@@ -1,0 +1,37 @@
+License for Tuscarora Framework and associated software by The Samraksh Company
+
+This research was developed with funding from the Defense Advanced Research 
+Projects Agency (DARPA). The views, opinions, and/or findings contained in this 
+software/article/presentation are those of the author(s)/presenter(s) and should 
+not be interpreted as representing the official views or policies of the 
+Department of Defense or the U.S. Government.
+
+The U.S. government or any of its branches including DARPA does not endorse or 
+recommend this software, its underlying technology and methodologies and is not 
+liable in any form for the software.
+
+This software is distributed without any restrictions on its use and without 
+any expectation of contributions back to it. Individuals and organizations are 
+free to use, modify and redistribute it.
+
+You are welcome to make contributions to this software.  Any contributions to 
+it is considered a public release of the source. Do NOT contribute proprietary, 
+trade secret or export-controlled material. 
+
+This software is work in progress. Samraksh intends to continue its development 
+and does not make any guarantee as to its usability, reliability, 
+standardization or backward compatibility. Samraksh reserves the right to modify 
+any part of the system, its design and implementation(s). Samraksh also reserves 
+the right to open source the entire repository including any contributions from 
+other individuals or organizations at a future date.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR 
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

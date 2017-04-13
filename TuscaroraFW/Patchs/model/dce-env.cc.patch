@@ -1,0 +1,219 @@
+--- a/dce-env.cc	2015-05-31 20:55:57.644166038 -0400
++++ b/dce-env.cc	2015-05-30 12:31:51.303207439 -0400
+@@ -1,19 +1,148 @@
+ #include "dce-stdlib.h"
+ #include "utils.h"
+ #include "process.h"
++#include "ns3/object.h"
++#include "ns3/ptr.h"
+ #include "ns3/log.h"
+ #include "ns3/assert.h"
++#include "ns3/propagation-loss-model.h"
++#include "ns3/mobility-model.h"
++#include "ns3/node.h"
++#include "ns3/node-list.h"
++#include "ns3/simulator.h"
++#include "ns3/node-container.h"
++#include "ns3/dce-manager.h"
++#include "ns3/object.h"
+ #include <string.h>
++#include <sstream>
++
++#include <assert.h>
++#include <stdio.h>
++#include <stdlib.h>
+ 
+ NS_LOG_COMPONENT_DEFINE ("SimuEnv");
+ 
+ using namespace ns3;
+ 
++char** str_split(char* a_str, const char a_delim)
++{
++    char** result    = 0;
++    size_t count     = 0;
++    char* tmp        = a_str;
++    char* last_comma = 0;
++    char delim[2];
++    delim[0] = a_delim;
++    delim[1] = 0;
++
++    /* Count how many elements will be extracted. */
++    while (*tmp)
++    {
++        if (a_delim == *tmp)
++        {
++            count++;
++            last_comma = tmp;
++        }
++        tmp++;
++    }
++
++    /* Add space for trailing token. */
++    count += last_comma < (a_str + strlen(a_str) - 1);
++
++    /* Add space for terminating null string so caller
++       knows where the list of returned strings ends. */
++    count++;
++
++    result = (char**) malloc(sizeof(char*) * count);
++
++    if (result)
++    {
++        size_t idx  = 0;
++        char* token = strtok(a_str, delim);
++
++        while (token)
++        {
++            assert(idx < count);
++            *(result + idx++) = strdup(token);
++            token = strtok(0, delim);
++        }
++        assert(idx == count - 1);
++        *(result + idx) = 0;
++    }
++
++    return result;
++}
++
++char* IntToChar(int i){
++  char *ret = new char[16];
++  sprintf(ret,"%d",i);
++  return ret;
++}
++char* DoubleToChar(double d){
++  char *ret = new char[16];
++  sprintf(ret,"%f",d);
++  return ret;
++}
++
+ char * dce_getenv (const char *name)
+ {
+   NS_LOG_FUNCTION (Current () << UtilsGetNodeId () << name);
+   NS_ASSERT (Current () != 0);
+   struct Thread *current = Current ();
++  static Ptr<MobilityModel> mob = current->process->manager->GetObject<Node>()->GetObject<MobilityModel>();
++
++  if(strcmp("NETWORK_SIZE", name) == 0) {
++    int x = NodeContainer::GetGlobal().GetN();
++
++    std::stringstream strs;
++    strs << x;
++    std::string str = strs.str();
++    dce_setenv(name, (char*) str.c_str(),1);
++    //dce_setenv(name, IntToChar(x),1);
++  }
++
++  if(strcmp("CURX", name) == 0) {
++    double x = current->process->manager->GetObject<Node>()->GetObject<MobilityModel>()->GetPosition().x;
++    std::stringstream strs;
++    strs << x;
++    std::string str = strs.str();
++    return (char*) str.c_str();
++    return DoubleToChar(x);
++  }
++
++  if(strcmp("CURY", name) == 0) {
++    double y = current->process->manager->GetObject<Node>()->GetObject<MobilityModel>()->GetPosition().y;
++   
++    std::stringstream strs;
++    strs << y;
++    std::string str = strs.str();
++    return (char*) str.c_str();
++    return DoubleToChar(y);
++  }
++
++  if(strstr(name, "CURPOS") != 0) {
++    NodeContainer glob = NodeContainer::GetGlobal();
++    
++    std::stringstream strs;
++    for(int id = 0; id < glob.GetN(); id++) {
++      Ptr<Node> nl = glob.Get(id);
++      double x = nl->GetObject<MobilityModel>()->GetPosition().x;
++      double y = nl->GetObject<MobilityModel>()->GetPosition().y;
++      strs << x;
++      strs << "-";
++      strs << y;
++      strs << "-";
++    }
++    std::string str = strs.str();
++    dce_setenv(name, (char*) str.c_str(),1);
++  }
++
++  if(strcmp("NODEID", name) == 0) {
++    std::stringstream strs;
++    strs << UtilsGetNodeId();
++    std::string str = strs.str();
++    dce_setenv(name, (char*) str.c_str(),0);
++  }
++
+   char ***penvp = current->process->penvp;
+   if (!penvp)
+     {
+@@ -27,6 +156,13 @@
+   return dce_getenv (name);
+ }
+ 
++void InjectMobility(Process *process, double x, double y, double z)
++{
++  //Ptr<MobilityModel> mobility = node->GetObject<MobilityModel>  ();
++  //mobility->SetPosition (Vector(_x,_y,_z));
++  process->manager->GetObject<Node>()->GetObject<MobilityModel>()->SetPosition(Vector(x,y,z));
++}
++
+ int dce_putenv (char *string)
+ {
+   NS_LOG_FUNCTION (Current () << UtilsGetNodeId () << string);
+@@ -35,6 +171,53 @@
+   char ***penvp = current->process->penvp;
+   // first, locate '=' sign.
+   char *name = strchr (string, '=');
++  char *tempStr = (char*)malloc(100);
++  strcpy(tempStr,string);
++  char **leftAndRight = str_split(tempStr, '=');
++  char *left = leftAndRight[0];
++  char *right = leftAndRight[1];
++  //printf("DCE called putenv with:  %s, %s\n", string, left);
++
++  if(strcmp("LOCATION", left) == 0) {
++    std::stringstream strs;
++    strs << UtilsGetNodeId();
++    std::string str_nodeId = strs.str();
++    char ** tokens = str_split(right,',');
++    //printf("Setting the location of %s \n", str_nodeId.c_str());
++    if(tokens){
++	double x,y,z;
++	x= atof(*tokens);
++	y= atof(*(tokens+1));
++	z= atof(*(tokens+2));
++	TaskManager *tmanager = TaskManager::Current ();
++	EventImpl * ev =MakeEvent (&InjectMobility, current->process,x,y,z);
++  	tmanager->ScheduleMain (UtilsTimevalToTime(0),ev);
++    }
++    fflush(stdout);
++
++    //dce_setenv(name, (char*) str.c_str(),0);
++    return 1;
++  }
++  if(strcmp("VELOCITY", left) == 0) {
++    std::stringstream strs;
++    strs << UtilsGetNodeId();
++    std::string str_nodeId = strs.str();
++    char ** tokens = str_split(right,',');
++    //printf("Setting the location of %s \n", str_nodeId.c_str());
++    if(tokens){
++        double vel;
++        vel= atof(*tokens);
++        //printf("location is %f, %f, %f\n",x,y,z);
++        //TaskManager *tmanager = TaskManager::Current ();
++        //EventImpl * ev =MakeEvent (&InjectMobility, current->process,x,y,z);
++        //tmanager->ScheduleMain (UtilsTimevalToTime(0),ev);
++    }
++    fflush(stdout);
++
++    //dce_setenv(name, (char*) str.c_str(),0);
++    return 0;
++  }
++
+   if (name == 0)
+     {
+       // no '=' so, this is a request to clear the corresponding

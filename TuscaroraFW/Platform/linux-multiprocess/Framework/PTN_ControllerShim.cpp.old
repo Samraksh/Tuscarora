@@ -1,0 +1,396 @@
+#include "PTN_ControllerShim.h"
+
+
+//#include "Lib/Shims/PTN_API_Calls.h"
+//#include "Fw2Wf_SocketShim.h"
+//#include "Src/Framework/Core/PTN_Events/RecvPTNEvents.h"
+
+
+extern IO_Signals ioSignals;
+
+
+
+bool PTN_ControllerShim::SendMsg2Pattern(PatternId_t pid, uint8_t* buf, int32_t size){
+    BSTMapT<PatternId_t, SocketId_t>::Iterator iter =  ptnToSockIdMap.Find(pid);
+    if(iter != ptnToSockIdMap.End()){
+    SocketId_t socketID = iter->Second();
+    Debug_Printf(DBG_SHIM, "PTN_ControllerShim::SendMsg2Pattern Found a socket %d for the pattern %d \n", socketID, pid);
+    int32_t n = write(socketID, buf, size);
+     Debug_Printf(DBG_SHIM, "PTN_ControllerShim:: Write : Sent %d bytes on socket %d \n", n, socketID);
+     PrintMsg((char*)buf,size);
+     return (n>0);
+    }
+    else{
+        Debug_Printf(DBG_SHIM, "Cannot find the sockket for the pattern %d \n", pid);
+        return false;
+    }
+
+}
+
+PTN_ControllerShim::PTN_ControllerShim(){
+    Debug_Printf(DBG_SHIM, "PTN_ControllerShim::PTN_ControllerShim Initializing \n");
+    fi =  &GetFrameworkInterface();
+
+	del = new SocketSignalDelegate_t(this, &PTN_ControllerShim::OnSignal);
+	master = new SocketServer(FRAMEWORK_HOST, FRAMEWORK_PATTERN_PORT, FRAMEWORK_PATTERN_PORT_TYPE);
+	ptnMasterSocket = master->GetSocketID();
+	//ioSig = new IO_Signals();
+	ioSignals.Register(ptnMasterSocket, del);
+	Debug_Printf(DBG_SHIM, "PTN_ControllerShim::PTN_ControllerShim Initializing \n");
+}
+
+void PTN_ControllerShim::SetFrameworkPtr(Framework_I *_fi){
+    fi = _fi;
+}
+
+
+SocketId_t PTN_ControllerShim::NewConnection()
+{
+    SocketId_t newsock=0;
+	newsock = master->Accept();
+
+	if (newsock > 0){
+		//Register this socket with the IO_Signal handler and store this in the list of waveforms
+		//First read from socket and figure out the Waveform ID;
+		//WaveformId_t nptnd =0;
+		Debug_Printf(DBG_SHIM, "PTN_ControllerShim::NewConnection: Master socket has received a new connection on socket %d \n", newsock);
+		
+	}else {
+		Debug_Printf(DBG_SHIM, "Error: Waveform Master socket Error: Something wrong with accepting connections\n");
+
+	}
+	return newsock;
+}
+
+
+void PTN_ControllerShim::OnSignal(int32_t sockfd){
+	//You should read the socket here
+
+	//this is the master socket, a waveform is (re)connecting
+	//printf("PTN_ControllerShim::OnSignal: Received a signal for socket %d \n", sockfd);
+	if (sockfd == ptnMasterSocket) {
+		printf("PTN_ControllerShim::OnSignal: Received a signal for Master socket %d \n", sockfd);
+		SocketId_t nwPTN = NewConnection();
+		if (nwPTN > 0) {
+		    ioSignals.Register(nwPTN, del);
+
+		}
+	}
+	else {
+		//This is one of the client sockets, read message and process
+		printf("PTN_ControllerShim::OnSignal: Received a signal for a pattern socket %d \n", sockfd);
+		OnRecv(sockfd);
+	}
+}
+
+void PTN_ControllerShim::OnRecv (int sockfd) {
+	//int32_t readBytes = read(sockfd,readBuf, MAX_SOC_READ_SIZE);
+	Debug_Printf(DBG_SHIM, "PTN_ControllerShim::OnRecv: Reading from socket %d \n", sockfd);
+	int32_t readBytes = recv(sockfd,readBuf, MAX_FW_SOC_READ_SIZE, 0);
+	Debug_Printf(DBG_SHIM, "PTN_ControllerShim::OnRecv: Read %d bytes from socket %d \n", readBytes, sockfd);
+
+	if (readBytes > 0){
+		PrintMsg(readBuf,readBytes);
+		//bool rv = Deserialize (readBuf,readBytes, sockfd);
+		bool rv = true;
+		PTN2FWMessages* ptn2fwmsg_ptr = new PTN2FWMessages(readBytes, readBuf);
+		while(rv &&  ptn2fwmsg_ptr->GetBytesRead() < ptn2fwmsg_ptr->GetPayloadSize() ){
+		    rv = Deserialize (*ptn2fwmsg_ptr, sockfd);
+		    Debug_Printf(DBG_SHIM, "PTN_ControllerShim::So far Deserialized:");
+		    PrintMsg(readBuf,ptn2fwmsg_ptr->GetBytesRead());
+		}
+		if(rv){
+            Debug_Printf(DBG_SHIM, "PTN_ControllerShim::OnRecv: finished successfully\n");
+		}
+		else{
+		    Debug_Printf(DBG_SHIM, "PTN_ControllerShim::OnRecv: finished unsuccessfully\n");
+		}
+	}
+	else {
+			Debug_Printf(DBG_SHIM, "PTN_ControllerShim::OnRecv: Got a signal on socket, but couldnt read. Probably the pattern terminated \n");
+			if(Cleanup(sockfd)){
+			    for(BSTMapT<PatternId_t, SocketId_t>::Iterator iter =  ptnToSockIdMap.Begin(); iter != ptnToSockIdMap.End(); ++iter){
+			        if(iter->Second() == sockfd){
+			            Debug_Printf(DBG_SHIM, "PTN_ControllerShim::OnRecv: Removing pattern=%d with sockedid=%d\n", iter->First(), iter->Second());
+			            ptnToSockIdMap.Erase(iter);
+			            break;
+			        }
+                    Debug_Printf(DBG_SHIM, "!!!!PTN_ControllerShim::OnRecv: Could not find the pattern with sockedid=%d !!!!\n", sockfd);
+			    }
+			}
+	}
+	Debug_Printf(DBG_SHIM, "PTN_ControllerShim::OnRecv:EXITING \n");
+}
+
+bool PTN_ControllerShim::Deserialize (PTN2FWMessages& ptn2fwmsg, int32_t sockfd){
+	Debug_Printf(DBG_SHIM, "PTN_ControllerShim::Deserialize ... ReadBytes / TotalBytes = %lu / %lu \n", ptn2fwmsg.GetBytesRead(), ptn2fwmsg.GetPayloadSize() );
+	//Debug_Printf(DBG_SHIM, "PTN_ControllerShim::Deserialize: Message %s\n", buf);
+//	PTN2FWMessages ptn2fwmsg(size, buf);
+//	Generic_VarSized_Msg *ptn2fwmsg2_ptr = new Generic_VarSized_Msg(size, (uint8_t*)buf);
+//	delete ptn2fwmsg2_ptr;
+//	int calltype = ptn2fwmsg.GetType();
+	int calltype = 0;
+	GenericDeSerializer<int> (&ptn2fwmsg, calltype);
+	//ptn2fwmsg.ReadFromPayload<int>(calltype);
+
+
+    Debug_Printf(DBG_SHIM, "PTN_ControllerShim::Deserialize: Got a message msg.GetType() = %d \n", calltype);
+
+//    if(calltype == PTN2FW_Call_Greet) {
+//        PatternId_t patternId;
+//        GenericMsgPayloadSize_t totalsize;
+//        char greet[22];
+//        void* greet_ptr = (void*)greet;
+//        GenericDeSerializer< PatternId_t, GenericMsgPayloadSize_t, void* >
+//            gs(&ptn2fwmsg,  patternId, totalsize, greet_ptr);
+//
+//        Debug_Printf(DBG_SHIM, "PTN_ControllerShim::Deserialize: Got a greeting message patternId = %d \n", patternId );
+//        PrintMsg(greet,totalsize/sizeof(char));
+//        InitPattern(patternId, sockfd);
+//    }
+    if (calltype == PTN2FW_Call_RegisterPatternRequest){
+        PatternId_t patternId;
+         PatternTypeE type;
+         GenericMsgPayloadSize_t sizeofchararray;
+         char* uniqueName = NULL;
+        GenericDeSerializer< PatternId_t, GenericMsgPayloadSize_t, char*, PatternTypeE >
+                gs(&ptn2fwmsg,  patternId, sizeofchararray, uniqueName, type);
+
+        Debug_Printf(DBG_SHIM, "PTN_ControllerShim::Deserialize: PTN2FW_Call_RegisterPatternRequest patternId = %d type = %d \n", patternId, type);
+
+        if(patternId == 0){
+            patternId =  (static_cast<FrameworkBase*>(fi))->NewPatternInstanceRequest(type, uniqueName );
+            Debug_Printf(DBG_SHIM, "PTN_ControllerShim::Deserialize: PTN2FW_Call_RegisterPatternRequest got new PID patternId = %d type = %d \n", patternId, type);
+
+        }
+        InitPattern(patternId, sockfd);
+
+        static_cast<FrameworkBase*>(fi)->RegisterPatternRequest(patternId,  type);
+        free((void*)uniqueName); //TODO: BK: This is against the general memory rules, this should have been consumed by NewPatternInstanceRequest
+    }
+
+    else if (calltype == PTN2FW_Call_Send){
+		PatternId_t pid = 0;
+		 NodeId_t destArray[MAX_DEST];
+		 void* destArrayptr = (void*)destArray;
+		 uint16_t noOfDest;
+		 GenericMsgPayloadSize_t totalsize;
+		 FMessage_t msg;
+          GenericMsgPayloadSize_t serial_msg_size;
+          void* serial_msg = NULL;
+		 uint16_t nonce;
+		 bool noAck;
+
+
+		GenericDeSerializer< PatternId_t, GenericMsgPayloadSize_t, void*, GenericMsgPayloadSize_t, void*, uint16_t, bool >
+		      gs(&ptn2fwmsg, pid, totalsize, destArrayptr, serial_msg_size, serial_msg, nonce, noAck);
+
+		msg.DeSerialize( serial_msg_size, serial_msg);
+
+
+		noOfDest = totalsize / sizeof(NodeId_t);
+
+	fi->SendData (pid, destArray,  noOfDest,  msg, nonce, noAck);
+//	free(serial_msg); //This is destructed by the msg.DeSerialize no need to destruct again
+	}
+
+	else if (calltype == PTN2FW_Call_SendwComp){
+		PatternId_t pid;
+		 NodeId_t destArray[MAX_DEST];
+		 void* destArrayptr = (void*)destArray;
+		 uint16_t noOfDest;
+	        GenericMsgPayloadSize_t totalsize;
+		 LinkComparatorTypeE lcType;
+		 FMessage_t msg;
+         GenericMsgPayloadSize_t serial_msg_size;
+         void* serial_msg = NULL;
+		 uint16_t nonce;
+		 bool noAck;
+		GenericDeSerializer< PatternId_t, GenericMsgPayloadSize_t, void*, LinkComparatorTypeE, GenericMsgPayloadSize_t, void*, uint16_t, bool >
+			    gs(&ptn2fwmsg,  pid, totalsize, destArrayptr, lcType, serial_msg_size, serial_msg, nonce, noAck);
+		msg.DeSerialize( serial_msg_size, serial_msg);
+		noOfDest = totalsize / sizeof(NodeId_t);
+
+
+	fi->SendData (pid, destArray, noOfDest, lcType, msg, nonce, noAck);
+	//	free(serial_msg); //This is destructed by the msg.DeSerialize no need to destruct again
+	}
+
+	else if (calltype == PTN2FW_Call_Broadcast){
+		PatternId_t pid;
+		 FMessage_t msg;
+         GenericMsgPayloadSize_t serial_msg_size;
+         void* serial_msg;
+		 WaveformId_t wid;
+		 uint16_t nonce;
+		GenericDeSerializer< PatternId_t, GenericMsgPayloadSize_t, void*, WaveformId_t, uint16_t >
+			    gs(&ptn2fwmsg,  pid, serial_msg_size, serial_msg, wid, nonce);
+
+		msg.DeSerialize( serial_msg_size, serial_msg);
+
+	fi->BroadcastData(pid,  msg, wid, nonce);
+	}
+
+	else if (calltype == PTN2FW_Call_ReplacePayload){
+		PatternId_t patternId;
+		 MessageId_t msgId;
+		 void* payload;
+		 GenericMsgPayloadSize_t sizeOfPayload;
+		GenericDeSerializer< PatternId_t, MessageId_t, GenericMsgPayloadSize_t, void* >
+			    gs(&ptn2fwmsg,  patternId, msgId, sizeOfPayload, payload);
+	fi->ReplacePayloadRequest(patternId, msgId, payload, sizeOfPayload);
+	}
+
+	else if (calltype == PTN2FW_Call_AddDest){
+		PatternId_t patternId;
+		 MessageId_t msgId;
+		 NodeId_t destArray[MAX_DEST];
+		 uint16_t noOfNbrs;
+
+		 void* destArrayptr = (void*)destArray;
+		 GenericMsgPayloadSize_t totalsize;
+
+		GenericDeSerializer< PatternId_t, MessageId_t, GenericMsgPayloadSize_t, void* >
+			  gs(&ptn2fwmsg,  patternId, msgId, totalsize, destArrayptr);
+
+		noOfNbrs = totalsize / sizeof(NodeId_t);
+
+	fi->AddDestinationRequest(patternId, msgId, destArray, noOfNbrs);
+	}
+
+	else if (calltype == PTN2FW_Call_AddDestwComp){
+		PatternId_t patternId;
+		 MessageId_t msgId;
+		 NodeId_t destArray[MAX_DEST];
+		 uint16_t noOfNbrs;
+
+	        void* destArrayptr = (void*)destArray;
+	         GenericMsgPayloadSize_t totalsize;
+
+		 LinkComparatorTypeE lcType;
+		GenericDeSerializer< PatternId_t, MessageId_t, GenericMsgPayloadSize_t, void*, LinkComparatorTypeE >
+			    gs(&ptn2fwmsg,  patternId, msgId, totalsize, destArrayptr, lcType);
+
+		noOfNbrs = totalsize / sizeof(NodeId_t);
+
+	fi->AddDestinationRequest(patternId, msgId, destArray, noOfNbrs, lcType);
+	}
+
+	else if (calltype == PTN2FW_Call_Cancel){
+		PatternId_t patternId;
+		 MessageId_t msgId;
+		 NodeId_t destArray[MAX_DEST];
+		 uint16_t noOfDest;
+
+         void* destArrayptr = (void*)destArray;
+         GenericMsgPayloadSize_t totalsize;
+
+		GenericDeSerializer< PatternId_t, MessageId_t, GenericMsgPayloadSize_t, void* >
+			    gs(&ptn2fwmsg,  patternId, msgId, totalsize, destArrayptr);
+
+		noOfDest = totalsize / sizeof(NodeId_t);
+
+	fi->CancelDataRequest(patternId, msgId, destArray, noOfDest);
+	}
+
+	else if (calltype == PTN2FW_Call_DataStatus){
+		PatternId_t patternId;
+		 MessageId_t msgId;
+		GenericDeSerializer< PatternId_t, MessageId_t >
+			    gs(&ptn2fwmsg,  patternId, msgId);
+	fi->DataStatusRequest(patternId, msgId);
+	}
+
+//	else if (calltype == PTN2FW_Call_RegisterPattern){
+//		PatternId_t patternId;
+//		 PatternTypeE type;
+//		GenericDeSerializer< PatternId_t, PatternTypeE >
+//			    gs(&ptn2fwmsg,  patternId, type);
+//
+//		Debug_Printf(DBG_SHIM, "PTN_ControllerShim::Deserialize: PTN2FW_Call_RegisterPattern patternId = %d type = %d \n", patternId, type);
+//
+//	fi->RegisterPatternRequest(patternId, type);
+//	}
+
+	else if (calltype == PTN2FW_Call_FrameworkAttributes){
+		PatternId_t patternId;
+		GenericDeSerializer< PatternId_t >
+			    gs(&ptn2fwmsg,  patternId);
+	fi->FrameworkAttributesRequest(patternId);
+	}
+
+	else if (calltype == PTN2FW_Call_SelectDataNotification){
+		PatternId_t patternId;
+		 uint8_t notifierMask;
+		GenericDeSerializer< PatternId_t, uint8_t >
+			    gs(&ptn2fwmsg,  patternId, notifierMask);
+	fi->SelectDataNotificationRequest(patternId, notifierMask);
+	}
+
+
+	else if (calltype == PTN2FW_Call_SelectLinkComparator){
+		PatternId_t patternId;
+		 LinkComparatorTypeE lcType;
+		GenericDeSerializer< PatternId_t, LinkComparatorTypeE >
+			    gs(&ptn2fwmsg,  patternId, lcType);
+	fi->SelectLinkComparatorRequest(patternId, lcType);
+	}
+
+	else if (calltype == PTN2FW_Call_SetLinkThreshold){
+		PatternId_t patternId;
+		 LinkMetrics threshold;
+		GenericDeSerializer< PatternId_t, LinkMetrics >
+			    gs(&ptn2fwmsg,  patternId, threshold);
+	fi->SetLinkThresholdRequest(patternId, threshold);
+	}
+
+
+//	else if (calltype == PTN2FW_Call_NewPatternInstance){
+//		PatternTypeE type;
+//		 char uniqueName[128];
+//		 void* uniqueNameptr = (void*)uniqueName;
+//		 GenericMsgPayloadSize_t totalsize;
+//		GenericDeSerializer< PatternTypeE, GenericMsgPayloadSize_t, void* >
+//			    gs(&ptn2fwmsg,  type, totalsize, uniqueNameptr);
+//		static_cast<FrameworkBase*>(fi)->NewPatternInstanceRequest(type, uniqueName);
+//	}
+
+
+
+
+	else{
+			Debug_Printf(DBG_SHIM, "PTN_ControllerShim::Deserialize: Unknown message \n");
+			//PrintMsg(buf, size);
+	}
+	
+    Debug_Printf(DBG_SHIM, "PTN_ControllerShim::Deserialize:EXITING \n");
+	return true;
+}
+
+bool PTN_ControllerShim::Cleanup(int sockfd)
+{
+	return (ioSignals.DeRegister(sockfd));
+}
+
+void PTN_ControllerShim::InitPattern(PatternId_t pid, int32_t sock)
+{
+    Debug_Printf(DBG_SHIM, "PTN_ControllerShim::InitPattern: Initializing shim for pattern %d on sock %d\n", pid, sock);
+    if(ptnToSockIdMap.Find(pid) == ptnToSockIdMap.End()){
+        Debug_Printf(DBG_SHIM, "PTN_ControllerShim::InitWaveform: registering socket for pattern  %d new sock %d\n", pid, sock);
+        ptnToSockIdMap.Insert(pid,sock);
+    }
+    else{
+        Debug_Printf(DBG_SHIM, "PTN_ControllerShim::InitWaveform: Overwriting socket for pattern %d old sock %d new sock %d\n", pid, ptnToSockIdMap[pid] ,sock);
+        ptnToSockIdMap[pid] = sock;
+    }
+}
+
+void PTN_ControllerShim::PrintMsg(char* buf, uint32_t size)
+{
+	for(uint32_t i=0; i<size; i++){
+		//printf("%u: %c, ", i, buf[i]);
+		printf("%X ", buf[i]);
+	}
+	printf("\n");
+}
+

@@ -1,0 +1,18 @@
+--- a/yans-wifi-phy.h	2015-04-24 14:56:54.829717727 -0400
++++ b/yans-wifi-phy.h	2015-04-24 00:21:12.497285935 -0400
+@@ -23,6 +23,7 @@
+ #define YANS_WIFI_PHY_H
+ 
+ #include <stdint.h>
++#include "wifi-mac-header.h"
+ #include "ns3/callback.h"
+ #include "ns3/event-id.h"
+ #include "ns3/packet.h"
+@@ -371,6 +372,7 @@
+   virtual WifiMode McsToWifiMode (uint8_t mcs);
+ 
+ private:
++  double powerdbm;
+   //YansWifiPhy (const YansWifiPhy &o);
+   virtual void DoDispose (void);
+   /**

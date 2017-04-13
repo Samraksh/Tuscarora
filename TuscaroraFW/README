@@ -1,0 +1,70 @@
+Samraksh Tuscarora Networking Framework 
+=======================================
+
+$TUS is the root directory of the framework
+
+Supported plaforms:
+------------------
+- Tuscarora is currently supported only on 64-bit linux plaftorms
+- The 'standard' platform supported is dce-1.7 on ubuntu-16.04.
+- However, most dce versions on any ubuntu higher than 12.04 is expected to work 
+
+Installation:
+---------------
+
+The script installs dce, ns3 and configures Tuscarora to run under dce. Please make sure to call the script from the same shell using a '.' in order for environment variables to be set correctly.
+cd $TUS/Install;
+. ./install.sh
+
+Executing Tuscararo framework modules:
+--------------------------------------
+
+The 'runOrDebug.sh' in the root directory is the primary script to execute the modules and tests under framework.
+The script cleans, builds, runs and collects the output for the 'test-name' specified 
+Run the script without parameters for information on supported options.
+
+Any other way of building and executing requires a deeper knowledge of how Tuscarora is built and compiled. The build enviornment uses CMake and gnu make. Also the binaries are build as shared libraries when run on the 'dce' (ns3-dce) platform and are build as static executable if built for other platforms.
+
+If you are interested in building and running other than using the runOrDebug.sh script get in touch with Samraksh.
+
+
+Directory structure:
+-----------------------
+
+Doc: Documentation
+Install: Scripts to automate installation of Tuscarora
+Include: Header files / API specifications
+Lib : Plaform neutral library modules 
+ns-3-dce: Files that enable integration with ns3-dce system
+ns-3.x: Files that enable integration with ns3 system
+Patchs: Patchs to ns3-dce system to enable additional features
+Platform: Platform specific module implementations
+Scripts: Various utility scripts
+Framework: Framework source files
+Pattern: Pattern source files
+App: Application source files
+Tests : Module tests for different layers and Patterns
+updates: Changes made to the ns3/dce models to support various features that DCE lacked (these files are used to generate the patches). This is depreciated and will be removed in future releases.
+
+
+General/Licensing Contact: 	
+-----------------------
+	Kenneth Parker		Kenneth.Parker@samraksh.com
+
+Technical Contacts: 		
+-----------------------
+	Mukundan Sridharan 	Mukundan.Sridharan@samraksh.com
+	Bora Karaoglu 		Bora.Karaoglu@samraksh.com
+
+Contributors: 
+-----------------------
+	Mukundan Sridharan  	(Samraksh)
+	Bora Karaoglu		(Samraksh)
+	Daniel Patru		(Samraksh)
+	Vinod Kulathumani	(West Virginia University) 
+	Bryan Lemon 		(West Virginia University)
+	Masahiro Nakagawa 	(West Virginia University)
+	Ken Calvert		(University of Kentucky)
+
+
+

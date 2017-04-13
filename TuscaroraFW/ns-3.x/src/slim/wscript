@@ -1,0 +1,37 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+def build(bld):
+    obj = bld.create_ns3_module('slim', ['network', 'wifi', 'antenna'])
+    obj.source = [
+		'model/slim-channel.cc',
+		'model/slim-mode.cc',
+		'model/slim-phy.cc',
+		'model/slim-phy-state-helper.cc',
+		'model/slim-interference-helper.cc',
+		'model/tuscarora-slim-channel.cc',
+		'model/tuscarora-slim-phy.cc',
+		'model/slim-mac-header.cc',
+		'model/slim-net-device.cc',
+		'model/slim-tx-vector.cc',
+		'model/slim-mode-error.cc',
+		'model/dsssdbpsk-slim-mode-error.cc',
+		'model/dsssdqpskcck11-slim-mode-error.cc'
+        ]
+    headers = bld(features='ns3header')
+    headers.module = 'slim'
+    headers.source = [
+    	'model/slim-net-device.h',
+		'model/slim-channel.h',
+		'model/slim-mode.h',
+		'model/tuscarora-slim-phy.h',
+		'model/tuscarora-slim-channel.h',
+		'model/slim-mac-header.h',
+		'model/slim-phy.h',
+		'model/slim-phy-state-helper.h',
+		'model/slim-interference-helper.h',
+		'model/slim-tx-vector.h',
+		'model/slim-mode-error.h',
+		'model/dsssdbpsk-slim-mode-error.h',
+		'model/dsssdqpskcck11-slim-mode-error.h'
+        ]
+    obj.env.append_value("LIB", ["pcap"])

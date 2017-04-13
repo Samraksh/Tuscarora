@@ -1,0 +1,51 @@
+#!/bin/bash
+# Find all the tests in the Tests directory, 
+# return one per line.
+# -v option returns all the nontests.
+# --names option returns just the test names.
+# --objectfile testname option returns the object file for the testname
+
+export _prefix=validate
+
+# shortcut for tests dir
+tdir=${TUS}/Tests
+
+function usage {
+    cat <<EOF
+$0
+    Show all the validation scripts in Tests.
+$0 --names
+    Show all the short names for validation scripts.
+$0 --objectfile shortname
+    Show the object file corresponding to the short name.
+$0 shortname
+    Show the validation script corresponding to the short name.
+EOF
+}
+function all { 
+     find "$tdir" -executable -iname "${_prefix}*"
+}
+function names {
+    all | perl -lane 'for (@F) { 
+                         s/.+\///g; 
+                         s/^$ENV{_prefix}//i; 
+                         s/\.(sh|pl|py)$//; 
+                         print; }'
+}
+function findNameIndex {
+    # given a name, return an index into all
+    names | grep -wn "$1" | cut -f1 -d':'
+    # || (usage && exit 1)
+}
+function selectLineByName {
+    # given a short name, select the corresponding line from stdin
+    i=`findNameIndex $1`
+    if [[ -n $i ]]; then sed "${i}q;d"
+    else usage; exit 1
+    fi
+}
+
+if [[ -z $1 ]];               then all
+elif [[ "$1" == '--names' ]]; then names
+                              else all | selectLineByName $1 
+fi

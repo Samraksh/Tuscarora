@@ -1,0 +1,352 @@
+/*
+ * Timer.cpp
+ *
+ *  Created on: Oct 11, 2013
+ *      Author: sridhara
+ */
+#include <sstream>
+using std::ostringstream;
+
+#include "Lib/PAL/Timer.h"
+#include "Lib/Misc/Debug.h"
+#include <unistd.h>
+
+namespace PAL {
+
+#define MAX_TIMERS 256
+#if defined(PLATFORM_LINUX)
+#define TIMER_OVERHEAD 1000 //overhead of timer on a actual platform in microseconds
+#else
+#define TIMER_OVERHEAD 0 //DCE has no timer overhead
+#endif
+
+#define errExit(msg)    do { perror(msg); exit(EXIT_FAILURE); \
+	} while (0)
+
+///TODO:
+/* 1. If no timer is running cancel the SIGALRM signal from kernel, if later needed resubscribe
+  * (does not affect correctness, but could help speedup simulations)
+  * 2. Need a concept of permanently deleted timers vs temporarily suspended timers.
+  *
+  *
+  */
+
+////////////////////Global Book Keeping for all Timers///////////////////
+//long timerIdValueArray[MAX_TIMERS];
+Timer* timerPtrArray[MAX_TIMERS] = { NULL };
+Timer *nextTimer, *curTimer;
+
+//struct timeval lastTimeStamp;
+//int signalArray[MAX_TIMERS]={0};
+//timer_t timerIdArray[MAX_TIMERS];
+
+bool signalRegistered=false;
+bool timerAlive[MAX_TIMERS] = { false };
+struct itimerval curr_timer, old_timer;
+static uint16_t timerIDGenerator=0;
+bool timerPendingExecution = false;
+
+static void timerHandler(int sig);
+
+struct sigaction timer_action;
+
+void Register(){
+  timer_action.sa_handler= timerHandler;
+  sigemptyset (&timer_action.sa_mask);
+  timer_action.sa_flags = 0;
+    
+  sigaction (SIGALRM, &timer_action, NULL);
+  //signal(SIGALRM, timerHandler);
+  signalRegistered = true;
+}
+
+void Deregister(){
+ sigaction (SIGALRM, NULL, &timer_action);
+ printf("No timer seems to be running.. Deregistering the alarm signal handler\n"); fflush(stdout);
+ signalRegistered=false;
+}
+
+//Timer::Timer(){}
+Timer::Timer(uint32_t microsecond_period, TimerTypeE type, TimerDelegate& del){
+  //name.append(_name);
+  delegate = &del;
+
+  myTimerNumber = GetFreeTimerID();
+  //printf("Timer::Timer: Creating %s\n", this->c_str());
+  fflush(stdout);
+  if (myTimerNumber == -1) {
+    errExit( "Timer::Timer: Cons:Ran out of timers, check stack for number of timers used\n");
+  } else {
+    //printf("Timer::Timer: Cons: Initialized new %s\n", this->GetName()); fflush(stdout);
+  }
+
+  //This is the first time a timer is being created
+  ///Initialize call back
+  if (myTimerNumber == 0 || !signalRegistered) {
+    //printf("Timer::Timer: Cons: This is the first time any timer is created\n");fflush(stdout);
+    Register();
+    nextTimer = this;
+    //initialize the rest as zero, might help speedup
+    for (int i = 1; i < MAX_TIMERS; i++) {
+      timerPtrArray[i] = NULL;
+    }
+  }
+
+  eventNumber = 0;
+
+  // Set timer values
+  this->period = microsecond_period;
+  this->countdown = microsecond_period;
+  if (type == PERIODIC) {
+    this->oneshot = false;
+  } else {
+    this->oneshot = true;
+    //printf("%s is a oneshot timer\n", this->GetName()); fflush(stdout);
+  }
+
+  //Add timer info to global structure
+  timerPtrArray[myTimerNumber] = this;
+  //timerAlive[myTimerNumber] = true;
+
+}
+
+bool CheckForAliveTimers(){
+  for (int i=0; i < MAX_TIMERS; i++){
+    if(timerAlive[i]){
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Timer::Start() {
+  //if(oneshot){ printf("Timer:: Starting ONE_SHOT timer %s \n", this->c_str()); fflush(stdout); }
+  if(!signalRegistered) {
+    Register();
+  }
+  
+  //alive = true;
+  timerAlive[myTimerNumber]=true;
+  gettimeofday(&lastEvalTime, NULL);
+  countdown = period;
+  Timer *next = nextTimer->EvaluateNext();
+  SetNext(next);
+  //ExecuteExpiredTimers(next);
+  return false;
+}
+
+bool Timer::Suspend() {
+  period = 4294967295;
+  countdown = 4294967295;
+  //alive = false;
+  timerAlive[myTimerNumber]=false;
+  return true;
+}
+
+bool Timer::Change(uint32_t microsecond_period, uint8_t type) {
+  period = microsecond_period;
+  countdown = microsecond_period;
+  timerAlive[myTimerNumber]=true;
+  //alive = true;
+  if (type == PERIODIC) {
+	  oneshot = false;
+  } else {
+	  oneshot = true;
+  }
+  Start();
+  return true;
+}
+
+void Timer::Execute() {
+  //printf("Timer::Execute: Fired %s\n", this->GetName());
+  if (oneshot) {
+    //printf("timerHandler: Finished executing a oneshot %s\n", curTimer->c_str()); fflush(stdout);
+    //alive = false;
+    timerAlive[myTimerNumber]=false;
+  } else {
+	  //printf("timerHandler: %s is a periodic timer. \n", curTimer->c_str()); fflush(stdout);
+  }
+  if(delegate) {
+	  delegate->operator()(eventNumber);
+	  eventNumber++;
+  }else {
+	  printf("Timer:: Something wrong: Timer %s fired, but NO delegate is registered\n", this->GetName());
+  }
+}
+
+int32_t Timer::GetFreeTimerID() {
+  if(timerIDGenerator < MAX_TIMERS) {
+    int32_t ret = timerIDGenerator;
+    timerIDGenerator++;
+    return ret;
+  }
+  return -1;
+}
+
+
+
+void timerHandler(int sig) {
+  //Debug::PrintTimeMilli();
+  //curTimer=nextTimer;
+  //printf("timerHandler: Received signal from Kernel: %d\n",sig);
+  //fflush(stdout);
+  if (timerAlive[curTimer->myTimerNumber]) {
+	  gettimeofday(&curTimer->lastEvalTime, NULL);
+	  curTimer->countdown = curTimer->period;
+	  curTimer->Execute();
+  }
+
+  //Check what is the next timer to be scheduled to fire.
+  //But if meanwhile some timer has elapsed execute it.
+  Timer *next = nextTimer->EvaluateNext();
+  //Important Comment: Exexecuting expired timers without going through ns3-dce scheduler screws up the non-preemption logic of timer callbacks
+  //so simply set the next timer and get out, dont execute multiple callbacks
+  //curTimer->ExecuteExpiredTimers(next);
+  if(next!=NULL) { nextTimer->SetNext(next);}
+  else {
+    /*if(!CheckForAliveTimers()){
+      Deregister();
+    }*/
+  }
+  
+}
+
+void Timer::ExecuteExpiredTimers(Timer* next) {
+  while (timerPendingExecution && next==NULL){
+	  curTimer->Execute();
+	  timerPendingExecution=false;
+	  next=nextTimer->EvaluateNext();
+  }
+  if(next!=NULL){
+	  nextTimer->SetNext(next);
+  }
+  //else {
+    //printf("No timer needs to run at this time\n");
+  //}
+}
+
+bool Timer::SetNext(Timer *timer) {
+
+  //printf("Timer::SetNext: Setting %s for %d microsec\n", timer->c_str(), timer->countdown);
+  if(timer!=NULL){
+    if(timer->countdown==0) {timer->countdown=1;}
+    curr_timer.it_interval.tv_sec = timer->countdown / 1000000;
+    curr_timer.it_interval.tv_usec = (timer->countdown % 1000000);
+    curr_timer.it_value.tv_sec = timer->countdown / 1000000;
+    ;
+    curr_timer.it_value.tv_usec = (timer->countdown % 1000000);
+
+    old_timer.it_interval.tv_sec = 0;
+    old_timer.it_interval.tv_usec = 0;
+    old_timer.it_value.tv_sec = 0;
+    old_timer.it_value.tv_usec = 0;
+
+    curTimer = timer;
+    int timer_id = setitimer(ITIMER_REAL, &curr_timer, &old_timer);
+    if (timer_id < 0) {
+	    //printf("Timer::SetNext: timer init failed\n");
+	    return false;
+    } else {
+	    //printf("Timer::SetNext: %s with timer id %d\n", curTimer->c_str(), timer_id);
+	    fflush(stdout);
+	    return true;
+    }
+  }
+  else {return false;}
+}
+
+Timer* Timer::EvaluateNext() {
+  Timer* next = NULL;
+  uint32_t usecsElapsed;
+  uint32_t min = 4294967295;
+  //printf("Timer::EvaluateNext: Intializing %s\n", this->c_str());
+  //adjust others values
+  struct timeval curtime;
+  gettimeofday(&curtime, NULL);
+
+  for (int i = 0; i < MAX_TIMERS; i++) {
+
+    if (timerPtrArray[i] != NULL) {
+      //the guy who just ran
+      /*
+      if(timerPtrArray[i]==curTimer){
+      //printf("I just ran this guy\n");
+      timerPtrArray[i]->countdown = timerPtrArray[i]->period;
+      timerPtrArray[i]->lastEvalTime=curtime;
+      }
+      //others
+      else{
+      */
+      if (timerAlive[timerPtrArray[i]->myTimerNumber]) {
+	usecsElapsed = (curtime.tv_sec - timerPtrArray[i]->lastEvalTime.tv_sec) * 1000000 + (curtime.tv_usec - timerPtrArray[i]->lastEvalTime.tv_usec);
+	if (usecsElapsed + TIMER_OVERHEAD > timerPtrArray[i]->countdown) {
+	  curTimer = timerPtrArray[i];
+	  //This timer has already elapsed execute this.
+	  //printf("Timer::EvaluateNext: Oops.. %s has expired\n", curTimer->c_str());
+	  fflush(stdout);
+	  timerPtrArray[i]->countdown = timerPtrArray[i]->period;
+	  timerPtrArray[i]->lastEvalTime = curtime;
+	  timerPendingExecution = true;
+	  //nextTimer= timerPtrArray[i];
+	  next = NULL;
+	  return next;
+	  //timerPtrArray[i]->Execute();
+	} else {
+	  timerPtrArray[i]->countdown = timerPtrArray[i]->countdown - usecsElapsed;
+	  timerPtrArray[i]->lastEvalTime = curtime;
+	  //printf("Timer::EvaluateNext: Updated countdown of %s at place %d to %d\n", timerPtrArray[i]->GetName(), i, timerPtrArray[i]->countdown);
+	  fflush(stdout);
+	}
+      }
+    }
+    //else {
+    //    printf("Timer %d not alive\n",i);
+    //}
+    //}
+  }
+  //curTimer=NULL;
+  //printf("Let me find min\n");
+  //find who needs to run next
+  for (int i = 0; i < MAX_TIMERS; i++) {
+    if (timerPtrArray[i] != NULL && timerAlive[timerPtrArray[i]->myTimerNumber]
+	&& timerPtrArray[i]->countdown < min) {
+      min = timerPtrArray[i]->countdown;
+      next = timerPtrArray[i];
+      //printf("Found min: %d, count: %d\n", i, min);
+    }
+  }
+
+  /*if(nextTimer!=next){
+    printf("Changing timer from %d to %d\n",nextTimer,next);
+    }*/
+  nextTimer = next;
+  //printf("Timer::EvaluateNext: Found new timer to run..\n");
+  return next;
+}
+
+std::ostream& operator<<(std::ostream &strm, const Timer &t) {
+  return strm << "Timer " << t.myTimerNumber << (t.name.empty() ? "" : " ") << t.name;
+}
+
+string Timer::str() {
+  ostringstream s;
+  s << "Timer " << myTimerNumber << (name.empty() ? "" : " ") << name;
+  return s.str();
+}
+
+const char* Timer::GetName() {
+  return this->str().c_str();
+}
+
+
+Timer::~Timer()
+{
+  timerPtrArray[myTimerNumber]=NULL;
+  timerAlive[myTimerNumber]=false;
+  if(nextTimer==this) {nextTimer = NULL;}
+  if(curTimer==this) {curTimer= NULL;}
+}
+
+
+} //End of namespace
+

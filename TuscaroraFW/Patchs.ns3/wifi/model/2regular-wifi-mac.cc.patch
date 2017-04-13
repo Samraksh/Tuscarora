@@ -1,0 +1,32 @@
+--- a/regular-wifi-mac.cc       2015-04-09 21:21:25.445065463 -0400
++++ b/regular-wifi-mac.cc       2015-04-09 21:21:47.105066009 -0400
+@@ -738,6 +738,14 @@
+ {
+   NS_LOG_FUNCTION (this << hdr);
+   m_txOkCallback (hdr);
++  int size = 65;
++  uint8_t* data = new uint8_t[size];
++  memset(data, 0, size);
++  hdr.GetAddr1().CopyTo(&data[0]);
++  memset(&data[6], 0x3, 1);
++  memset(&data[64], 0x9, 1);
++  Ptr<Packet> packet = Create<Packet>(data, size);
++  ForwardUp(packet, hdr.GetAddr1(), hdr.GetAddr2());
+ }
+ 
+ void
+@@ -745,6 +753,14 @@
+ {
+   NS_LOG_FUNCTION (this << hdr);
+   m_txErrCallback (hdr);
++  int size = 65;
++  uint8_t* data = new uint8_t[size];
++  memset(data, 0, size);
++  hdr.GetAddr1().CopyTo(&data[0]);
++  memset(&data[6], 0x3, 1);
++  memset(&data[64], 0x0, 1);
++  Ptr<Packet> packet = Create<Packet>(data, size);
++  ForwardUp(packet, hdr.GetAddr1(), hdr.GetAddr2());
+ }
+ 
+ } // namespace ns3

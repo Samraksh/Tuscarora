@@ -1,0 +1,95 @@
+#!/bin/bash
+# Find all the tests in the Tests directory, 
+# return one per line.
+# -v option returns all the nontests.
+# --names option returns just the test names.
+# --objectfile testname option returns the object file for the testname
+
+function usage {
+    cat <<EOF
+Usage for $0:
+
+$0 -h|--help
+    Show this message.
+
+$0 FrameworkRootDir
+    Show all the "run" files in Tests.
+
+$0 FrameworkRootDir -v
+    Show all the non-run files in Tests (invert).
+
+$0 FrameworkRootDir --names
+    Show all the short names for run files.
+
+$0 FrameworkRootDir --objectfile shortname
+    Show the object file corresponding to the short name.
+
+$0 FrameworkRootDir --filename shortname
+    Show the cpp file corresponding to the short name of test.
+
+$0 FrameworkRootDir --basename shortname
+    Show the basename of the file corresponding to the short name.
+
+EOF
+}
+
+export _prefix=run
+
+# shorten test dir name
+export tdir=$1/Tests
+shift
+
+function all { 
+    # find all the files in the Test dir that start with $_prefix, end
+    # with ".cpp", and contain "int main".
+    find "$tdir" -name "${_prefix}*.cpp" | xargs grep -l 'int main'
+}
+function neg { 
+    # find all the files in the Test dir that end with .cpp but don't
+    # start with the $_prefix or don't contain "int main".
+    find "$tdir" -name '*.cpp' | \
+	perl -lane 'print if (! /\/?$ENV{_prefix}/) || `grep -L "int main" $_`;'
+}
+function names {
+    # Tronsform each result of "all" by stripping off leading
+    # directories, the leading $_prefix, and the ending ".cpp".
+    all | perl -lane 'for (@F) { 
+      s/\/?.+\///g; 
+      s/^$ENV{_prefix}//; 
+      s/\.cpp$//; print; }'
+}
+function findNameIndex {
+    # Given a name, return an index into all.
+    # Each name is piped to grep, one per line. 
+    # Grep tries to match the whole word (-w). 
+    # When grep finds a match, it first prints the line number (-n).
+    # Cut returns only the line number.
+    # See http://stackoverflow.com/questions/6958841/use-grep-to-report-back-only-line-numbers.
+    names | grep -wn "$1" | cut -f1 -d: 
+}
+function selectLineByName {
+    # given a short name, select the corresponding line from stdinset
+    i=`findNameIndex $1`
+    # The following tells sed to quit at line number $i, and disregard
+    # all lines upto the line where it quits. The result is that it
+    # prints just the line where it quits.
+    if [[ -n $i ]]; then sed "${i}q;d"
+    else usage; exit 1
+    fi
+}
+    
+if [[ -z $1 ]]; then all
+elif [[ "$1" == '-h' || "$1" == '--help' ]]; then 
+    usage; exit
+elif [[ "$1" == '-v' ]]; then 
+    neg
+elif [[ "$1" == '--names' ]]; then 
+    names
+elif [[ "$1" == '--objectfile' ]]; then
+    all | selectLineByName $2 | sed s/\.cpp/\.o/
+elif [[ "$1" == '--basename' ]]; then
+    all | selectLineByName $2 | xargs basename -s .cpp
+elif [[ "$1" == '--filename' ]]; then
+    all | selectLineByName $2 
+fi
+

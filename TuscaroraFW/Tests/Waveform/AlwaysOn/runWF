@@ -1,0 +1,163 @@
+/*
+ * WF_test.cpp
+ *
+ *  Created on: Oct 7, 2013
+ *      Author: Mukundan Sridharan
+ */
+
+#include "runWF.h"
+#include <string.h>
+#include <math.h>
+#include "../../../../test.h"
+
+//extern uint16_t MY_NODE_ID;
+//NodeId_t MY_NODE_ID;
+
+// extern bool DBG_WAVEFORM; // set in Lib/Misc/Debug.cpp
+// extern bool DBG_SIGNAL; // set in Lib/Misc/Debug.cpp
+// extern bool DBG_CORE; // set in Lib/Misc/Debug.cpp
+
+void PrintMsg(WF_Message_n64_t& msg) {
+  MyMsg* rcvPtr = (MyMsg*) msg.payload;
+  printf("Message %d from node %lu :: ", rcvPtr->seqNo, rcvPtr->senderID);
+  for (int i = 0; i< PayloadSize; i++){
+    //printf("%d ",rcvPtr->data[i]);
+  }
+  printf("%d\n", rcvPtr->seqNo);
+}
+
+
+void WF_Test::Timer_Handler(uint32_t event)
+{
+    if(MY_NODE_ID == 0){
+        
+    
+    Debug::PrintTimeMilli();
+    //if(seqNumber % 2 == 1) {
+      memset(sendMsg->payload, 10, sizeof(struct MyMsg));
+      MyMsg* sndPtr = (MyMsg*) sendMsg->payload;
+      sndPtr->senderID = MY_NODE_ID;
+      sndPtr->seqNo=seqNumber;
+      printf("Timer Handler: %d event: Sending Message %d\n",event, seqNumber);
+      
+      for (int i=0; i< PayloadSize ; i++){
+	if((seqNumber % 2) ==0 ){
+	  sndPtr->data[i] = PayloadSize-i; //I do not understand. Seqnumber cannot be even.
+	}else {
+	  sndPtr->data[i] = i;//if sequence number is odd,fill data to be integer.
+	}
+      }
+      
+      sendMsg->payloadSize = sizeof(struct MyMsg);
+      
+      //wf->BroadcastData((*sendMsg), (sendMsg->payloadSize), seqNumber);
+      uint64_t* destArray = new uint64_t[1];
+      *destArray = 1;
+      wf->SendData((*sendMsg), (sendMsg->payloadSize), destArray, 1, 2,true);
+      //TODO:v09
+      if(1){
+	printf("WF 1 WF_TEST:: LocalLink:: TimerHandler: Successfully broadcasted message %d of size %d\n", seqNumber, sendMsg->payloadSize); fflush(stdout);
+      }else {
+	printf("WF_TEST:: LocalLink:: TimerHandler: Some other error sending broadcast message %d \n", seqNumber); fflush(stdout);
+      }  
+    //}
+    seqNumber++;
+/*
+    //Make request... Why always first DataRequest fails?
+    printf("Cancel send..\n");
+    wf->CancelDataRequest (0,0,0,0);
+    printf("Replace packet..\n");
+    wf->ReplacePayloadRequest (1, 2,(uint8_t*)sendMsg->payload, sendMsg->payloadSize);
+    printf("Get Attributes\n");
+    wf->AttributesRequest (2);
+    printf("Get Control Status\n");
+    wf->ControlStatusRequest (3);
+    printf("Get DataStatus\n");
+    wf->DataStatusRequest (4,2);*/
+    }
+}
+
+void WF_Test::SendAck_Handler(WF_DataNotifierParam_n64_t& ack){
+	//Debug::PrintTime();
+	//printf("Inside Ack Handler: \n");
+	
+}
+
+void WF_Test::Recv_Handler(WF_Message_n64_t& msg){
+	Debug::PrintTimeMilli();
+	printf("WF_Test:: Receive: Got a msg from %lu of size %d on waveform %d\n",msg.GetSource(), msg.GetPayloadSize(),msg.GetWaveform());
+	PrintMsg(msg);
+}
+
+WF_Test::WF_Test(){
+	//handlers = new Handlers();
+// 	//DBG_WAVEFORM=true; // set in Lib/Misc/Debug.cpp
+
+	sendMsg= new WF_Message_n64_t(sizeof(struct MyMsg));
+	ackDelegate = new Delegate<void, WF_DataNotifierParam_n64_t>(this, &WF_Test::SendAck_Handler); //assign DataNotifier signal
+	recvDelegate = new Delegate<void, WF_Message_n64_t&>(this, &WF_Test::Recv_Handler); //assign recv signal
+	timerDelegate = new TimerDelegate(this, &WF_Test::Timer_Handler); 
+	
+	UniformValueRNGState rngState;
+
+	rngState.cmrgState.run = RngSeedManager::GetRun();
+	//rngState.cmrgState.run = 1;
+	rngState.cmrgState.stream = MY_NODE_ID*117;
+	rngState.min=0;
+	rngState.max=1;
+	rndDouble = new UniformRandomValue (rngState);
+
+	//MY_NODE_ID = atoi(getenv("NODEID"));
+	
+	//(WaveformId_t waveformID, WF_TypeE _type, char* deviceName
+	//wf = new WF_AlwaysOn_DCE("wlan0",*recvDelegate,*ackDelegate);
+	char localWflink_ [] = "eth1";
+	wf = new WF_AlwaysOn_DCE((WaveformId_t) (Waveform::ALWAYS_ON_LOCAL_WF), Waveform::ALWAYS_ON_LOCAL_WF, Waveform::WF_NO_EST, localWflink_);
+	//TODO:v09
+	//wf->RegisterDelegates(*recvDelegate,*ackDelegate );
+	//char longWflink_ [] = "eth2";
+	//wf2 = new WF_AlwaysOn_DCE((WaveformId_t)(Waveform::LONG_LINK_WF),Waveform::LONG_LINK_WF, Waveform::WF_NO_EST, longWflink_);
+	//TODO:v09
+	//wf2->RegisterDelegates(*recvDelegate,*ackDelegate);
+
+
+	//sendMsg.payload = new uint8_t[sizeof(struct MyMsg)];
+	//sendMsg.payloadSize = sizeof(struct MyMsg);
+	//TODO:v09
+	//wfAttrib = wf->GetWaveformAttributes();
+	//maxPayloadSize = wfAttrib.maxPayloadSize;
+	seqNumber=0;
+	//printf("Initialized test: Maximum payload that can be sent is %d \n", maxPayloadSize);
+}
+
+
+void WF_Test::Execute(RuntimeOpts *opts){
+
+
+    double r = rndDouble->GetNext();
+    uint32_t period = opts->linkEstimationPeriod;
+    uint32_t sendPeriod = period * 0.5 + r * period;
+    printf ("Test beacoing interval: %d, Starting actual  beaconing with period: %d \n",period, sendPeriod);
+    //timer = new Timer(sendPeriod, PERIODIC, *timerDelegate);
+    //if(MY_NODE_ID == 0){
+        timer = new Timer(sendPeriod, ONE_SHOT, *timerDelegate);
+        timer->Start();
+    //}
+}
+
+//int testWF(int argc, char* argv[]) {
+int main(int argc, char* argv[]) {
+//   DBG_WAVEFORM = true; //Enable debug statement  // set in Lib/Misc/Debug.cpp
+//   DBG_SIGNAL = true; // set in Lib/Misc/Debug.cpp
+ 
+  RuntimeOpts opts ( argc-1, argv+1 );
+  MY_NODE_ID = atoi(getenv("NODEID"));
+  NETWORK_SIZE = opts.nodes;
+
+	WF_Test ctest;
+	ctest.Execute(&opts);
+
+	while(1){ sleep(1);}
+	return 0;
+}
+

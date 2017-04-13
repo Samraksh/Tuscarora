@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# set -x # Debug script
+
+
+function Die()
+{
+    # Print exit message and exit shell
+    # also print the trailing file as a convenience
+    # example: Die "There was an error! Exiting." diagnosis_File
+    echo "$*"
+    [[ -f $2 ]] && echo "$2:" && cat "$2"
+    exit 1
+}
+
+echo "Executing $0"
+cd ${TUS}
+
+echo -n "Running Trial ... "
+tmpdir=$(mktemp -dtp dceln/ "LargeGossip.XXXXX")
+echo $tmpdir
+./runOrDebug.sh -p dce --force --isolate "${tmpdir##*/}" FW-GossipTest -- Size 85 RunTime 100 Density 5 WFConfig "${TUS}/Config/16wf-85nodes.cnf" &> ${tmpdir}/run 
+#|| Die "Couldn't run. See ${tmpdir}/run for output" ${tmpdir}/runi
+exitStatus=$?
+
+echo "Done"
+echo -n "Processing ... "
+echo "Done"
+#if [ ! "$numreceived" = 40 ]; then
+#    Die "FAILED"
+#fi
+popd > /dev/null
+
+if [ $exitStatus == 0 ]; then
+	echo "UNITPASS"
+else 
+	echo "UNITFAIL"
+fi 

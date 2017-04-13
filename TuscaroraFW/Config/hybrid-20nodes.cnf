@@ -1,0 +1,2 @@
+2 WF_AlwaysOn_DCE_Ack WifiNetDevice WF_NO_EST 4 3 0-9,15
+3 WF_AlwaysOn_DCE_Ack SlimNetDevice WF_NO_EST 2 4 5-19

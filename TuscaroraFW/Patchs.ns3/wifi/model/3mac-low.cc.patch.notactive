@@ -1,0 +1,24 @@
+--- mac-low.cc.orig	2015-05-12 23:58:42.302765492 -0400
++++ mac-low.cc	2015-05-12 23:59:00.774765644 -0400
+@@ -661,6 +661,9 @@
+    * we handle any packet present in the
+    * packet queue.
+    */
++  DbmHeader dbm_;
++  packet->RemoveHeader(dbm_);
++  double dbm = dbm_.GetData();
+   WifiMacHeader hdr;
+   packet->RemoveHeader (hdr);
+ 
+@@ -906,6 +909,11 @@
+ rxPacket:
+   WifiMacTrailer fcs;
+   packet->RemoveTrailer (fcs);
++  uint8_t newdata[packet->GetSize()];
++  packet->CopyData(newdata,packet->GetSize());
++  memcpy(&(newdata[58]), &rxSnr, sizeof rxSnr);
++  memcpy(&(newdata[58 + sizeof rxSnr]), &dbm, sizeof dbm);
++  packet = Create<Packet>(newdata, packet->GetSize());
+   m_rxCallback (packet, &hdr);
+   return;
+ }

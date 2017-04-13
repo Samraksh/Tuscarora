@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# set -x # Debug script
+
+function Die()
+{
+    # Print exit message and exit shell
+    # also print the trailing file as a convenience
+    # example: Die "There was an error! Exiting." diagnosis_File
+    echo "$*"
+    [[ -f $2 ]] && echo "$2:" && cat "$2"
+    exit 1
+}
+
+echo "Executing $0"
+cd ${TUS}
+echo "Running UniformRandom"
+tmpdir="$(mktemp -dtp dceln/ UniformRandom.XXXXX)"
+
+echo "Execution dir: $tmpdir "
+
+./runOrDebug.sh -p dce --isolate ${tmpdir##*/} --doNotCopy --force  UniformRandom &> ${tmpdir}/run || Die "Couldn't run. See ${tmpdir}/run for output" ${tmpdir}/run
+
+echo -n "Validating UniformRandom ... "
+
+output=`diff $tmpdir/files-0/UniformRandom_100000.txt $tmpdir/files-1/UniformRandom_100000.txt`
+
+if [ `echo "$output" | wc -l` -gt 1 ]; then
+    Die "node 0 and node 1 do not match schedules.\n$output"
+fi
+
+MeanCount049=`tail -n 5 $tmpdir/files-0/stdout | grep "0.49" | head -n 1 | wc -l`
+MeanCount050=`tail -n 5 $tmpdir/files-0/stdout | grep "0.50" | head -n 1 | wc -l`
+#MeanCount051=`tail -n 2 $tmpdir/files-0/stdout | head -n 1 | grep "0.51" | wc -l`
+
+echo "049count: $MeanCount049, 050count: $MeanCount050"
+
+[ $MeanCount049 -eq 1 ] || [ $MeanCount050 -eq 1 ] || Die "Mean is not 0.49 < x < 0.51"
+
+rm -r ${tmpdir}
+
+echo "PASS"

@@ -1,0 +1,94 @@
+diff -rupN a/unix-fd.cc b/unix-fd.cc
+--- a/unix-fd.cc	2014-02-28 12:50:50.620100336 -0500
++++ b/unix-fd.cc	2014-02-25 14:12:46.705517258 -0500
+@@ -23,6 +23,9 @@ UnixFd::UnixFd () : m_fdCount (0),
+                     m_fdFlags (0),
+                     m_statusFlags (0)
+ {
++  //Added by Mukundan, for Sigio, Samraksh
++  m_ownerProcess = Current ()->process;
++  
+ }
+ void
+ UnixFd::RemoveWaitQueue (WaitQueueEntry* old, bool andUnregister)
+diff -rupN a/unix-fd.h b/unix-fd.h
+--- a/unix-fd.h	2014-02-28 12:50:50.620100336 -0500
++++ b/unix-fd.h	2014-02-25 14:20:34.135640865 -0500
+@@ -10,6 +10,9 @@
+ 
+ namespace ns3 {
+ 
++//Mukundan
++struct Process;
++  
+ class Waiter;
+ class DceManager;
+ 
+@@ -68,9 +71,12 @@ protected:
+   void WakeWaiters (void *key);
+   int m_fdFlags;
+   int m_statusFlags;
++  Process *m_ownerProcess;	//Mukundan, Samraksh
+ 
+ private:
+   std::list <WaitQueueEntry*> m_waitQueueList;
++  //std::list <int> m_sigioPidList;	//Samraksh
++
+   // Number of FD referencing me
+   int m_fdCount;
+ };
+diff -rupN a/unix-socket-fd.cc b/unix-socket-fd.cc
+--- a/unix-socket-fd.cc     2014-02-28 13:12:34.187712271 -0500
++++ b/unix-socket-fd.cc     2014-02-28 12:35:51.615402355 -0500
+@@ -32,6 +32,7 @@
+ #include "ns3/uinteger.h"
+ #include "ns3/boolean.h"
+ #include "ns3/simulator.h"
++#include "ns3/node.h"
+ #include "ns3/netlink-socket-address.h"
+ #include "ns3/inet6-socket-address.h"
+ #include <fcntl.h>
+@@ -46,7 +47,6 @@
+ #include <poll.h>
+ #include <linux/netlink.h>
+ #include <sys/ioctl.h>
+-
+ NS_LOG_COMPONENT_DEFINE ("UnixSocketFd");
+ 
+ namespace ns3 {
+@@ -140,6 +140,10 @@ UnixSocketFd::RecvSocketData (Ptr<Socket
+ 
+   int pi = POLLIN;
+   WakeWaiters (&pi);
++  
++  //Added by Mukundan, from Samraksh to enable SIGIO based reading
++  UtilsSendSignal (m_ownerProcess, SIGIO);
++  
+ }
+ void
+ UnixSocketFd::SendSocketData (Ptr<Socket> socket, uint32_t available)
+@@ -322,6 +326,15 @@ UnixSocketFd::Setsockopt (int level, int
+                 return -1;
+               }
+           } break;
++        case SO_BINDTODEVICE:
++          {
++            //Ptr<Node> node = m_socket->GetNode();
++            //int devicetobind = 0;
++            char *devname = (char*)optval;
++            int devnum = devname[optlen - 2] - '0';
++            
++            m_socket->BindToNetDevice(m_socket->GetNode()->GetDevice(devnum));
++          } break;
+         default:
+           NS_LOG_WARN ("Unsupported setsockopt requested. level: SOL_SOCKET, optname: " << optname);
+           break;
+@@ -791,6 +804,8 @@ UnixSocketFd::Bind (const struct sockadd
+   NS_LOG_FUNCTION (this << current);
+   NS_ASSERT (current != 0);
+ 
++  
++
+   Address ad = PosixAddressToNs3Address (my_addr, addrlen);
+   int result = m_socket->Bind (ad);
+   if (result == -1)

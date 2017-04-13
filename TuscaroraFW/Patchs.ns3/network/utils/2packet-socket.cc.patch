@@ -1,0 +1,11 @@
+--- a/packet-socket.cc	2015-03-15 18:23:55.245418424 -0400
++++ b/packet-socket.cc	2015-03-15 18:24:23.365418655 -0400
+@@ -387,6 +387,8 @@
+   address.SetSingleDevice (device->GetIfIndex ());
+   address.SetProtocol (protocol);
+ 
++  if(to != m_boundnetdevice->GetAddress()) { return; }
++
+   if ((m_rxAvailable + packet->GetSize ()) <= m_rcvBufSize)
+     {
+       Ptr<Packet> copy = packet->Copy ();

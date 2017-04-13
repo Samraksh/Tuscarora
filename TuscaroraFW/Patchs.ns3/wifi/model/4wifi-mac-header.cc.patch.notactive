@@ -1,0 +1,68 @@
+--- a/wifi-mac-header.cc	2015-04-24 14:56:54.821717727 -0400
++++ b/wifi-mac-header.cc	2015-04-24 00:41:32.725295963 -0400
+@@ -952,6 +952,15 @@
+ }
+ 
+ TypeId
++DbmHeader::GetTypeId (void)
++{
++  static TypeId tid = TypeId ("ns3::DbmHeader")
++    .SetParent<Header> ()
++    .AddConstructor<DbmHeader> ()
++  ;
++  return tid;
++}
++TypeId
+ WifiMacHeader::GetTypeId (void)
+ {
+   static TypeId tid = TypeId ("ns3::WifiMacHeader")
+@@ -962,6 +971,12 @@
+ }
+ 
+ TypeId
++DbmHeader::GetInstanceTypeId (void) const
++{
++  return GetTypeId ();
++}
++
++TypeId
+ WifiMacHeader::GetInstanceTypeId (void) const
+ {
+   return GetTypeId ();
+@@ -1074,6 +1089,36 @@
+ {
+   return GetSize ();
+ }
++uint32_t
++DbmHeader::GetSerializedSize (void) const
++{
++  return 2 + sizeof m_data;
++}
++ void 
++ DbmHeader::Serialize (Buffer::Iterator start) const
++ {
++   // The 2 byte-constant
++   start.WriteU8 (0xdb);
++   start.WriteU8 (0xdb);
++   // The data.
++   start.Write((uint8_t*)(&m_data), sizeof m_data);
++ }
++   uint32_t 
++   DbmHeader::Deserialize (Buffer::Iterator start)
++   {
++     uint8_t tmp;
++     tmp = start.ReadU8 ();
++     NS_ASSERT (tmp == 0xdb);
++     tmp = start.ReadU8 ();
++     NS_ASSERT (tmp == 0xdb);
++     start.Read((uint8_t*)(&m_data), sizeof m_data);
++     return 2 + sizeof m_data; // the number of bytes consumed.
++   }
++   void 
++   DbmHeader::Print (std::ostream &os) const
++   {
++     os << "data=" << m_data;
++   }
+ void
+ WifiMacHeader::Serialize (Buffer::Iterator i) const
+ {

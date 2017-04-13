@@ -1,0 +1,116 @@
+/*
+ Author: Vinod Kulathumani
+ Date: May 12, 2014.
+ */
+
+#ifndef UniformRandomValue_h
+#define UniformRandomValue_h
+
+#include <stdio.h>
+#include <Base/FrameworkTypes.h>
+#include <PAL/PseudoRandomI.h>
+#include "rng-stream.h"
+#include "rng-seed-manager.h"
+
+using namespace Types;
+
+extern NodeId_t MY_NODE_ID;
+
+namespace PAL{
+
+	struct UniformValueRNGState {
+		CMRG_State cmrgState;
+		double min;
+		double max;
+		void SetcmrgState(CMRG_State _i){
+			cmrgState = _i;
+		}
+		CMRG_State GetcmrgState() const{
+			return cmrgState;
+		}
+		UniformValueRNGState(){};
+		UniformValueRNGState(CMRG_State i_s, uint64_t i_min = 0, uint64_t i_max = 1 ){
+			cmrgState = i_s;
+			min = i_min;
+			max = i_max;
+		}
+	};
+
+	class UniformRandomValue : public PseudoRandomI<UniformValueRNGState, double> {
+	private:
+		UniformValueRNGState state;
+		RngStream* m_generator;  // underlying generator being wrapped
+
+	public:
+
+		/* Default constructor; returns random double between 0 and 1*/
+		UniformRandomValue(){
+			
+			state.min=0;
+			state.max=1;
+			state.cmrgState.stream = RngSeedManager::GetNextStreamIndex ();
+     			state.cmrgState.run = RngSeedManager::GetRun();
+			
+      			m_generator = new RngStream (RngSeedManager::GetSeed(),
+				   state.cmrgState.stream,
+				   state.cmrgState.run);
+		}
+
+		/* returns random double between min and max; internally allocated RNG stream */
+		UniformRandomValue(double min, double max){
+			
+			state.min=min;
+			state.max=max;
+			state.cmrgState.stream = RngSeedManager::GetNextStreamIndex ();
+     			state.cmrgState.run = RngSeedManager::GetRun();
+			
+      			m_generator = new RngStream (RngSeedManager::GetSeed(),
+				   state.cmrgState.stream,
+				   state.cmrgState.run);
+		}
+
+
+		UniformRandomValue(const UniformValueRNGState _state){ //Here stream number is explicitly specified
+			state.min = _state.min;
+			state.max = _state.max;
+			state.cmrgState.run = _state.cmrgState.run;
+						
+			state.cmrgState.stream = _state.cmrgState.stream;
+			m_generator = new RngStream (RngSeedManager::GetSeed(),
+							state.cmrgState.stream,
+							state.cmrgState.run);
+			
+		}
+
+
+		void SetState(const UniformValueRNGState& _state){ //Here stream number is explicitly specified
+			state.min = _state.min;
+			state.max = _state.max;
+			state.cmrgState.run = _state.cmrgState.run;
+			delete(m_generator);
+			m_generator = new RngStream (RngSeedManager::GetSeed(),
+							state.cmrgState.stream,
+							state.cmrgState.run);			
+			//printf("UniformRandomValue::SetState: %lu, run: %lu , max: %f, min: %f \n", _state.cmrgState.stream, _state.cmrgState.run, state.max, state.min); fflush(stdout);
+			
+		}
+	
+		void SetRange(double c_min, double c_max){
+			state.min=c_min;
+			state.max=c_max;
+		}
+	
+
+		double GetNext(){
+			return (state.min + m_generator->RandU01 () * (state.max - state.min));
+		}
+
+		const UniformValueRNGState GetState(){
+			return state;  //return stream and run number for this random variable
+		}
+
+	};
+
+}	//End of namespace PAL
+
+#endif // UniformRandValue_h

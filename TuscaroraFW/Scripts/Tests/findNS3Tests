@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cd ${TUS}/ns-3-dce/myscripts/TuscTest
+ls *.cc | sed s/.cc//

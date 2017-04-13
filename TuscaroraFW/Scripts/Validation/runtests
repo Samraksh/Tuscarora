@@ -1,0 +1,4 @@
+. runtests_bryan.sh
+. runtests_vinod.sh
+
+. shunit/src/shunit2

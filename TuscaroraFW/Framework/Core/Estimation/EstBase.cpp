@@ -1,0 +1,270 @@
+////////////////////////////////////////////////////////////////////////////////// 
+// Tuscarora Software Suite. The Samraksh Company.  All rights reserved. 
+// Please see License.txt file in the software root directory for usage rights. 
+// Please see developer's manual for implementation notes. 
+////////////////////////////////////////////////////////////////////////////////// 
+
+#include "EstBase.h"
+#include "Framework/PWI/FrameworkBase.h"
+#include "Framework/External/Location.h"
+
+
+extern NodeId_t MY_NODE_ID;
+
+// extern bool DBG_CORE; // set in Lib/Misc/Debug.cpp
+// extern bool DBG_CORE_ESTIMATION; // set in Lib/Misc/Debug.cpp
+
+namespace Core {
+namespace Estimation {
+
+
+#define SCWF(x) static_cast <Waveform::WF_Message_n64_t *>(x)
+
+EstBase::EstBase(EstimatorCallback_I< uint64_t >& callback)
+{
+	callbackI = &callback;
+	id=(uint32_t) MY_NODE_ID;
+	leDel = new WF_LinkChangeDelegate_n64_t(this, &EstBase::NodeExpired);
+	estimationTable = new LinkEstimationTable_n64_t();
+}
+
+
+EstBase::EstBase(EstimatorCallback_I<uint64_t> &callback, WaveformId_t _wid)
+:EstBase(callback)
+{
+	wid = _wid;
+}
+
+EstBase::EstBase(EstimatorCallback_I<uint64_t> &callback, WaveformId_t _wid, NeighborTable *_coreNbrTable)
+:EstBase(callback,_wid)
+{
+	coreNbrTable=_coreNbrTable;
+}
+
+bool EstBase::RegisterDelegate (WF_LinkChangeDelegate_n64_t &del){
+
+	fworkNbrDel = &del;
+	Debug_Printf(DBG_CORE_ESTIMATION, "EstBase:: Framework registerd its delegate, stored ptr %p, my ptr is %p, period is %d \n", fworkNbrDel, this, period);
+	return true;
+}
+
+void EstBase::SetParam(uint32_t beaconPeriod, uint32_t inactivePeriod){
+	Debug_Printf(DBG_CORE_ESTIMATION, "EstBase::SetParam: Initializing link estimation of WF %d, with period %d\n", wid, beaconPeriod );
+	leSeqno=0;
+	dead = inactivePeriod;
+	period = beaconPeriod;
+
+	randInt = new UniformRandomInt(beaconPeriod - (beaconPeriod/2), beaconPeriod + (beaconPeriod/2));
+	
+	beaconSchedule = new RandomSchedule<UniformRandomInt, UniformRNGState,uint64_t,  uint64_t>(*randInt, 0);
+	beaconSchedule->SetNode(MY_NODE_ID);
+	/*UniformRNGState state;
+	RNStreamID cmrg_state;
+	cmrg_state.stream = MY_NODE_ID * MAX_WAVEFORMS + wid;
+	cmrg_state.run = 1;
+	state.SetRNStreamID(cmrg_state);
+	UniformIntDistParameter dist;
+	dist.min = beaconPeriod - beaconPeriod/2;
+	dist.max = beaconPeriod + beaconPeriod/2;
+	state.SetDistributionParameters(dist);
+*/
+	sendHb = new Delegate<void, EventInfoU64& >(this, &EstBase::SendHB);
+	
+	beaconSchedule->RegisterDelegate(*sendHb);
+	//This will only be valid if the parameters are set within 1 second of beginning the simulation. When doing a real world installation, 
+	//there will have to be a time synchronization that also defines the start time to use here.
+	beaconSchedule->Start(SysTime::GetEpochTimeInSec() * 1000000);
+	
+	state_ = new TimerDelegate(this, &EstBase::CleanUp);
+	cleaner = new Timer(beaconPeriod / 10, PERIODIC, *state_);
+	cleaner->Start();
+	
+	wfAttributes=callbackI->GetWaveformAttributes(wid);
+	Debug_Printf(DBG_CORE_ESTIMATION, "EstBase::SetParam: Initializing link estimation Done.\n");
+}
+
+void EstBase::NodeExpired(WF_LinkEstimationParam_n64_t _param) {
+	fworkNbrDel->operator ()(_param);
+	LogQualityEvent(_param.linkAddress, SysTime::GetEpochTimeInMicroSec());
+	Debug_Printf( DBG_CORE_ESTIMATION,"EstBase:: Removed dead neighbor %lu from table expires\n", _param.linkAddress);
+}
+
+void EstBase::CleanUp(uint32_t event) {
+	//Debug_Printf(DBG_CORE_ESTIMATION, "EstBase::CleanUp: \n"); fflush(stdout);
+	estimationTable->CheckExpiration(*leDel);
+}
+
+void EstBase::SendHB(EventInfoU64& event) {
+	TimeStamp_t cur = SysTime::GetEpochTimeInMicroSec();
+
+	double x = x();
+	double y = y();
+
+	//uint32_t *packetId = new uint32_t;
+	//*packetId = id;
+	FMessage_t* msg = new FMessage_t(sizeof(EstMsg));
+	EstMsg *estMsg = (EstMsg*) msg->GetPayload();
+	estMsg->packetSeqNo = leSeqno;
+	msg->SetSource(MY_NODE_ID);
+	msg->SetType(Types::ESTIMATION_MSG);
+
+
+	Debug_Printf(DBG_CORE_ESTIMATION, "EstBase::SendHB: Sending link estimation packet %d at %lu for %d on %d %f %f\n",leSeqno, cur, MY_NODE_ID, wid, x, y);
+	callbackI->SendEstimationMessage(wid, msg);
+	//sendDel->operator()(param);
+	//SC(fi)->SendToWF(wid, true, Types::LE_Type,0, 0, *msg);
+	//fi->BroadcastData(0, *msg, wid);
+	logger.LogEvent(PAL::LINK_SENT, leSeqno);
+	leSeqno++;
+	Debug_Printf(DBG_CORE_ESTIMATION,"EstBase::SendHB: Checking framework delegate value: %p, my ptr is %p, period is %d \n", fworkNbrDel, this, period);fflush(stdout);
+}
+
+double EstBase::GetQuality(LinkAddress_t _linkAddress) {
+	double c=1.5;
+	double max=5;
+	int w=30;
+	double maxValue=pow(c, max)*w + 1;
+	double value=1;
+	uint64_t curtime;
+	
+	uint totalUnits=1000000;
+	
+	
+	bool nbr= ((events[_linkAddress].Size() % 2) == 1);
+	//uint64_t cur = (uint64_t)curtime.tv_sec * 1000000 + curtime.tv_usec;
+	//uint64_t last = (uint64_t)(curtime.tv_sec - w) * 1000000 + curtime.tv_usec;
+	uint64_t cur = SysTime::GetEpochTimeInMicroSec();
+	uint64_t last = cur - w * 1000000;
+
+	for(int x = events[_linkAddress].Size(); x > 0; x--) {
+		curtime=events[_linkAddress][x - 1];
+		uint64_t pcur = curtime;
+		if(nbr) {
+			uint64_t dcur = cur - pcur;
+			if(pcur < last) {
+				dcur = last - pcur;
+			}
+			if(dcur > totalUnits*max) {
+				value+=pow(c, max) * ((1.0f*dcur/totalUnits)-max);
+				dcur = totalUnits*max;
+			}
+			int i = 0;
+			for(; dcur > totalUnits; i++) {
+				value += pow(c, i);
+				dcur-=totalUnits;
+			}
+
+			if(dcur != 0) {
+				value += pow(c, i) * (1.0f*dcur/totalUnits);
+			}
+		}
+		if(pcur < last) break;
+		cur = pcur;
+		nbr=!nbr;
+	}
+
+	if(value >maxValue) return 1;
+	
+	return value/maxValue;
+}
+
+//void EstBase::LogQualityEvent(LinkAddress_t linkAddress, timeval time) {
+void EstBase::LogQualityEvent(LinkAddress_t linkAddress, TimeStamp_t time) {
+	events[linkAddress].InsertBack(time);
+	Debug_Printf( DBG_CORE_ESTIMATION,"EstBase::LogQualityEvent: Size of event log for node %lu is %d\n", linkAddress, (int)events[linkAddress].Size());
+}
+
+
+
+LinkMetrics* EstBase::OnPacketReceive(Waveform::WF_MessageBase *rcvMsg){
+	TimeStamp_t cur = SysTime::GetEpochTimeInMicroSec();
+	return ProcessMessage(rcvMsg, cur + period * dead * 1.5);
+}
+
+
+LinkMetrics* EstBase::ProcessMessage(Waveform::WF_MessageBase *rcvMsg, TimeStamp_t _expiryTime){
+	LinkAddress_t nbrWfAddress = SCWF(rcvMsg)->GetSource();
+	NodeId_t nbrId = SCWF(rcvMsg)->GetSrcNodeID();
+	WaveformId_t wfid = SCWF(rcvMsg)->GetWaveform();
+	TimeStamp_t curtime = SysTime::GetEpochTimeInMicroSec();
+	//printf("EstBase::OnPacketReceive: Received a message with ptr %p, from node %lu, on waveform %d, with expiry time %lu \n", rcvMsg, nbrWfAddress, wfid, rcvMsg->GetExpiryTime().GetMicroseconds());fflush(stdout);
+	Debug_Printf(DBG_CORE_ESTIMATION,"EstBase::OnPacketReceive: Received a message with ptr %p, from node %lu, on waveform %d \n", rcvMsg, nbrWfAddress, wfid);fflush(stdout);
+
+	//printf("EstBase::OnPacketReceive: Received a message with ptr %p, from node %lu, on waveform %d of size: %d\n", rcvMsg, nbrWfAddress, wfid, rcvMsg->GetPayloadSize());fflush(stdout);
+
+	//if(coreNbrTable->GetNeighborLink(nbrWfAddress) == 0) {
+	if(!estimationTable->GetEstimationInfo(nbrWfAddress, wfid)) {
+		LogQualityEvent(nbrWfAddress, curtime);
+		EstimationInfo<LinkAddress_t>* info = estimationTable->AddNeighbor(nbrWfAddress, wfid);
+		Link* link = new Link();
+		link->linkId.nodeId = info->linkAddress;
+		link->linkId.waveformId= wfid;
+		link->metrics.quality=GetQuality(nbrWfAddress);
+		link->metrics.cost = wfAttributes.cost;
+		link->metrics.dataRate = wfAttributes.channelRate;
+		link->metrics.energy = wfAttributes.energy;
+		//link->metrics.
+
+		//LinkMetrics* rtnMetrics = new LinkMetrics(); //Get the current metrics of the sending node and update it.
+		info->link = link;
+		info->expiryTime = _expiryTime;
+		info->metric = &link->metrics;
+		//info->metric->quality = 1;
+
+		estimationTable->SetLink(nbrWfAddress, wfid, link);
+
+		//Notify pattern interface about new link
+		//NeighborUpdateParam _param;
+		WF_LinkEstimationParam_n64_t _param;
+		_param.nodeId = nbrId;
+		_param.changeType = NBR_NEW;
+		_param.linkAddress =nbrWfAddress;
+		_param.metrics = info->link->metrics;
+		_param.type = info->link->type;
+		_param.wfid = info->link->linkId.waveformId;
+		//_param.link = *link;
+		fworkNbrDel->operator ()(_param);
+	}
+	else {
+		EstimationInfo<uint64_t>* info = estimationTable->GetEstimationInfo(nbrWfAddress, wfid);
+		if(info->link->metrics.quality != GetQuality(nbrWfAddress)) {
+			info->link->metrics.quality = GetQuality(nbrWfAddress);
+			estimationTable->UpdateExpiration(nbrWfAddress, wfid,_expiryTime);
+			WF_LinkEstimationParam_n64_t _param;
+			_param.nodeId = nbrId;
+			_param.changeType = NBR_UPDATE;
+			_param.linkAddress =nbrWfAddress;
+			_param.metrics = info->link->metrics;
+			_param.type = info->link->type;
+			_param.wfid = info->link->linkId.waveformId;
+			fworkNbrDel->operator ()(_param);
+		}
+	}
+	LinkMetrics *ret= estimationTable->GetEstimationInfo(nbrWfAddress, wfid)->metric;
+	delete(rcvMsg);
+	return ret;
+}
+
+
+EstBase::~EstBase() {
+
+	delete(estimationTable);
+	delete(sendHb);
+	delete(state_);
+	delete(leDel);
+	beaconSchedule->Suspend();
+	delete(beaconSchedule);
+	cleaner->Suspend();
+	delete(cleaner);
+}
+
+//TODO:: Implement this. Framework will call this method with a list of potential neighbors, use it to figure out who
+//is currently your neighbor
+void EstBase::PotentialNeighborUpdate(PotentialNeighbor& pnbr, PNbrUpdateTypeE type)
+{
+
+}
+
+
+}//End of namespace
+}

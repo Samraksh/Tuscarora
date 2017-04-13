@@ -1,0 +1,11 @@
+diff -rupN a/libc-dce.cc b/libc-dce.cc
+--- a/libc-dce.cc	2015-11-25 13:11:36.692893654 -0500
++++ b/libc-dce.cc	2015-11-25 13:12:38.167979159 -0500
+@@ -95,6 +95,7 @@
+ #include <search.h>
+ #include <fnmatch.h>
+ #include <langinfo.h>
++#include <link.h>
+ #include <sys/vfs.h>
+ #include <termio.h>
+ #include <math.h>

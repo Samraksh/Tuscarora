@@ -1,0 +1,1 @@
+This is the network sever test from the nanopb distribution, with minor modification in build to get it working under tuscarora build environment. The nanoph distribution is checked in under TuscaroraFW/ExtLib/

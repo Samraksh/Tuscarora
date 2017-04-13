@@ -1,0 +1,16 @@
+--- a/dce.cc	2015-04-24 18:01:31.298951521 -0400
++++ b/dce.cc	2015-05-06 17:27:28.527490925 -0400
+@@ -563,9 +564,11 @@
+       return 0;
+     }
+   TaskManager *manager = TaskManager::Current ();
++  //Mukundan, Samraksh, Memleak fix in dce
++  EventImpl * ev =MakeEvent (&Itimer, current->process);
+   current->process->itimer = manager->ScheduleMain (
+-      UtilsTimevalToTime (value->it_value),
+-      MakeEvent (&Itimer, current->process));
++      UtilsTimevalToTime (value->it_value),ev);
++   ev->Unref(); //explicitly unref the event to avoid leak
+ 
+   return 0;
+ }

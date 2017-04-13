@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# set -x # Debug script
+
+cd $TUS
+
+dir=$TUS/dceln
+
+./runOrDebug.sh -p dce MultiWaveform -- Size 17 Density 100 WFConfig $TUS/Tests/NS3/16wf.cfg
+
+function Die()
+{
+    # Print exit message and exit shell
+    # also print the trailing file as a convenience
+    # example: Die "There was an error! Exiting." diagnosis_File
+    echo "$*"
+    [[ -f $2 ]] && echo "$2:" && cat "$2"
+    exit 1
+    echo uncomment exit
+}
+
+for i in $(seq 1 14); do
+    wf=`expr $i + 1`
+    if [ `grep "Core_Test::Received Message from 0" $dir/files-$i/stdout | grep "1262304005:500" | wc -l` -ne "1" ]; then
+      Die "Node $i received more or less than 1 message."
+    fi
+
+    #if [ `grep "Got message from 0 on wfid $wf" $dir/files-$i/stdout | grep "1262304005:50" | wc -l` -ne "1" ]; then
+    #  Die "Node $i did not receive a message on wf $wf"
+    #fi
+done
+
+echo "PASS"

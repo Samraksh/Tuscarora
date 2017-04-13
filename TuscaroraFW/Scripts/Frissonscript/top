@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# set -x # Debug script
+#this array stores set of possible destination
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# $1: node size
+# $2: communication range
+# $3: simulation time
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+array=()
+
+#get input from user
+while true; do
+    read -p "Please enter element of possible destination. Please enter any alphabet to finish entering: " dest
+    re='^[0-9]+$'
+    if ! [[ $dest =~ $re ]] ; then
+       echo "done" >&2 ;break
+    else
+       array+=($dest)
+    fi  
+done
+
+echo "Please check if the set looks ok or not"
+for i in "${array[@]}"
+do 
+    echo $i
+done
+
+read -p "Please press N if it does notlook ok: " yn
+if [ $yn = N -o $yn = n ] ; then
+            echo "Terminating" ; exit
+else
+    echo "Starting Frisson Emulation" 
+fi
+
+#Now find out how many fixed destination we have.
+array_size=${#array[*]}
+#adjust index
+array_size=`expr $array_size - 1`
+
+#find out the length of emulation.txt this should be simulation time * 10.
+simtime=$3
+simtime=`expr $simtime \* 10`
+simtime=`expr $simtime - 1`
+echo "RunTime is $simtime"
+./clear_emulation.sh
+#for each fixed_destination run script
+for i in `seq 0 $array_size`
+do 
+    echo ${array[$i]}
+
+    #just in case, clear all emulation.bin file in dce/source/ns-3-dce/files-*/
+
+    rm -rf ratio
+    rm -rf result
+    #First, break .bin files
+    #syntax node size, fixed_destination_id
+    ./break.out $1 ${array[$i]}
+    
+    mkdir result
+    #Generate emulation path count
+    #syntax node size, fixed_destination_id, 1, communication range, 1
+    ./emulation.out $1 ${array[$i]} 1 $2 1 
+
+    #Generate shortest path count
+    #syntax node size, fixed_destination_id, communication range, 1
+    ./bestpath.out $1 ${array[$i]}  $2 1
+
+    mkdir ratio
+    #find ratio between emulated path and 
+    #syntax node size, fixed_destination_id, communication range, 1
+    ./find_ratio.out $1 $simtime ${array[$i]} 1  
+
+done
+
+

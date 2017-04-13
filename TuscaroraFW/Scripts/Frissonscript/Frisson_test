@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# set -x # Debug script
+
+#current location is Tuscarora/Tests/Patterns/Frisson/
+#All the data is located /home/masahiro/100_x_x
+#copy it and rename
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# $1: node size
+# $2: communication range
+# $3: fixed destination
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+#just in case, clear all emulation.bin file in dce/source/ns-3-dce/files-*/
+./clear_emulation.sh
+rm -rf ratio
+rm -rf result
+rm -rf final_result
+#First, break .bin files
+#syntax node size, fixed_destination_id
+./break.out $1 $3
+
+
+mkdir result
+#Generate emulation path count
+#syntax node size, fixed_destination_id, 1, communication range, 1
+./emulation.out $1 $3  1 $2 1 
+
+#Generate shortest path count
+#syntax node size, fixed_destination_id, communication range, 1
+./bestpath.out $1 $3  $2 1
+
+mkdir ratio
+#find ratio between emulated path and 
+#syntax node size, fixed_destination_id, communication range, 1
+./find_ratio.out $1 299 $3 1  
+

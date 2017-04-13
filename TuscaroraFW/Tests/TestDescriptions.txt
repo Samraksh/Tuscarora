@@ -1,0 +1,53 @@
+Level 1 modules:
+-------------------
+
+validateTimer:  ensures that the timers are correct and fire the correct number of times on each node.
+
+SigIO:
+
+
+
+Level 2 Modules:
+
+6) validateMobility just tests that the mobility models are configured correctly to run.
+
+7) validateNS3 tests that the positive and negative acks are received, tests that a node can have it's position set by the environment variable. These are tested for simple wireless radio and wifi. Wifi also has the tests for rssi and snr being reported, and that rss and snr are sane.
+validateMultiWaveform tests that messages for the multi waveforms are transmitted/received on the correct radio.
+validateUniformRandom/validatePseudoRandMRG tests that the numbers match the underlying ns3 randomness range
+
+8) validateMemMap tests that the memmaps are created correctly during the simulation, and that they are readable after the fact.
+
+9) validateScheduleTest ensures that the schedules match between 2 nodes for the same set of seeds.
+
+Level 3 Modules:
+-------------------
+
+1) ValidateFIBroadcast
+   This script tests broadcast reception rate. First it runs runFI with specified 
+   arguments.(If not specified, it uses default). Then it passes the validation if the ratio of 
+   total broadcast received to total broadcast sent is grather than 70%
+
+2) ValidateFIUnicast
+   This script tests unicast reception rate. First it runs runFI with specified 
+   arguments.(If not specified, it uses default). Then it passes the validation if the ratio of
+   unicast recieved to the total unicast enqueued in the framework is grather than 70%
+
+3)api.sh  This one is in Scripts/Masahiro. This was not converted to a validate script under tests/FI (we do not exactly remember why). But this script is used to validate the add/cancel/replace apis. (Replace: Both unicast/broadcast, Cancel:Both unicast/broadcast, Add only unicast)
+  
+  replace api: This api checks the packet content is replaced and compares number of replaced packet sent and number of replaced packet recieved. If their ratio is 90% it passes the validation.
+
+  cancel api:  This api compares number of  (total packet sent from pattern - total_packet canceled by pattern - total_wf_nack -total dest nack) and total packet recieved. Test fails if total_recv packet is grater. 
+  
+  add api: This api checks if for each additional destination, either dest ack or dest nack is recieved.
+
+4)validateLinkEstimationAndDiscovery tests several parts of LE and Disco. For each of the discovery and LE combinations (SU1 NoDiscovery, SU1 GlobalOracle, SA 2HopOracle, SACA LongLink) it tests that LE gives sane output based on following metrics:
+•	potential neighbors are added after the network is initialized, 
+•	the average known links are close to, but less than, the ground truth, 
+•	ground truth is close to the declared density, 
+•	false positive and false negative errors are under a specified threshold, 
+•	link duration is not abnormally low (oscillating links), 
+•	new/failed links are discovered in an acceptable timeframe. 
+
+5) validateLongLink tests that the long link base station receives all locations of the nodes in the network.
+
+

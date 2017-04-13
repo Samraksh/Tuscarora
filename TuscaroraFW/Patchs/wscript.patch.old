@@ -1,0 +1,20 @@
+--- a/wscript	2015-06-04 20:09:51.607454447 -0400
++++ b/wscript	2015-06-05 10:37:49.736885229 -0400
+@@ -88,7 +88,7 @@
+ 
+     ns3waf.check_modules(conf, ['core', 'network', 'internet'], mandatory = True)
+     ns3waf.check_modules(conf, ['point-to-point', 'tap-bridge', 'netanim'], mandatory = False)
+-    ns3waf.check_modules(conf, ['wifi', 'point-to-point', 'csma', 'mobility'], mandatory = False)
++    ns3waf.check_modules(conf, ['antenna', 'wifi', 'slim', 'point-to-point', 'csma', 'mobility'], mandatory = False)
+     ns3waf.check_modules(conf, ['point-to-point-layout'], mandatory = False)
+     ns3waf.check_modules(conf, ['mpi', 'lte'], mandatory = False)
+     ns3waf.check_modules(conf, ['visualizer'], mandatory = False)
+@@ -695,7 +695,7 @@
+ 
+     module_source = module_source + kernel_source
+     module_headers = module_headers + kernel_headers
+-    uselib = ns3waf.modules_uselib(bld, ['core', 'network', 'internet', 'netlink'])
++    uselib = ns3waf.modules_uselib(bld, ['core', 'wifi', 'antenna', 'slim', 'network', 'internet', 'netlink', 'mobility'])
+     module = ns3waf.create_module(bld, name='dce',
+                                   source=module_source,
+                                   headers=module_headers,

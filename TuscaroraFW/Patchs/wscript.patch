@@ -1,0 +1,29 @@
+--- a/wscript	2016-04-29 17:03:07.190783063 -0400
++++ b/wscript	2016-05-02 11:20:48.230361276 -0400
+@@ -90,7 +90,7 @@
+ 
+     ns3waf.check_modules(conf, ['core', 'network', 'internet'], mandatory = True)
+     ns3waf.check_modules(conf, ['point-to-point', 'tap-bridge', 'netanim'], mandatory = False)
+-    ns3waf.check_modules(conf, ['wifi', 'point-to-point', 'csma', 'mobility'], mandatory = False)
++    ns3waf.check_modules(conf, ['antenna', 'wifi', 'slim', 'point-to-point', 'csma', 'mobility'], mandatory = False)
+     ns3waf.check_modules(conf, ['point-to-point-layout'], mandatory = False)
+     ns3waf.check_modules(conf, ['mpi', 'lte'], mandatory = False)
+     ns3waf.check_modules(conf, ['visualizer'], mandatory = False)
+@@ -289,7 +289,7 @@
+              ['test-dirent', []],
+              ['test-socket', []],
+              ['test-bug-multi-select', []],
+-             ['test-tsearch', []],
++             #['test-tsearch', []],
+              ['test-signal', []],
+              ['test-clock-gettime', []],
+              ['test-gcc-builtin-apply', []],
+@@ -723,7 +723,7 @@
+ 
+     module_source = module_source + kernel_source
+     module_headers = module_headers + kernel_headers
+-    uselib = ns3waf.modules_uselib(bld, ['core', 'network', 'internet', 'netlink'])
++    uselib = ns3waf.modules_uselib(bld, ['core', 'wifi', 'slim', 'antenna', 'network', 'internet', 'netlink', 'mobility'])
+     module = ns3waf.create_module(bld, name='dce',
+                                   source=module_source,
+                                   headers=module_headers,

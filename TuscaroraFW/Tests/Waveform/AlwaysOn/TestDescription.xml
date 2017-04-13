@@ -1,0 +1,14 @@
+<Platform> DCE </Platform>
+
+<ShortDescription>
+	Tests a Always On Waveform Object for correct behavior
+	
+</ShortDescription>
+
+
+<FullDescription>
+	- Test does the role of framework, although very tough to recreate entire behavior.
+	- Creates either a WF_AlwaysOn_Ack or WF_AlwaysOn_NoAck object based on the parameter passed
+	- Nodes send broadcast and count packets on the receiving side
+	
+</FullDescription>

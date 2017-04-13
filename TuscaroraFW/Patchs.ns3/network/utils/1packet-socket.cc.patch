@@ -1,0 +1,11 @@
+--- a/packet-socket.cc	2014-11-07 13:21:07.387435125 -0500
++++ b/packet-socket.cc	2014-11-07 13:21:16.163434940 -0500
+@@ -335,6 +335,6 @@
+   Address dest = ad.GetPhysicalAddress ();
+   if (ad.IsSingleDevice ())
+     {
+-      Ptr<NetDevice> device = m_node->GetDevice (ad.GetSingleDevice ());
++      Ptr<NetDevice> device = m_node->GetDevice (ad.GetSingleDevice () + 1);
+       if (!device->Send (p, dest, ad.GetProtocol ()))
+         {
+           NS_LOG_LOGIC ("error: NetDevice::Send error");

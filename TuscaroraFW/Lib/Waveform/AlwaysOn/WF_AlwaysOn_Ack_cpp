@@ -1,0 +1,1434 @@
+/*
+ * WF_AlwaysOn_Ack.cpp
+ *
+ *  Created on: Nov 6, 2013
+ *      Author: sridhara
+ *  New Waveform API implemented by Masahiro nakagawa and Vinod Kulathumani, West Virginia University
+ *      Date: May 1 2015
+ */
+#define ACKSUPPORT 1
+
+#ifndef Debug_Flag
+#define Debug_Flag 1
+#endif
+
+#include "WF_AlwaysOn_Ack.h"
+#include "Lib/Misc/Debug.h"
+#include "Src/Framework/Core/Naming/StaticNaming.h"
+
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <endian.h>
+
+#include <netpacket/packet.h>
+#include <netinet/ether.h>
+#include <signal.h>
+#include <fcntl.h>
+
+#include <netdb.h>
+#include <ifaddrs.h>
+#include <sstream>  //generate string key for map
+
+extern NodeId_t MY_NODE_ID;
+extern uint16_t NETWORK_SIZE;
+extern uint32_t runTime;
+
+extern IO_Signals ioSignals;
+
+namespace Waveform {
+  
+//extern int32_t sockfd[MAX_WAVEFORMS];
+extern Waveform_64b_I* myWFPtr[MAX_WAVEFORMS];
+
+//uint16_t debug_count =0;
+
+void WF_AlwaysOn_Ack::DataNotification(WF_DataStatusParam_n64_t ackParam)
+{
+}
+
+WF_AlwaysOn_Ack::WF_AlwaysOn_Ack (WaveformId_t _wfID, WF_TypeE _type, WF_EstimatorTypeE _estType, char* _deviceName)
+{
+}
+
+ 
+  
+void WF_AlwaysOn_Ack::PrintMAC(uint8_t *mac){
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+	for (int i=5; i>=0; i--){
+#elif __BYTE_ORDER == __BIG_ENDIAN
+	for (int i=0; i<6; i++){
+#endif
+		printf("%X:", mac[i]);
+		//Debug_Printf(DBG_WAVEFORM, "%X:", mac[i]);
+	}
+	//Debug_Printf(DBG_WAVEFORM,"\n");
+	Debug_Printf(DBG_WAVEFORM, "\n");
+}
+
+  void WF_AlwaysOn_Ack::SendData (WF_Message_n64_t& msg, uint16_t size, uint64_t *destArray, uint16_t noOfDestinations, MessageId_t msgId, bool ack){
+    receivedMsgNo++;
+    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::SendData::Size of Ack_Type is  %d\n",Ack_Type.Size());
+	//Just in case, check destArray is not null and noOfDestinations is not 0
+    if((destArray == NULL) || (noOfDestinations ==0)){
+        Debug_Printf(DBG_WAVEFORM, "AlwaysOn_Ack::destArray or noOfDestination is invalid.\n");
+        return; //exit(2);
+    }
+    Debug_Printf(DBG_WAVEFORM, "AlwaysOn_Ack::Starting Send DataMessage Id for this message is %d\n",msg.GetFrameworkMessageID());
+  
+    //Check current status of AlwaysOn and prepare first acknowledgement
+    WF_MessageStatusE Status = Success;
+    //if(WF_Buffer_FULL == false){
+   /* Debug_Printf(DBG_WAVEFORM,"debug_count is %d\n",debug_count);
+    if((debug_count%3) == 2){
+      readyToRecv = false;
+      debug_count++;
+    }*/
+    if(readyToRecv == true){ //buffer not full
+    	//debug_count++;
+        Debug_Printf(DBG_WAVEFORM, "AlwaysOn_Ack::current_messageId.Size is %d\n", current_messageId.Size());
+        MessageId_t fwMsgId = msg.GetFrameworkMessageID();
+        current_messageId.InsertBack(fwMsgId);
+        Debug_Printf(DBG_WAVEFORM, "AlwaysOn_Ack::Adding messageId %d to current_messageId. Now size is %d\n",msgId, current_messageId.Size());
+        //WF_Buffer_FULL = true;
+        readyToRecv = false; // AlwaysOn_Ack has no buffering
+        Debug_Printf(DBG_WAVEFORM,"AlwaysOn_Ack::Setting readyToRecv to false\n");
+        //AlwaysOn is not handling message right now.
+        Status = Success;  
+
+        //Need to add (messageId, address of message) pair to map
+        //MessageIdToPointer[msgId]=&msg;  Masahiro
+        for(int i=0; i < noOfDestinations; i++){
+            Ack_Type[destArray[i]] = WDN_WF_RECV;   //Keep track acknowledgment
+            MessageStatus[destArray[i]] = Success;
+        }
+        msgStat = Success;
+        Debug_Printf(DBG_WAVEFORM, "AlwaysOn_Ack::Ack_Type.Size is %d\n",Ack_Type.Size());
+
+        //validation
+#if Debug_Flag
+    	u_summary.postive_wf_recv += noOfDestinations;
+#endif
+    }else{
+        //AlwaysOn cannot accept message to be send now. return Nack
+        //Debug_Printf(DBG_WAVEFORM, "WF_Buffer_FULL is true!!\n");
+        Debug_Printf(DBG_WAVEFORM, "AlwaysOn_Ack::readyToRecv is false!!\n");
+        for(uint16_t index =0 ; index < noOfDestinations; index++){
+        	Ack_Type[destArray[index]] = WDN_WF_RECV;   //Keep track acknowledgment
+        	MessageStatus[destArray[index]] = Buffer_Full;
+        }
+        //debug_count++;
+        Status = Buffer_Full; //Cannot accept message right now
+        //put flag back
+        //readyToRecv = true;
+        //this->debugTimer->Start();
+#if Debug_Flag
+        u_summary.negative_wf_recv += noOfDestinations;
+#endif
+    } 
+  
+    //Prepare and signal DataNotification to Framework 
+    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: Prepare WDN_WF_RECV\n");
+    //signal WDN_WF_RECV to framework. First create object to be passed
+    //WF_DataStatusParam<uint64_t>* param = new WF_DataStatusParam<uint64_t>(msg.GetFrameworkMessageID(), msg.GetWaveform(),Status);
+    WF_DataStatusParam<uint64_t> param(msg.GetFrameworkMessageID(), this->WID);
+    //update pram strcuture with what WF knows
+    this->CopyToDN(param);
+    param.readyToReceive = readyToRecv;
+    dataNotifierEvent->Invoke(param);
+    
+    //If Status is Buffer_Full, exit
+    if(Status ==Buffer_Full){
+        Debug_Printf(DBG_WAVEFORM, "AlwaysOn_Ack::Exiting from SendData method. Cannot accept incoming message now\n");
+        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_NoAck::Exiting from SendData method. Cannot accept incoming message now\n");
+        //I think I need to clear Ack_Type here.
+        BSTMapT<NodeId_t, WF_DataStatusTypeE>::Iterator it;
+        it = Ack_Type.Begin();
+        while(it != Ack_Type.End()){ //for loop does not work as we have not it++?
+          //Debug_Printf(DBG_WAVEFORM,"Show what it is pointing %d \n", it->First());
+          Ack_Type.Erase(it);
+        }
+        //clear MessageStatus map;
+        BSTMapT<NodeId_t, WF_MessageStatusE>::Iterator it_msg = MessageStatus.Begin();
+        while(it_msg != MessageStatus.End()){
+          MessageStatus.Erase(it_msg);
+        }
+        return;
+    }    
+
+    //Check Packet Size
+     if(size > MAX_AO_PAYLOAD_SIZE){
+         last_sent_msg_ptr = &msg;
+         lastMsgStatus = PktTooBig;
+         Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_NoAck:: Payload size %d is too big, only payloads upto %d can be sent\n",size, MAX_AO_PAYLOAD_SIZE);
+         //return PktTooBig;
+         //MessageStatus[msgId] = PktTooBig;
+         for(uint16_t i =0 ; i < noOfDestinations; i++){
+        	 MessageStatus[destArray[i]] = PktTooBig;
+         }
+         msgStat = PktTooBig;
+     }
+
+    //store message ID for later use
+    current_Id = msgId;
+    //store message Size for later use
+    message_size = size;
+        
+    Debug_Printf( DBG_WAVEFORM,"WF_AlwaysOnAck::Send:: Received a multi-desitnation message id %d from framework %d dests (ptr %p) \n", msgId, noOfDestinations, destArray);
+    msg.SetNumberOfDest(noOfDestinations);
+    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOnAck::Size of destList should be 0.  Size: %d\n",destList.Size());
+    if(destList.Size() != 0){
+        abort();
+    }
+    //Store all destination into List.
+    for(int i=0; i < noOfDestinations; i++){
+        destList.InsertBack(destArray[i]);
+        Debug_Printf(DBG_WAVEFORM, "destList[%d] = %ld\n",i,destList[i]);
+    }
+    memcpy(last_sent_msg_dest_ptr,destArray, noOfDestinations*sizeof(uint64_t)); //Copy of destArray
+    Debug_Printf( DBG_WAVEFORM,"WF_AlwaysOnAck::Sending unicast to dest %lu \n", destArray[0]);
+    //Send data out  from chanel.
+    Unicast(destArray[0],msg,size);
+    u_summary.total_unicast_sent += 1;
+    Debug_Printf( DBG_WAVEFORM,"WF_AlwaysOnAck::Preparing WDN_WF_SENT for dest %ld \n", destList[0]);
+    // update waveform datastructure
+    Ack_Type[last_sent_msg_dest_ptr[0]] = WDN_WF_SENT;
+
+    this->CopyToDN(param);
+
+    //prepare WDN_WF_SENT
+    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOnAck::Ack_Type.Size is %d\n",Ack_Type.Size());
+    //param.status = Success;
+    //uint64_t* dest = new uint64_t[1];
+    //*dest = destArray[0];
+    //uint64_t dest[1];
+    //dest[0] = destArray[0];
+    //param.statusType[destArray[0]] = WDN_WF_SENT;
+    //param.dest = dest;
+    //param.noOfDest = 1;
+    //param->WF_Buffer_FULL = WF_Buffer_FULL;
+    param.readyToReceive = readyToRecv;
+    dataNotifierEvent->Invoke(param);
+#if Debug_Flag
+    u_summary.positive_wf_sent += 1;
+#endif
+    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOnAck::Exiting from SendData method\n");
+  }
+
+  WF_MessageStatusE WF_AlwaysOn_Ack::Unicast(uint64_t dest, WF_Message_n64_t& msg, uint16_t size){
+    //dest = (uint64_t)(dest << 8);
+    //MAC addresses in DCE are one above the the node id. node 0 has the mac 00:00:00:00:00:01
+    
+    uint64_t deviceId= MapNodeIdToWaveformAddress(dest);
+    Debug_Printf( DBG_WAVEFORM,"WF_AlwaysOn_Ack:: WFID: %d:: Unicast:: Sending a unicast message to node: %lu, at address: \n", wfAttrib.wfId , dest); PrintMAC((uint8_t*)&deviceId); fflush(stdout);
+    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOnAck::Checking noOfDest %d\n",msg.GetNumberOfDest());
+    //Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Unicast:: Sending a unicast message to node: %lu, at address: ", dest); PrintMAC((uint8_t*)&deviceId); fflush(stdout);
+    return SendToDevice((uint8_t *)&deviceId, msg, size);
+  }
+
+  void WF_AlwaysOn_Ack::BroadcastData(WF_Message_n64_t& msg, uint16_t size, uint32_t msgId){
+    //Check current status of AlwaysOn and prepare first acknowledgement
+    receivedMsgNo++;
+    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOnAck:: Broadcast: Local count number %d, Packet msg id %d,  Size of Ack_Type is  %d \n",receivedMsgNo, msgId, Ack_Type.Size());fflush(stdout);
+    //Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOnAck:: Sending Broadcast.\n");
+    WF_MessageStatusE Status = Success;
+    /*
+    //If type is pattern related, increment debug_count1.
+    Debug_Printf(DBG_WAVEFORM,"show current debug_count %d, message type is %d\n",debug_count,msg.GetType());
+    if((msg.GetType() != Types::LE_Type) && (msg.GetType() != Types::Discovery_Type)){
+       	debug_count++;
+       	Debug_Printf(DBG_WAVEFORM, "Incrementing debug_count1 to %d\n",debug_count);
+    }
+           //set readyToRecv
+    if((debug_count %3) == 2){
+      	readyToRecv = false;
+      	debug_count++;
+    }*/
+
+    if(readyToRecv == true){ //buffer is not full 
+        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOnAck::current_messageId.Size is %d\n", current_messageId.Size());
+        //MessageId_t fwMsgId = msg.GetFrameworkMessageID();
+				MessageId_t fwMsgId = msgId;
+        current_messageId.InsertBack(fwMsgId);
+        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOnAck::Adding fwMsgId %d to current_messageId. Now size is %d\n",msgId, current_messageId.Size());
+        //Debug_Printf(DBG_WAVEFORM, "Setting WF_Buffer_FULL to true\n");
+        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOnAck::Setting readyToRecv to false\n");
+        //WF_Buffer_FULL = true;
+        readyToRecv = false;
+        //AlwaysOn is not handling message right now.
+        Status = Success;  
+        msgStat = Success;
+        MessageStatus[0] = Success;
+        Ack_Type[0] = WDN_WF_RECV;   //Keep track acknowledgement. For broadcast use 0 as key value
+        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOnAck::Ack_Type.Size is %d\n",Ack_Type.Size());
+        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOnAck::Address of Ack_Type is %p\n",&Ack_Type);
+        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOnAck::Size of destList is %d\n",destList.Size());
+        uint64_t value = 0;
+        destList.InsertBack(value);
+        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOnAck::Size of destList after adding destination is %d\n",destList.Size());
+        //validation
+#if Debug_Flag
+        b_summary.postive_wf_recv_b += 1;
+#endif
+    }else{
+        //AlwaysOn cannot accept message to be send now. return Nack
+        //Debug_Printf(DBG_WAVEFORM, "WF_Buffer_FULL is true!!\n");
+        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::readyToRecv is false!!\n");
+        MessageStatus[0] = Buffer_Full;
+        Ack_Type[0] = WDN_WF_RECV;
+        Status = Buffer_Full; //Cannot accept message right now
+        //readyToRecv = true;
+        //this->debugTimer->Start();
+#if Debug_Flag
+        b_summary.negative_wf_recv_b += 1;
+#endif
+    } 
+  
+    //Prepare and signal DataNotification to Framework 
+    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: Prepare WDN_WF_RECV\n");
+    //signal WDN_WF_RECV to framework. First create object to be passed
+
+    //WF_DataStatusParam<uint64_t>* param = new WF_DataStatusParam<uint64_t>(msg.GetFrameworkMessageID(), msg.GetWaveform(),Status);
+    WF_DataStatusParam<uint64_t> param(msgId, this->WID);
+
+    //update notification param
+    param.statusType[0] = WDN_WF_RECV;
+    param.statusValue[0] = MessageStatus[0];
+    //param.ackType = WDN_WF_RECV;
+    //param.dest = NULL; //Return pointer to destination array
+    param.noOfDest = 0; //Return noOfDestination
+    param.destArray[0] = 0;
+    //param->WF_Buffer_FULL = WF_Buffer_FULL;
+    param.readyToReceive = readyToRecv;
+    dataNotifierEvent->Invoke(param);
+    
+    //If Status is Buffer_Full, exit
+    if(Status ==Buffer_Full){
+        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: Exiting from Broadcast method. Cannot accept incoming message now\n");
+        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_NoAck::Exiting from SendData method. Cannot accept incoming message now\n");
+        //I think I need to clear Ack_Type here.
+        BSTMapT<NodeId_t, WF_DataStatusTypeE>::Iterator it;
+        it = Ack_Type.Begin();
+        while(it != Ack_Type.End()){ //for loop does not work as we have not it++?
+          //Debug_Printf(DBG_WAVEFORM,"Show what it is pointing %d \n", it->First());
+          Ack_Type.Erase(it);
+        }
+        //clear MessageStatus map;
+        BSTMapT<NodeId_t, WF_MessageStatusE>::Iterator it_msg = MessageStatus.Begin();
+        while(it_msg != MessageStatus.End()){
+          MessageStatus.Erase(it_msg);
+        }
+        return;
+    }    
+
+    //Add entry in messageId <=> destination
+    MessageIdTodest[msgId] = 0;
+    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: Message Id for this message is %d\n",msgId);
+
+    uint8_t bcastAddress[6]={0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+    //if(msg.GetType() != Types::LE_Type && msg.GetType() != Types::Discovery_Type){
+    //  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: Broadcast:: sending patttern broadcast from node: %ld, of size: %d \n", msg.GetSource(), size);
+    //}
+
+    //DataNotification is signaled... Now prepare to send data 
+    /***************************************************************
+     Packet size has not been verified!!!!!
+    ****************************************************************/
+    Debug_Printf( DBG_WAVEFORM,"WF_AlwaysOn_Ack:: WFID: %d:: Broadcast:: sending broadcast from node: %ld, of size: %d \n", wfAttrib.wfId, msg.GetSource(), size);
+    msg.SetNumberOfDest(0);
+    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::BroadcastData::Ack_Type.Size is %d\n",Ack_Type.Size());
+    last_packet = true; //I need to pay attention to this. There is a possibility that this value is overwritten by another SendRequest?
+    IsBroadcast = true;
+    SendToDevice(bcastAddress, msg, size);
+#if Debug_Flag
+    if(msg.GetType() == Types::Pattern_Type){
+    	b_summary.total_data_broadcast_sent += 1;
+    }else{
+    	b_summary.total_le_broadcast_sent += 1;
+    }
+#endif
+  }
+
+
+  WF_MessageStatusE  WF_AlwaysOn_Ack::SendToDevice(uint8_t* destMAC, WF_Message_n64_t&  msg, uint16_t size){
+    Debug_Printf(DBG_WAVEFORM, "AlwaysOn__Ack::SendToDevice sending for wfid %d\n",WID);
+    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Ack_Type.Size is %d\n",Ack_Type.Size());
+   //do the message reference exchange first
+    WF_MessageStatusE rtn;
+    WF_Message_n64_t* in_msg_ptr = &msg;
+    in_msg_ptr->SetSource(MY_NODE_ID);
+    uint16_t tx_len = 0;
+    
+    memset(sendbuf, 0, BUF_SIZE);
+#ifdef PLATFORM_LINUX
+		struct ether_header *eh = (struct ether_header *) sendbuf;
+		// Ethernet header
+		eh->ether_shost[0] = ((uint8_t *)&if_mac.ifr_hwaddr.sa_data)[0];
+		eh->ether_shost[1] = ((uint8_t *)&if_mac.ifr_hwaddr.sa_data)[1];
+		eh->ether_shost[2] = ((uint8_t *)&if_mac.ifr_hwaddr.sa_data)[2];
+		eh->ether_shost[3] = ((uint8_t *)&if_mac.ifr_hwaddr.sa_data)[3];
+		eh->ether_shost[4] = ((uint8_t *)&if_mac.ifr_hwaddr.sa_data)[4];
+		eh->ether_shost[5] = ((uint8_t *)&if_mac.ifr_hwaddr.sa_data)[5];
+		eh->ether_dhost[0] = destMAC[5];
+		eh->ether_dhost[1] = destMAC[4];
+		eh->ether_dhost[2] = destMAC[3];
+		eh->ether_dhost[3] = destMAC[2];
+		eh->ether_dhost[4] = destMAC[1];
+		eh->ether_dhost[5] = destMAC[0];
+
+		eh->ether_type = protocol;
+		tx_len += sizeof(struct ether_header);	
+#endif
+		
+		struct sockaddr_ll dest;
+    dest.sll_family = AF_PACKET;
+    dest.sll_halen = 6;
+    dest.sll_ifindex = wfAttrib.ifindex;
+		dest.sll_protocol = protocol;
+	
+//#if __BYTE_ORDER == __LITTLE_ENDIAN
+    dest.sll_addr[0] = destMAC[5];
+    dest.sll_addr[1] = destMAC[4];
+    dest.sll_addr[2] = destMAC[3];
+    dest.sll_addr[3] = destMAC[2];
+    dest.sll_addr[4] = destMAC[1];
+    dest.sll_addr[5] = destMAC[0];
+/*#elif __BYTE_ORDER == __BIG_ENDIAN
+
+    dest.sll_addr[0] = destMAC[0];
+    dest.sll_addr[1] = destMAC[1];
+    dest.sll_addr[2] = destMAC[2];
+    dest.sll_addr[3] = destMAC[3];
+    dest.sll_addr[4] = destMAC[4];
+    dest.sll_addr[5] = destMAC[5];
+  //#endif
+  */
+	  //Give space for wifi header
+    tx_len+=WF_HDR_SIZE;
+    //Give space for dbm and snr
+    tx_len+=sizeof(double)*2;
+
+    uint16_t adapterHdrSize = in_msg_ptr->GetHeaderSize();
+    //Copy the Message header
+    memcpy(&sendbuf[tx_len], (void*)in_msg_ptr, adapterHdrSize);
+    tx_len+=adapterHdrSize;
+
+    //Debugging
+    //Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Showing the size of destination in SendToDevice: %d\n",msg.GetNumberOfDest());
+		printf("WF_AlwaysOn_Ack::Showing the size of destination in SendToDevice: %d\n",msg.GetNumberOfDest());
+		if(destMAC[0]==0xFF && destMAC[1]==0xFF && destMAC[2]==0xFF && destMAC[3]==0xFF && destMAC[4]==0xFF && destMAC[5]==0xFF){
+			printf("===========WF_AlwaysOn_Ack:: Sending a broadcast message============ \n");
+		}
+
+    //Fill up data here
+    memcpy(&sendbuf[tx_len], in_msg_ptr->payload, size);
+    tx_len+=size;
+  
+     Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::SendToDevice::Ack_Type.Size is %d\n",Ack_Type.Size());
+    /// Send packet
+    if (sendto(sockID, sendbuf, tx_len, 0, (struct sockaddr*)&dest, sizeof(struct sockaddr_ll)) < 0){
+      Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack:: Sending failed:: \n");
+      lastMsgStatus = Buffer_Full;
+      rtn=Buffer_Full;
+    }else {
+      Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack:: Sent a msg of size %d successfully \n", tx_len); fflush(stdout);
+      rtn=Success;
+    }
+    
+    ///TODO: Start a timer for few microseconds to send the SendAck to the layer above. This is needed for the Async semantics
+    ///we cannot call the ackDelege directly here(that will make it a synchronous send), before the send returns.
+    ///We need to scheduler the timer and when it fires, call the ackdelegate.
+    
+    /*I want to do it like below*/
+    if(IsTimerSet){
+        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::IsTimerSet is true\n");
+    }else{
+        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::IsTimerSet is false\n");
+    }
+    if(last_packet){
+        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::last_packet is true\n");
+    }else{
+        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::last_packet is false\n");
+    }
+    //first check if ackTimer is running or not.
+    if(!IsTimerSet){// && last_packet){
+        //Currently no ackTimer is running so start timer
+        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Starting timer to wait for acknowledgement from NS-3\n");
+        if(ackTimer == NULL){
+            Debug_Printf(DBG_WAVEFORM, "ackTimer is NULL. Illegal!");
+        }
+        ackTimer->Start();
+        IsTimerSet = true;
+        //Debug_Printf(DBG_WAVEFORM, "Starting acknowledgement timer \n");
+    }else{
+        if(IsTimerSet){
+            Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::IsTimerSet is true\n");
+        }else{ 
+            Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::IsTimerSet is false\n");
+        }
+    }    
+    //store the pointer to send the acknowledgement. RAL created the packet and it will decides what to do with it.
+    last_sent_msg_ptr = in_msg_ptr;
+    lastMsgStatus = rtn;
+  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::SendToDevice:: Leaving Ack_Type.Size is %d\n",Ack_Type.Size());
+    return rtn;
+  }
+	
+  void WF_AlwaysOn_Ack::RecvTimer_Handler(uint32_t flag)
+  {
+    //ReceiveMsg(-1, NULL, NULL);
+		OnSocketSignal(sockID);
+  }
+
+  
+  void WF_AlwaysOn_Ack::AckTimer_Handler(uint32_t flag)
+  {
+    //MessageTypeE type = last_sent_msg_ptr->GetType();
+    if(1){// I do not care Message Type
+	Debug_Printf(DBG_WAVEFORM, "\nWF_AlwaysOn_Ack acKnowledgement timer has expired\n");          
+	//Delete first element in the list.
+	uint64_t current_node = destList.GetItem(0);
+	destList.Delete(0); 
+
+	Debug_Printf( DBG_WAVEFORM,"WF_AlwaysOn_Ack::Deleting destList[0] \n");
+	for(unsigned int i =0; i < destList.Size(); i++){
+	    Debug_Printf( DBG_WAVEFORM,"destList[%d] is %ld \n",i, destList[i]);  
+	}
+
+	/*
+	if(last_sent_msg_ptr->GetNumberOfDest() >0 ){
+	//This is unicast. Store NACK for this node in the future but for now it is set to ack
+	    Ack_Type[last_sent_msg_dest_ptr[destination_index++]] = WDN_DST_RECV;
+	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Setting ackType of destination %ld to WDN_DST_RECV\n",last_sent_msg_dest_ptr[destination_index-1]);
+
+	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Ack_Type.Size is %d\n",Ack_Type.Size());
+	}*/
+	//update information of current node
+	if(last_sent_msg_ptr->GetNumberOfDest() == 0){
+		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: This is broadcast.\n");
+		Ack_Type[current_node] = WDN_WF_SENT;
+#if Debug_Flag
+    b_summary.negative_wf_sent_b += 1;
+#endif
+	}else{
+		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: This is unicast. Current_Node %ld\n",current_node);
+		Ack_Type[current_node] = WDN_DST_RECV;
+#if Debug_Flag
+    u_summary.negative_dst_recv += 1;
+#endif
+	}
+
+	//timer expired means nack
+	MessageStatus[current_node] = AckNotRecv;
+
+
+	//If this is the acknowledgment for last packet send, signal acknowledgments for each destination
+	if(destList.Size() ==0){
+	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Sending acknowledgment to Framework.\n");
+	    //Create DataStatusParam object to be send via Event   
+	    //WF_DataStatusParam<uint64_t>* ackParam = new WF_DataStatusParam<uint64_t>(last_sent_msg_ptr->GetFrameworkMessageID(),
+		//last_sent_msg_ptr->GetWaveform(),lastMsgStatus);
+		WF_DataStatusParam<uint64_t> ackParam(last_sent_msg_ptr->GetFrameworkMessageID(),last_sent_msg_ptr->GetWaveform());
+
+		//int numberOfAck = 0;
+		//numberOfAck = Ack_Type.Size();
+	    //ackParam.status = AckNotRecv;
+		//set dest pointer and noOfdest
+	    if(last_sent_msg_ptr->GetNumberOfDest() == 0){ //Broadcast
+	    	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::This is Broadcast\n");
+	    	//ackParam.destArray = NULL;
+	    	ackParam.noOfDest = 0;
+	    	ackParam.statusType[0] = WDN_WF_SENT;
+	    	ackParam.statusValue[0] = AckNotRecv;
+	    	ackParam.destArray[0] = 0;
+	    }else{ // this is unicast
+		  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::This is Multiple Unicast\n");
+		  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Ack_Type.Size is %d\n",Ack_Type.Size());
+		  this->CopyToDN(ackParam);
+		  /*
+		  uint32_t index = 0;
+		  BSTMapT<NodeId_t, WF_DataStatusTypeE>::Iterator it;
+		  for(it = Ack_Type.Begin(); it != Ack_Type.End() ; ++it){
+		  //copy information from wf datastructure to ackParam
+			  Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack::Ack_Type[%d] is WDN_DST_RECV\n",it->First(), it->Second());
+			  ackParam.destArray[index] = it->First(); // copy node id
+			  ackParam.statusType[index] = it->Second();
+			  ackParam.statusValue[index] = lastMsgStatus;
+			  index++;
+		  }*/
+		}
+
+	    //Clear Ack_Type map;
+	    BSTMapT<NodeId_t, WF_DataStatusTypeE>::Iterator it;
+	    it = Ack_Type.Begin();
+	    while(it != Ack_Type.End()){ //for loop does not work as we have not it++?
+		//Debug_Printf(DBG_WAVEFORM,"Show what it is pointing %d \n", it->First());
+		Ack_Type.Erase(it);
+	    }   
+	    //clear MessageStatus map;
+	    BSTMapT<NodeId_t, WF_MessageStatusE>::Iterator it_msg = MessageStatus.Begin();
+	    while(it_msg != MessageStatus.End()){
+	    	MessageStatus.Erase(it_msg);
+	    }
+	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Erased all keys? Size of MessageStatus is %d\n",MessageStatus.Size());
+	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Erased all keys? Size of Ack_Type is %d\n",Ack_Type.Size());
+	    //size of destList is already zero.
+	    //Debug_Printf(DBG_WAVEFORM, "Ack handler, clear WF_Buffer_FULL\n");
+	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Ack handler, set readyToRecv\n");
+	    //WF_Buffer_FULL = false; //Now I can accept new message
+	    readyToRecv = true; // Now waveform can accept message
+	    IsTimerSet = false;
+	    if(current_messageId.Size() != 1){
+		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::current_messageId size is not 1. This means I am handling two messages\n");
+	    }
+	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Deleting messageId %d from current_messageId\n",current_messageId.GetItem(0));
+	    current_messageId.Delete(0); //remove messageId I am sending WDN_DST_RECV
+	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Invoking datanotification from Ack timer handler\n");
+	    //ackParam->WF_Buffer_FULL = WF_Buffer_FULL;
+
+	    ackParam.readyToReceive = readyToRecv;
+	    dataNotifierEvent->Invoke(ackParam); //Event only for SendData.
+	}else{
+	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Pending destination exits\n");
+	    //There are pending destinations. call Unicast to send them
+	    Unicast((uint64_t)destList[0],*last_sent_msg_ptr,message_size);
+	    //update acknowledgement status
+	    NodeId_t dest = (NodeId_t) destList[0];
+	    Ack_Type[dest] = WDN_WF_SENT;
+		MessageStatus[dest] = Success;
+
+	    //start very short timer for acknowledgment from MAC.
+	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Starting timer to wait for acknowledgment from NS-3\n");
+	    if(ackTimer == NULL){
+		Debug_Printf(DBG_WAVEFORM, "ackTimer is NULL. Illegal!");
+	    } 
+	    ackTimer->Start();
+
+	    //signal WDN_WF_RECV to framework. For now, it is always success
+	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Sending WDN_WF_SENT for destination %ld\n",destList[0]);
+	    //WF_DataStatusParam_n64_t ackParam(*last_sent_msg_ptr, lastMsgStatus);
+	    //WF_DataStatusParam<uint64_t>* ackParam = new WF_DataStatusParam<uint64_t>(last_sent_msg_ptr->GetFrameworkMessageID(),
+		    //							    last_sent_msg_ptr->GetWaveform(), lastMsgStatus);
+	    WF_DataStatusParam<uint64_t> ackParam(last_sent_msg_ptr->GetFrameworkMessageID(), last_sent_msg_ptr->GetWaveform());
+        this->CopyToDN(ackParam);
+
+	    /******************
+	    uint16_t index =0;
+        uint16_t numberOfAck = Ack_Type.Size();
+	    //ackParam->wfMsg = last_sent_msg_ptr;
+        BSTMapT<NodeId_t, WF_DataStatusTypeE>::Iterator it;
+	    for(it = Ack_Type.Begin(); it != Ack_Type.End() ; ++it){
+	    //copy information from wf datastructure to ackParam
+	    	Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack::Ack_Type[%d] is WDN_DST_RECV\n",it->First(), it->Second());
+	    	ackParam.destArray[index] = it->First(); // coepy node id
+	    	ackParam.statusType[index] = it->Second();
+	    	ackParam.statusValue[index] = lastMsgStatus;
+	    	index++;
+	    }
+	    ackParam.noOfDest = numberOfAck;
+         ********************************/
+        //ackParam.status = lastMsgStatus;
+	    //ackParam.ackType = WDN_WF_SENT;
+	    //uint64_t dest[1];
+	    //uint64_t* dest = new uint64_t[1];
+	    //*dest = destList[0];
+	    //dest[0] = destList[0];
+	    //ackParam.dest = dest;
+	    //ackParam.noOfDest = 1;
+	    //ackParam->WF_Buffer_FULL = WF_Buffer_FULL;
+	    ackParam.readyToReceive = readyToRecv;
+	    dataNotifierEvent->Invoke(ackParam);
+	}
+    }
+  }
+   
+  //This translates the nodeId to MAC address used. This is based on how ns3 configures macs address for devices
+  uint64_t WF_AlwaysOn_Ack::MapNodeIdToWaveformAddress(uint64_t nodeId)
+  {
+    uint64_t deviceId;
+    //first increament by one, Mac ids begin from 1, while nodeIds begin at 0.
+    nodeId++;
+    
+    //your actual mac depends on the number of interfaces configured across all radios. so increament by network size and number of radios
+    deviceId = (wfAttrib.wfId * NETWORK_SIZE) + nodeId;
+    return deviceId;
+  }
+
+  void WF_AlwaysOn_Ack::CancelDataRequest(RequestId_t _rId, MessageId_t _msgId, uint64_t* _destArray, uint16_t _noOfDestinations)
+  {
+
+    WF_CancelDataResponse_Param rv;
+	rv.msgId = _msgId;
+	rv.status = false;
+	rv.noOfDest = _noOfDestinations;
+	for(uint16_t index =0; index < _noOfDestinations; index++){
+		rv.cancel_status[index] = false;
+		rv.destArray[index] = _destArray[index];
+	}
+	WF_ControlResponseParam param_rv;
+	param_rv.id = _rId;
+	param_rv.wfid = WID;
+	cont = CancelPacketResponse;
+	param_rv.type = cont;
+	//param.status = false; // Too late to cancel send
+	param_rv.data = &rv;//0; // Not 100%  sure what needs to be set. I do not think this filed is used fo CancelDataRequest?
+	param_rv.dataSize = sizeof(WF_CancelDataResponse_Param); //Set to zero to be safe.
+	Debug_Printf(DBG_WAVEFORM, "Invoking Event\n"); fflush(stdout);
+	controlResponseEvent->Invoke(param_rv);
+	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Just Invoked event\n"); fflush(stdout);
+
+    return;
+    //signal framework
+    Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack::Got CancelDataRequest for msgId %d\n",_msgId);
+    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Show destination to be canceled\n");
+    for(uint16_t index =0; index < _noOfDestinations; index++){
+    	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysON_Ack::CancelDataRequest: destination[%d] is %ld\n",index,_destArray[index]);
+    }
+    WF_CancelDataResponse_Param data;
+    data.msgId = _msgId;
+    uint16_t node_count = 0;
+
+    //check result
+    for(uint16_t index =0; index < _noOfDestinations; index++){
+        //check if given destination existed.
+    	BSTMapT<NodeId_t, WF_DataStatusTypeE>::Iterator it_ack = Ack_Type.Find(_destArray[index]);
+    	if(it_ack == Ack_Type.End() && !IsBroadcast){
+    		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: Node %ld does not exist. Cannot cancel\n",_destArray[index]);
+    		continue;
+    	}
+
+    	switch(Ack_Type[_destArray[index]]){
+    	  case WDN_WF_RECV:{
+    	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: destination[%ld] is successfully canceled\n",_destArray[index]);
+    		destList.DeleteItem(_destArray[index]);
+    	    Ack_Type.Erase(_destArray[index]);
+            data.cancel_status[node_count] = true;
+            data.destArray[node_count] = _destArray[index];
+            node_count++;
+            Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_AcK:: show destList\n");
+            for(uint16_t k =0; k < destList.Size(); k++){
+            	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: destList[%d] is %ld\n",k, destList.GetItem(k));
+            }
+            break;
+    	  }
+          case WDN_WF_SENT:{
+    		Debug_Printf(DBG_WAVEFORM,"FrameworkBase:: node %ld has WDN_WF_SENT. Too late to cancel\n",_destArray[index]);
+    		break;
+          }
+    	  case WDN_DST_RECV:{
+    		Debug_Printf(DBG_WAVEFORM,"FrameworkBase:: node %ld has WDN_DST_RECV. Too late to cancel\n",_destArray[index]);
+    		break;
+    	  }
+    	  default:
+      		Debug_Printf(DBG_WAVEFORM,"FrameworkBase:: node %ld has Unknown status\n",_destArray[index]);
+      		break;
+    	}
+    }
+    if(IsBroadcast == true){
+      data.noOfDest = 0;
+    }else{
+      data.noOfDest = node_count;
+    }
+    data.status = true;
+
+    WF_ControlResponseParam param;
+    param.id = _rId;
+    param.wfid = WID;
+    cont = CancelPacketResponse;
+    param.type = cont;
+    //param.status = false; // Too late to cancel send
+    param.data = &data;//0; // Not 100%  sure what needs to be set. I do not think this filed is used fo CancelDataRequest?
+    param.dataSize = sizeof(WF_CancelDataResponse_Param); //Set to zero to be safe.
+    Debug_Printf(DBG_WAVEFORM, "Invoking Event\n"); fflush(stdout);
+    controlResponseEvent->Invoke(param);
+    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Just Invoked event\n"); fflush(stdout);
+  }
+  
+  void WF_AlwaysOn_Ack::ReplacePayloadRequest(RequestId_t rId, MessageId_t msgId, uint8_t* payload, uint16_t payloadSize)
+  {
+     Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack::ReplacePayloadRequest. %d.. What does it mean to replace payload when wf has only one?\n", rId);
+     WF_ReplacePayloadResponse_Param rv;
+     rv.msgId = msgId;
+     rv.status = false;
+     if(IsBroadcast == true){
+    	 rv.noOfDest = 0;
+     }else{
+    	 rv.noOfDest = Ack_Type.Size();
+     }
+     BSTMapT<NodeId_t, WF_DataStatusTypeE>::Iterator it_ack_test = Ack_Type.Begin();
+     uint16_t index =0;
+     while(it_ack_test != Ack_Type.End()){
+    	rv.replace_status[index] = false;
+     	rv.destArray[index] = it_ack_test->First();
+     	index++;
+     	++it_ack_test;
+     }
+     WF_ControlResponseParam param_rv;
+     param_rv.id = rId;
+     param_rv.wfid = WID;
+     cont = ReplacePayloadResponse;
+     param_rv.type = cont;
+     //param.status = false; // Too late to cancel send
+     param_rv.data = &rv;//0; // Not 100%  sure what needs to be set. I do not think this filed is used fo CancelDataRequest?
+     param_rv.dataSize = sizeof(WF_ReplacePayloadResponse_Param); //Set to zero to be safe.
+     Debug_Printf(DBG_WAVEFORM, "Invoking Event\n"); fflush(stdout);
+     controlResponseEvent->Invoke(param_rv);
+     Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Just Invoked event\n"); fflush(stdout);
+     return;
+
+     //signal framework 
+     WF_ControlResponseParam param;
+     //WF_ControlResponseParam* param = new WF_ControlResponseParam;
+     //Debug_Printf(DBG_WAVEFORM, "1\n"); fflush(stdout);
+     param.id = rId;
+     param.wfid = this->WID;
+     cont = ReplacePayloadResponse;
+     param.type = cont;
+
+     //Debug_Printf(DBG_WAVEFORM, "2\n"); fflush(stdout);
+     //param.status = false; // I do not no what this field supporce to mean for ControlStatusRequest
+     //for data, put
+     WF_ReplacePayloadResponse_Param data;
+     data.status = true;
+     uint16_t node_count = 0;
+     BSTMapT<NodeId_t, WF_DataStatusTypeE> ::Iterator it_ack = Ack_Type.Begin();
+     while(it_ack != Ack_Type.End()){
+       switch(it_ack->Second()){
+       case WDN_WF_RECV:
+         data.destArray[node_count] = it_ack->First();
+         data.replace_status[node_count] = true;
+         Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Node %d is at index %d, replace Payload successfully\n",data.destArray[node_count], node_count);
+         node_count++;
+         break;
+       case WDN_WF_SENT: Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Node %d could not replace Payload successfully\n", it_ack->First());
+         break;
+       case WDN_DST_RECV: Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Node %d could not replace Payload successfully\n",it_ack->First());
+         break;
+       }
+       ++it_ack;
+     }
+
+     if(IsBroadcast == true){
+       Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: This message is broadcast.\n")
+	   data.noOfDest = 0;
+     }else{
+       data.noOfDest = node_count;
+     }
+     data.msgId = msgId;
+     param.data = &data;     //put list of node on waveform// Not 100%  sure what needs to be set
+     param.dataSize = sizeof(WF_ReplacePayloadResponse_Param); //number of node on waveform //Set to zero to be safe.
+     Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack::Node_Count is %d, address of data is %p\n",node_count, param.data);
+     Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Invoking Event\n"); fflush(stdout);
+     controlResponseEvent->Invoke(param);
+     Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Just Invoked Event\n"); fflush(stdout);
+  }
+  
+  void WF_AlwaysOn_Ack::DataStatusRequest(RequestId_t rId, MessageId_t mId)
+  {    
+     WF_ControlResponseParam Resparam;
+     //WF_ControlResponseParam* param = new WF_ControlResponseParam;
+     Resparam.id = rId;
+     Resparam.type = DataStatusResponse;
+     //check if this request is for the message AlwaysOn is currently handling
+     if(mId != current_Id){
+         //Request is send for different message
+         //param.status = false; //Not valid response
+         Resparam.data = NULL;
+         Resparam.dataSize = 0;
+         controlResponseEvent->Invoke(Resparam);
+     }else{
+         //Now send ack. Q1: the below dynamic allocation make cause memory leak
+         //Q2 is it ok to send signal in a row?
+         WF_DataStatusParam<uint64_t> param(last_sent_msg_ptr->GetFrameworkMessageID(), last_sent_msg_ptr->GetWaveform());
+         //WF_DataStatusParam<uint64_t> data_WF_SENT(last_sent_msg_ptr->GetFrameworkMessageID(), last_sent_msg_ptr->GetWaveform(), msgStat);
+         //WF_DataStatusParam<uint64_t> data_DST_RECV(last_sent_msg_ptr->GetFrameworkMessageID(),last_sent_msg_ptr->GetWaveform(), msgStat);
+
+
+         //go through Ack_Type Map and copy current status into ackParam
+         this->CopyToDN(param);
+         param.readyToReceive = this->readyToRecv;
+         /*
+         uint16_t index = 0;
+         BSTMapT<NodeId_t, WF_DataStatusTypeE>::Iterator it_ack = Ack_Type.Begin();
+         while(it_ack != Ack_Type.End()){
+        	 param.destArray[index] = it_ack->First();
+        	 param.statusType[index] = it_ack->Second();
+        	 param.statusValue[index] = msgStat;
+        	 index++;
+        	 it_ack++;
+          }
+          */
+         //invoke
+         Resparam.data = &param;
+         Resparam.dataSize = sizeof(WF_DataStatusParam<uint64_t>);
+         controlResponseEvent->Invoke(Resparam);
+     }   
+
+  }
+  /************************************************************************
+  * AttributesRequest
+  *
+  *
+  **************************************************************************/
+  void WF_AlwaysOn_Ack::AttributesRequest(RequestId_t rId)
+  {
+		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: Waveform %u, AttributesRequest received. Preparing reply, ack timer %u, attribute size %lu\n", WID, wfAttrib.ackTimerPeriod, sizeof(wfAttrib) );
+		//signal framework 
+		WF_ControlResponseParam param;
+		//WF_ControlResponseParam* param = new WF_ControlResponseParam;
+		param.id = rId;
+		param.wfid = WID;
+		cont = AttributeResponse;
+		param.type = cont;
+		//param.status = true;
+		param.data = &wfAttrib; // Return address of attribute member
+		param.dataSize = sizeof(WF_Attributes); //Set to zero to be safe.
+		controlResponseEvent->Invoke(param);
+  }
+
+  /************************************************************************
+  * ControlStatusRequest
+  *
+  *
+  **************************************************************************/
+  void WF_AlwaysOn_Ack::ControlStatusRequest(RequestId_t rId)
+  {
+     //signal framework 
+     WF_ControlResponseParam param;
+     //WF_ControlResponseParam* param = new WF_ControlResponseParam;
+     param.id = rId;
+     cont = ControlStatusResponse;
+     param.type = cont;
+     //param.status = true;
+     param.wfid = WID;
+     param.data = &stat; //Can I guarantee this value does not change till receiver reads this value?
+     param.dataSize = sizeof(WF_ControlP_StatusE); //Set to zero to be safe.
+     controlResponseEvent->Invoke(param);
+  }
+
+void WF_AlwaysOn_Ack::SetAck_Type(NodeId_t node, WF_DataStatusTypeE type){
+  //Just in case, check if node exists in Ack_Type or not.
+  BSTMapT<NodeId_t, WF_DataStatusTypeE>:: Iterator it = Ack_Type.Find(node);
+  if(it != Ack_Type.End()){
+      Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack::Node found in Ack_Type, updating status\n");
+      Ack_Type[node] = type;
+  }else{
+      Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Node id not found in Ack_Type....\n");
+  }
+}
+
+void WF_AlwaysOn_Ack::ProcessNS3Acks(WaveformId_t wfid, uint16_t msglen, unsigned char* rcvbuf){
+  //validation
+//	 Debug_Printf(DBG_WAVEFORM, "WF_AlawaysOn_ACK:: positive wf sent is %d\n", b_summary.positive_wf_sent_b);
+  u_summary.total_ack++;
+	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: ProcessNS3Acks: Message Received is acknowledgement from Ns-3\n");
+  if(current_messageId.Size() == 0){
+      Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::No message waiting for NS-3 reply now. Timer hander is already returned reply\n");
+      
+  }
+  uint8_t nbr[6];
+  uint64_t tnbr;
+  uint8_t* pnbr = (uint8_t*)&tnbr;
+  /*  XXX this doesn't work the way somebody thought it would.
+  if(DBG_WAVEFORM) {
+    for(int x = 0; x < msglen; x++){
+      printf( "%d:%x ", x,rcvbuf[x]);
+    }
+    printf("\n");
+  }
+  */
+  //Debug_Printf(DBG_WAVEFORM, "\n");
+  memcpy(nbr, rcvbuf, 6);
+  pnbr[0] = nbr[5];
+  pnbr[1] = nbr[4];
+  pnbr[2] = nbr[3];
+  pnbr[3] = nbr[2];
+  pnbr[4] = nbr[1];
+  pnbr[5] = nbr[0];
+  tnbr -= NETWORK_SIZE * wfid + 1;
+  //nodeId is the node that sent the ack
+  //wfid is the waveform id
+  //status is true for success and false for failure
+  NodeId_t nodeId = tnbr;
+  bool status = rcvbuf[msglen - 1] == 0x9;
+  if(status){
+	  Debug_Printf(DBG_WAVEFORM, "WF_AlawysOn_ACK:: Positive acknowledgement is sent from node %d\n",nodeId);
+  }else{
+	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Acke:: Negative acknowledgement is sent from node %d\n",nodeId);
+  }
+      
+  //Maybe this responce was too late and entry may have been deleted and responce might have sent to FI.
+  //Check if messageId still exists in map.
+  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Size of current_messageId is %d\n",current_messageId.Size());
+  bool already_removed = true;
+  if((last_sent_msg_ptr != NULL) && (current_messageId.Size() != 0)){ 
+      Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::MessageId is %d\n", last_sent_msg_ptr->GetFrameworkMessageID());
+      for(unsigned int index = 0;  index < current_messageId.Size(); index++){
+	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::current_messageId[%d] is %d\n", index, current_messageId[index]);
+	  if(last_sent_msg_ptr->GetFrameworkMessageID() == current_messageId[index]){
+	      already_removed = false;
+	  }
+      }
+      if(already_removed == true){
+	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::messageId is not found. Maybe getting acknowledgment for message which had been deleted\n");
+	  //return;
+      }
+  }else{
+      Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::There is no message waiting for NS-3 acknowledgment right now\n");
+      
+  }
+  if(status && !already_removed){
+      Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_ACK::The ack was received for %d\n", nodeId);
+      if(IsBroadcast == true){
+	  //Maybe I can use last_sent_msg_ptr->GetNumberOfDestination()) ?
+	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::this is response to broadcast, use node Id 0\n");
+	  Ack_Type[0] = WDN_WF_SENT;
+	  MessageStatus[0] = Success;
+	  b_summary.positive_wf_sent_b++;
+	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Setting ackType of destination 0 to WDN_WF_SENT\n");
+      }else{
+	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::This is response to unicast\n");
+	  Ack_Type[nodeId] = WDN_DST_RECV; //myWFPtr[wfid]->SetAck_Type(nodeId, WDN_DST_RECV);
+      MessageStatus[nodeId] = Success;
+	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Setting ackType of destination %d to WDN_DST_RECV\n",nodeId);
+
+	  Debug_Printf(DBG_WAVEFORM, "WF_AlawaysOn_ACK:: positive wf sent is %d\n", b_summary.positive_wf_sent_b);
+#if Debug_Flag
+	  //validation
+	  u_summary.positive_dst_recv += 1;
+#endif
+      }
+      destination_index++;  //WFPtr[wfid]->IncrementDestinationIndex(); //increment index for last_sent_msg_dest_ptr
+      
+  }else if( !already_removed){
+      Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::The NACK from NS-3 was received for %d\n", nodeId);
+      Ack_Type[nodeId] = WDN_DST_RECV;
+      MessageStatus[nodeId] = AckNotRecv;
+#if Debug_Flag
+      u_summary.negative_dst_recv += 1;
+      b_summary.negative_wf_recv_b += 1;
+#endif
+  }else{
+      Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::It seems acktimer handler took care reply for this message\n");
+  }
+
+  Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack::Show destList address at %p\n",&destList);
+  for(uint16_t index=0; index < destList.Size(); index++){
+	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Show first element %ld\n",destList[index]);
+  }
+
+  //uint64_t ackedDest[MAX_DEST];
+  //uint64_t nackedDest[MAX_DEST];
+
+  //ackTimer->Suspend(); //If this line is moved in if statement, seg fault. But Why?
+  if(current_messageId.Size() != 0 && !already_removed){//already_removed ==false){ //open already_removed == false;
+      //AlwaysOn received ACK/NACK. So suspend ackTimier;
+      Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Suspend timer waiting for ack from NS-3\n");
+      ackTimer->Suspend(); //myWFPtr[wfid]->SuspendTimer();
+      //Get infromatioin from AlwaysOn instance
+      //BSTMapT<NodeId_t, WF_DataStatusTypeE>* ackType; //Stores ackType for each destinations.  
+      //ackType = myWFPtr[wfid]->GetAck_TypeAddress();  
+      //Debug_Printf(DBG_WAVEFORM, "Address of Ack_Type is %p\n",&Ack_Type);
+      //Debug_Printf(DBG_WAVEFORM, "Size of Ack_Type is %d\n",Ack_Type.Size());
+      //ListT<uint64_t,false, EqualTo<uint64_t> >* destList = myWFPtr[wfid]->GetdestListAddress();
+      //Debug_Printf(DBG_WAVEFORM, "Address of destList is %p\n",&destList);
+      //WF_Message_n64_t* last_sent_msg_ptr = last_sent_msg_ptr;//myWFPtr[wfid]->getLastSentMessagePtr();
+      //WF_MessageStatusE lastMsgStatus = myWFPtr[wfid]->getMessageStatus(); 
+      //Delete first element in the list.
+      //myWFPtr[wfid]->DeleteElement(); //destList.Delete(0);
+      Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Size of destList is %d\n",destList.Size());
+
+      if(destList.Size() != 0){
+	  destList.Delete(0);
+	  Debug_Printf( DBG_WAVEFORM,"WF_AlwaysOn_Ack::Deleting destList[0] \n");
+      }
+      else {
+	  Debug_Printf( DBG_WAVEFORM,"WF_AlwaysOn_Ack::something wrong; destlist size is 0 but should not be \n");
+      }
+      for(unsigned int i =0; i < (unsigned int) destList.Size(); i++){
+	  Debug_Printf( DBG_WAVEFORM,"WF_AlwaysOn_Ack::destList[%d] is %ld \n",i, destList[i]);
+      }
+      //If this is the acknowledgement for last packet send, signal acknowledgements for each destination
+      if((destList.Size() ==0)){
+    	  //if(myWFPtr[wfid]->GetDestListSize() ==0){
+    	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Sending acknowledgment to Framework.\n");
+    	  //Create DataStatusParam object to be send via Event
+    	  //WF_DataStatusParam_n64_t* ackParam = new WF_DataStatusParam_n64_t(last_sent_msg_ptr->GetFrameworkMessageID(),
+			  //						last_sent_msg_ptr->GetWaveform(),lastMsgStatus);
+    	  //WF_DataStatusParam_n64_t ackParam(last_sent_msg_ptr->GetFrameworkMessageID(),last_sent_msg_ptr->GetWaveform(),lastMsgStatus);
+    	  WF_DataStatusParam_n64_t ackParam(last_sent_msg_ptr->GetFrameworkMessageID(),last_sent_msg_ptr->GetWaveform());
+    	  //ackParam.status = lastMsgStatus;
+    	  //uint16_t index = 0;
+    	  if(last_sent_msg_ptr->GetNumberOfDest() == 0){ //Broaodcast
+    		  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOnAck:: This is Broadcast\n");
+    		  //ackParam.destArray = NULL;
+    		  ackParam.noOfDest = 0;
+    		  ackParam.statusType[0]  = WDN_WF_SENT;
+    		  ackParam.statusValue[0] = MessageStatus[0];
+    		  IsBroadcast = false;
+    		  ackParam.destArray[0] = 0;
+    		  ackParam.readyToReceive = true;
+    	  }else{
+    		  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: This is Multiple Unicast\n");
+    		  int numberOfAck = 0;
+    		  //go through ackTypeList to find node which received Ack.
+    		  //numberOfAck = Ack_Type.Size();
+    		  numberOfAck = Ack_Type.Size();//myWFPtr[wfid]->GetAckTypeSize();
+    		  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::numberOfAck is %d\n",numberOfAck);
+    		  // uint32_t index = 0;
+    		  //store node id which got ack
+    		  this->CopyToDN(ackParam);
+    	  }
+		  //Clear Ack_Type map;
+	      Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack::Clearing ackType map::Size of map is %d \n",Ack_Type.Size());
+	  	  BSTMapT<NodeId_t, WF_DataStatusTypeE>::Iterator it;
+	  	  it = Ack_Type.Begin();
+	  	  //while(it != ackType->End()){//For loop does not work as we have not it++ operator?
+	  	  while(it != Ack_Type.End()){
+	      	  Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack::Clearing entry with key value %d \n",it->First());
+	      	  Ack_Type.Erase(it);
+	  	  }
+	  	//clear MessageStatus map;
+	      BSTMapT<NodeId_t, WF_MessageStatusE>::Iterator it_msg = MessageStatus.Begin();
+	      while(it_msg != MessageStatus.End()){
+               MessageStatus.Erase(it_msg);
+	  	  }
+	  	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Erased all keys? Size of MessageStatus is %d\n",MessageStatus.Size());
+	  	  //if(ackType->Size() == 0){
+	  	  if(Ack_Type.Size() == 0){
+		  	  //Debug_Printf(DBG_WAVEFORM, "Clearing WF_Buffer_FULL flag\n");
+		  	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Setting readyToRecv flag\n");
+	      	  //WF_Buffer_FULL = false;//myWFPtr[wfid]->ClearWFBusy();
+	      	  readyToRecv = true;
+	  	  }
+	  	  //Clear IsTimerSEt flag here,
+	  	  IsTimerSet = false;
+
+	  	  if(current_messageId.Size() != 1){
+	  		  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::current_messageId size is not 1. This means I am handling two messages\n");
+	  	  }
+	  	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Deleting messageId %d from current_messageId\n",current_messageId.GetItem(0));
+	  	  current_messageId.Delete(0); //remove messageId I am sendinig WDN_DST_RECV
+	  	  //signal Framework. This also allow framework to send new message to wf.
+
+	  	  Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn__Ack::Sending acknowlegement\n");
+	  	  ackParam.readyToReceive = readyToRecv;
+	  	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_ACK:: Showing message(ptr: %p) type for this message. %d \n",last_sent_msg_ptr, last_sent_msg_ptr->GetType());
+	  	  DataNotification(ackParam);
+	  }else {//there are still pending acks for this message
+	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Pending destintion exits\n");
+	  //There are pending destinations. call Unicast to send them
+	  uint64_t destination = destList[0];//myWFPtr[wfid]->GetDistination();
+	  //uint16_t message_size = message_size;///myWFPtr[wfid]->GetMessageSize();
+	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Clearing acknowledgement timer flag\n");
+	  IsTimerSet = false;//myWFPtr[wfid]->ClearIsTimerSet(); 
+	  Unicast_Wrap(destination,*last_sent_msg_ptr,message_size);
+      u_summary.total_unicast_sent++;
+	  //update status of destination to WDN_WF_SENT
+	  Ack_Type[destination] = WDN_WF_SENT;
+	  MessageStatus[destination] = Success;
+
+	  //validation
+	  u_summary.positive_wf_sent += 1;
+
+	  //restart ackTimer                     
+	  //ackTimer->Start();//RestartTimer();//ackTimer->Change(200, ONE_SHOT);  
+
+	  //signal WDN_WF_RECV to framework. For now, it is always success
+	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Sending WDN_WF_SENT for destination %ld\n",destination);
+	  //WF_DataStatusParam_n64_t* ackParam = new WF_DataStatusParam_n64_t(last_sent_msg_ptr->GetFrameworkMessageID(),
+			  //						last_sent_msg_ptr->GetWaveform(), lastMsgStatus);
+	  //WF_DataStatusParam_n64_t ackParam(last_sent_msg_ptr->GetFrameworkMessageID(), last_sent_msg_ptr->GetWaveform(), lastMsgStatus);
+	  WF_DataStatusParam_n64_t ackParam(last_sent_msg_ptr->GetFrameworkMessageID(), last_sent_msg_ptr->GetWaveform());
+      BSTMapT<NodeId_t, WF_DataStatusTypeE>::Iterator it;
+      //index = numberOfAck -1; //I need to do this as Ack_Type.Begin works counter intuitive.
+      this->CopyToDN(ackParam);
+
+/*****************************************************************************************
+      uint16_t index =0;
+      for(it = Ack_Type.Begin(); it != Ack_Type.End() ; ++it){
+	    Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack::Show what it is pointing to %d \n", it->First());
+	    if(it->Second() == WDN_DST_RECV){
+	      Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack::Ack_Type[%d] is WDN_DST_RECV\n",it->First());
+	      ackParam.destArray[index] = it->First();// ackedDest[ack_index++] = it->First();
+	      ackParam.statusType[index] = it->Second();// Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack::ackedDest[%d] is %ld\n",ack_index-1,ackedDest[ack_index-1])
+	      ackParam.statusValue = lastMsgStatus;
+	      index++;
+	    }
+        ackParam.noOfDest = index;
+      }
+*********************************************************************************************/
+      //Update destination receved WDN_WF_SENT
+     //ackParam->WF_Buffer_FULL = WF_Buffer_FULL;
+	  ackParam.readyToReceive = readyToRecv;
+	  //dataNotifierEvent->Invoke(ackParam);
+	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_ACK:: Showing message (ptr %p) type for this message. %d \n",last_sent_msg_ptr, last_sent_msg_ptr->GetType());
+	  DataNotification(ackParam);
+	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn::Show destinations 2");
+	  }
+  }else{// close already_removed
+	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_ACK::Do nothiong\n");
+  }  
+	  
+  //delete[] (rcvbuf);
+  
+}
+
+void WF_AlwaysOn_Ack::ProcessIncomingMessage(WaveformId_t wfid, uint16_t msglen, unsigned char* rcvbuf){
+	//Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::ProcessIncoming: MessageAddress of rcvbuf in Process method is %p\n",rcvbuf);
+	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::ProcessIncomingMessage: Received a new Message %d size is %d\n\n", msgNumber, msglen);
+	return; //temporary to debug API calls
+	
+	//if waveform does not support acknowledgement. no need to do below.
+	PrintMsg(msglen, msgNumber, rcvbuf);
+	msgNumber++;
+
+
+	
+	if(msglen < WF_HDR_SIZE + sizeof(double)*2 + rcv_msg_ptr->GetHeaderSize()){
+		if(msglen == 71) {
+			ProcessNS3Acks(wfid,msglen, rcvbuf);
+			return;
+		} else if(msglen != 71) {
+			//ProcessNS3Acks(wfid,msglen, rcvbuf);
+			return;
+		}
+	}
+
+	
+	//skip the wireless physical layer header
+	uint16_t rcvPtrOffset =WF_HDR_SIZE;
+	//Extract the rss and snr
+	memcpy(&lastSnr, &rcvbuf[rcvPtrOffset], sizeof lastSnr);
+	memcpy(&lastRss, &rcvbuf[rcvPtrOffset + sizeof lastSnr], sizeof lastRss);
+	rcvPtrOffset += sizeof(double)*2;
+	//Copy the Message header
+	//memcpy(myWFPtr[wfid]->rcv_msg_ptr,rcvbuf+rcvPtrOffset, myWFPtr[wfid]->rcv_msg_ptr->GetHeaderSize());
+	WF_Message_n64_t *msgToSendUp = new WF_Message_n64_t();
+	memcpy(msgToSendUp,rcvbuf+rcvPtrOffset, msgToSendUp->GetHeaderSize());
+	//if(myWFPtr[wfid]->rcv_msg_ptr->src == MY_NODE_ID) continue;
+	rcvPtrOffset+=rcv_msg_ptr->GetHeaderSize();
+	uint8_t *payload = new uint8_t[msglen-rcvPtrOffset];
+	Debug_Printf( DBG_WAVEFORM,"WF_AlwaysOn_Ack:: Rcv msg of size: %d,Payload ptr: %p header size %d \n",msglen, rcv_msg_ptr->payload, rcv_msg_ptr->GetHeaderSize());
+	//copy the message payload
+	//memcpy(myWFPtr[wfid]->rcv_msg_ptr->payload,rcvbuf+rcvPtrOffset, msglen);
+	memcpy(payload,rcvbuf+rcvPtrOffset, msglen-rcvPtrOffset);
+	msgToSendUp->SetPayload(payload);
+	msgToSendUp->SetPayloadSize(msglen-rcvPtrOffset);
+	msgToSendUp->SetWaveform(wfid);
+	msgToSendUp->SetWaveformMessageID(GetNewWaveformMsgId());
+	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Show number of destination: %d\n", msgToSendUp->GetNumberOfDest());
+	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Got message from %lu on wfid %d of size %d and type %d with an snr of %f and a rssi of %fdb\n", msgToSendUp->GetSource(), wfid, msgToSendUp->GetPayloadSize(), msgToSendUp->GetType(), lastSnr, lastRss);
+	//validation
+	if(msgToSendUp->GetType() == Types::Discovery_Type || msgToSendUp->GetType() == Types::LE_Type){
+		b_summary.total_discovery_recv++;
+	}else{
+		b_summary.total_data_recv++;
+		u_summary.total_unicast_recv++;
+	}
+	WF_RecvMsgParam<uint64_t> sigParam;
+	//Debug_Printf(DBG_TEST, "Snr %f Rss %f\n", lastSnr, lastRss);
+	sigParam.msg = msgToSendUp;
+	sigParam.rcvMsgId = ++(recvMsgId);
+	if(recvMsgEvent){
+		recvMsgEvent->Invoke(sigParam);
+	}
+	//delete[](rcvbuf); //Now delete memory
+	//rcvbuf = NULL;
+
+}   
+
+
+void WF_AlwaysOn_Ack::AddDestinationRequest(RequestId_t _rId, MessageId_t _msgId, uint64_t* _destArray, uint16_t _noOfDestinations)
+{
+ Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Received AddDestinationReuqest\n");
+ WF_AddDestinationResponse_Param rv;
+ rv.msgId = _msgId;
+ rv.status = false;
+ if(IsBroadcast == true){
+	 rv.noOfDest = 0;
+ }else{
+	 rv.noOfDest = _noOfDestinations;
+ }
+ for(uint16_t index =0 ; index < _noOfDestinations; index++){
+	 rv.add_status[index] = false;
+	 rv.destArray[index] = _destArray[index];
+ }
+ WF_ControlResponseParam param_rv;
+ param_rv.id = _rId;
+ param_rv.wfid = WID;
+ cont = ReplacePayloadResponse;
+ param_rv.type = cont;
+ //param.status = false; // Too late to cancel send
+ param_rv.data = &rv;//0; // Not 100%  sure what needs to be set. I do not think this filed is used fo CancelDataRequest?
+ param_rv.dataSize = sizeof(WF_ReplacePayloadResponse_Param); //Set to zero to be safe.
+ Debug_Printf(DBG_WAVEFORM, "Invoking Event\n"); fflush(stdout);
+ controlResponseEvent->Invoke(param_rv);
+ Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Just Invoked event\n"); fflush(stdout);
+ return;
+
+
+
+
+
+ //I can assume destArray has only destination not found,
+  //checreadyToReceivk if the current message WF is handling is the one pattern is making request or not
+ for(uint16_t index =0; index < _noOfDestinations; index++){
+	 Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::destArray[%d] is %ld\n",index, _destArray[index]);
+ }
+
+
+  struct WF_AddDestinationResponse_Param data;
+  data.msgId = _msgId; // Stores message Id
+
+  if(current_messageId.Size() !=0){
+	  //Get message I am dealing with right now
+	  MessageId_t current_msg = current_messageId.GetItem(0);
+	  if(current_msg != _msgId){
+		  //fail
+		  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_ACK, too late. Message has been send out\n");
+		  data.noOfDest = 0;
+		  data.status = false;
+		  //data.destArray = NULL;
+	  }else{
+		  //check if this message still waiting for ack.
+		  if(destList.Size() != 0){ //There is still node waiting for acknowledgement.
+			  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_ACK:: destListSize is not zero\n");
+			  //now it is ok to add
+			  bool not_finished = false;
+			  BSTMapT<NodeId_t,  WF_DataStatusTypeE>::Iterator it_type = Ack_Type.Begin();
+			  while(it_type != Ack_Type.End()){
+				  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: Show WF_AlwaysON_ACK Ack_Type[%d] is %d \n",it_type->First(), it_type->Second());
+				  if(it_type->Second() != WDN_WF_RECV){
+					  not_finished = true;
+					  break;
+				  }
+				  ++it_type;
+			  }
+			  if(not_finished){//check if last node is not WDN_DST_RECV
+				  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: Now add destinations to list\n");
+				  for(uint16_t index =0 ; index < _noOfDestinations; index++){
+				  //create entry in ack type
+					  Ack_Type[_destArray[index]] = WDN_WF_RECV;
+					  destList.InsertBack(_destArray[index]);
+					  Debug_Printf(DBG_WAVEFORM, "WF_AlawaysOn_ACK:: Adding node %ld, size of destlist %d\n",_destArray[index], destList.Size());
+					  //It is impossible to fail at this point. A
+					  data.status = true;
+					  data.noOfDest = _noOfDestinations;
+					  data.destArray[index] =_destArray[index];
+				  }
+				  for(uint16_t index =0; index < _noOfDestinations; index++){
+					  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_ACK:: data.destArray[%d] is %ld\n", index, data.destArray[index])
+				  }
+
+			  }
+		  }else{
+			  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: Ack_Type[%ld] is %d",destList.GetItem(0), Ack_Type[destList.GetItem(0)])
+		  }
+		  BSTMapT<NodeId_t,  WF_DataStatusTypeE>::Iterator it_type1 = Ack_Type.Begin();
+		  while(it_type1 != Ack_Type.End()){
+		   	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: Show WF_AlwaysON_ACK Ack_Type[%d] is %d \n",it_type1->First(), it_type1->Second());
+		      ++it_type1;
+		  }
+	  }
+  }else{
+	  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_ACK, too late. Message has been send out\n");
+	  data.noOfDest = 0;
+	  data.status = false;
+	  //data.destArray = 0;
+  }
+
+  struct WF_ControlResponseParam param;
+  param.id = _rId;
+  param.type =AddDestinationResponse;
+  param.data = &data;
+  param.dataSize =sizeof(WF_AddDestinationResponse_Param);    //bool status;
+  param.wfid = this->WID;
+  controlResponseEvent->Invoke(param);
+}
+
+void WF_AlwaysOn_Ack::CopyToDN( WF_DataStatusParam<uint64_t>& ackParam){
+	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: Copy information into DN\n");
+	BSTMapT<NodeId_t, WF_MessageStatusE>::Iterator  it_msg;
+	BSTMapT<NodeId_t, WF_DataStatusTypeE>::Iterator it;
+	uint16_t index = 0; //I need to do this as Ack_Type.Begin works counter intuitive.
+	for(it = Ack_Type.Begin(); it != Ack_Type.End() ; ++it){
+		Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack::destArray[%d] : %d \n", it->First(), it->Second());
+		ackParam.destArray[index] = it->First();// ackedDest[ack_index++] = it->First();
+		//Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack::destArray[%d] : %d \n", index, ackParam.destArray[index]);
+		ackParam.statusType[index] = it->Second();// Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack::ackedDest[%d] is %ld\n",ack_index-1,ackedDest[ack_index-1])
+		index++;
+	}
+	ackParam.noOfDest = index;
+	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: setting noOfDest to %d\n",index);
+	index = 0;
+	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack:: Size of MessageStatus is %d\n",MessageStatus.Size());
+	for(it_msg = MessageStatus.Begin(); it_msg != MessageStatus.End(); ++it_msg){
+		Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack::statuValue[%d] : %d \n", it_msg->First(), it_msg->Second());
+		ackParam.statusValue[index] = it_msg->Second();
+		index++;
+	}
+}
+  
+void WF_AlwaysOn_Ack::validationTimer_Handler(uint32_t flag){
+
+	std::stringstream ss;
+	ss << this->WID;
+	string a =  ss.str() + "u.bin";
+	string b =  ss.str() + "b.bin";
+	MemMap<AckUnicastSummary>  unicastStat(a);
+	MemMap<AckBroadcastSummary> broadcastStat(b);
+	unicastStat.addRecord(u_summary);
+	broadcastStat.addRecord(b_summary);
+	Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Ack:: writing to memmap. wfid is %d\n",this->WID);
+
+}
+void WF_AlwaysOn_Ack::DebugTimer_Handler(uint32_t flag){
+    //Just sent clear flag to framework.
+	Debug_Printf(DBG_WAVEFORM, "Entered DebugTimer Handler\n");
+	WF_ControlResponseParam param;
+	param.id = 0;
+	cont = ControlStatusResponse;
+	param.type = cont;
+	//param.status = true;
+	param.wfid = WID;
+	stat = WF_BUFFER_LOW;
+	param.data = &stat; //Can I guarantee this value does not change till receiver reads this value?
+	param.dataSize = sizeof(WF_ControlP_StatusE); //Set to zero to be safe.
+	Debug_Printf(DBG_WAVEFORM, "Try to clear busy flag");
+	controlResponseEvent->Invoke(param);
+}
+
+void WF_AlwaysOn_Ack::OnSocketSignal(int32_t sockfd)
+{
+	//Debug_Printf(DBG_WAVEFORM, "WF_AlawaysOn_Ack::OnSocketSignal: Reading from socket %d \n", sockfd);
+	int32_t readBytes = recv(sockfd,rcvbuf, BUF_SIZE, 0);
+	
+	while(true){
+		if (readBytes > 0){
+			//msgNumber++;
+			Debug_Printf(DBG_WAVEFORM, "WF_AlawaysOn_Ack::OnSocketSignal: Read %d bytes from socket %d \n", readBytes, sockfd);
+			//PrintMsg(readBytes, msgNumber, rcvbuf);
+			ProcessIncomingMessage(WID, readBytes, rcvbuf);
+			readBytes = recv(sockfd,rcvbuf, BUF_SIZE, 0);
+			
+		}else {
+			if(readBytes ==0){
+				Debug_Printf(DBG_WAVEFORM, "WF_AlawaysOn_Ack::OnSocketSignal: Got a signal on socket, but couldnt read. \n");
+				//Cleanup(sockfd);
+			}
+			break;
+		}
+	}
+	
+}
+
+
+}//End of namespace

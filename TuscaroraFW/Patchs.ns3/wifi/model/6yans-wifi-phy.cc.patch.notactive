@@ -1,0 +1,20 @@
+--- a/yans-wifi-phy.cc	2015-04-24 14:56:54.829717727 -0400
++++ b/yans-wifi-phy.cc	2015-04-24 00:45:52.369298097 -0400
+@@ -449,6 +449,7 @@
+ {
+   NS_LOG_FUNCTION (this << packet << rxPowerDbm << txVector.GetMode()<< preamble);
+   rxPowerDbm += m_rxGainDb;
++  powerdbm = rxPowerDbm;
+   double rxPowerW = DbmToW (rxPowerDbm);
+   Time rxDuration = CalculateTxDuration (packet->GetSize (), txVector, preamble);
+   WifiMode txMode = txVector.GetMode();
+@@ -837,6 +838,9 @@
+       double signalDbm = RatioToDb (event->GetRxPowerW ()) + 30;
+       double noiseDbm = RatioToDb (event->GetRxPowerW () / snrPer.snr) - GetRxNoiseFigure () + 30;
+       NotifyMonitorSniffRx (packet, (uint16_t)GetChannelFrequencyMhz (), GetChannelNumber (), dataRate500KbpsUnits, isShortPreamble, signalDbm, noiseDbm);
++      DbmHeader hdr;
++      hdr.SetData(powerdbm);
++      packet->AddHeader(hdr);
+       m_state->SwitchFromRxEndOk (packet, snrPer.snr, event->GetPayloadMode (), event->GetPreambleType ());
+     }
+   else

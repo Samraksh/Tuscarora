@@ -1,0 +1,4 @@
+2 WF_AlwaysOn_NoAck WifiNetDevice WF_NO_EST 2 3 0-19
+3 WF_AlwaysOn_NoAck WifiNetDevice WF_NO_EST 2 3 0-19
+4 WF_AlwaysOn_NoAck SlimNetDevice WF_NO_EST 2 4 0-19
+5 WF_AlwaysOn_NoAck SlimNetDevice WF_NO_EST 2 5 0-19

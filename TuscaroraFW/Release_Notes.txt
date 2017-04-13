@@ -1,0 +1,44 @@
+Changes in version 2.0 (Sept 25, 2016):
+--------------------------------------
+- Addition of following framework features
+	- Piggybacking
+	- Timestamping of events and packets
+- Redesign of PAL layer modules (most of them) to follow PIMPL design
+- Random Number Generator has been generalized and can use an existing generator on a platform.
+- Platform configuration introduced through a .h file
+- Framework broadcast is disabled by default, a library function called 'RandomSpray' that approximate broadcast over unicast is added to PatternBase
+- Out-of-the-box supported patterns: Flooding with Pruning and Gossip 
+- Application Writer’s Interface: Two sample applications one using the Flood Pattern and One for Gossip Pattern and being developed mostly as an example for application developers. 
+- Generalized Shim layer. This feature envisions a template based general purpose shim library that can be used by any module (Pattern, Application or other external modules) with in built serialization support.
+ 
+
+Changes in version 1.2 (April 30, 2016):
+---------------------------------------
+- Samraksh's simulation waveform (a.k.a SLIM) has been enhanced and a new version (v2) added to support
+	- Modeling of custom waveforms
+	- Flexible specification of error models and FEC ratios
+	- Customizable antenna radiation patterns
+	- Tests to validate waveform behavior conforms to models specified
+- Supports DCE 1.7/ns3.24
+- Supports Ubuntu 14.04 through 16.04
+- Removed arm toolchains from framework 
+- Removed simplewireless sources from repo
+- Fixed bugs in waveform acks
+
+Changes in version 1.1 (Dec 31, 2015):
+--------------------------------------
+- Support for 2 new platforms apart from DCE, a native x86_64 linux and an arm (V1 C2E) linux platforms are supported
+- All link metrics implemented
+- Link estimation modules can be instantiated at Waveform shims, framework instantiates otherwise
+- An address map to convert between waveform native address and Framework node id
+- All communication between framework and waveform(shim) uses native waveform address format
+- Per-packet link specification of comparator to enable flexible link selection
+- Policies for setting number of pending packets per pattern and for overriding link selection to a neighbor
+- Framework, Patterns and Waveform can be compiled and deployed as seperate binaries
+- A socket based shim layer for supporting multi-process deployment, in addition to direct binding shim for dce
+- Implemented a generic serialization/deserialization library
+- Added a Bidirectional map data structure
+- Support for DCE 1.5
+- Moved to a cmake based make environment
+
+Previous changes are not included. Contact Samraksh if you are interested in them.

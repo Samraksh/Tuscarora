@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# set -x # Debug script
+
+
+function Die()
+{
+    # Print exit message and exit shell
+    # also print the trailing file as a convenience
+    # example: Die "There was an error! Exiting." diagnosis_File
+    echo "$*"
+    [[ -f $2 ]] && echo "$2:" && cat "$2"
+    exit 1
+}
+pushd .
+echo "Executing $0"
+cd ${TUS}
+
+echo -n "Running Trial ... "
+tmpdir=$(mktemp -dtp dceln/ "PplscValidation.XXXXX")
+curdir=$(pwd)
+echo $curdir
+echo $tmpdir
+./runOrDebug.sh -p dce --force --isolate "${tmpdir##*/}" Pplsc -- Size 2 RunTime 10 Density 5 WFConfig "${TUS}/Config/pplsc.cnf" &> ${tmpdir}/run 
+#|| Die "Couldn't run. See ${tmpdir}/run for output" ${tmpdir}/runi
+echo "Trial Run Completed"
+echo -n "Processing Results... "
+echo ""
+
+cd $tmpdir
+cd files-0
+ls
+input="PplscReceivedMessages.txt"
+read -r f1 f2 f3 f4 < "$input"
+echo ""
+echo "$f1 $f2 $f3 PrevWaveformId msgId"
+
+isdiffrent=0
+prevId=0
+i=0
+set k = 4
+while read -r f1 f2 f3 f4
+do
+	i=$((i+1))
+	if [ $i = "2" ]
+		then
+			prevId=$f3
+	elif [ $i -ge "2" ]
+		then
+			 if [ $prevId != $f3 ]
+				then
+					echo "$f1 $f2 $f3 $prevId msgId"
+					isdiffrent=1
+			 fi
+		prevId=$f3
+	fi
+done < "$input" 
+
+
+
+
+
+echo "Results Process Completed"
+echo "isdifferent = $isdiffrent"
+if [ ! "$isdiffrent" = 1 ]; then
+    Die "FAILED"
+fi
+
+popd > /dev/null
+
+echo "PASS"

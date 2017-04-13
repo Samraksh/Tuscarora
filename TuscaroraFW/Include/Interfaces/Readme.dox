@@ -1,0 +1,40 @@
+/*
+ * Readme.dox
+ *
+ *  Created on: Jun 27, 2014
+ *      Author: sridhara
+ */
+
+
+//Everything in this file is only for standardization and documentation purposes. DO NOT put anything here that will be used by any module
+
+/*! \mainpage Introduction and Naming Conventions
+ *
+ * \section Abbreviation
+ * * PWI : Pattern Writer's Interface 
+ * * PAL : Platform Abstraction Layer
+ * * WF  : Waveform 
+ *
+ * \section Layering 
+ * The Tuscarora framework has 3 layers, from bottom to top these are:
+ * 1. __The Waveform layer__: This layer interacts with the radio. The framework defines the APIs of this layer, but the implementation of this layer can be provided by the platform provider. For ns-3/DCE simulations the layer is provided by Samraksh. The APIs and implementations for this layer are under the Waveform namespace.
+ * 2. __Framework Layer__: This layer is the core of Tuscarora, it defines and implements the Pattern Writer's Interface (PWI) and the Core framework modules. Internally it also contains the 'Core' namespace, which defines and implements internal functions not exposed to a pattern writer. 
+ * A pattern writter typical needs to be familiar only with the APIs definted in the PWI namespace.
+ * 3. __Pattern Layer__: This is implemented by a pattern writer, using the PWI interfaces. 
+ * 
+ * Apart from the above layers, a number of Platform Abstraction Layer modules have defined to make the porting of Tuscarora easy. These are under the PAL namespace.
+ 
+ *
+ * \section convention_sec Naming Convention
+ * 
+ * * __Class Names__: Class and Method names are PolyCapitalized. 
+ * * __Template Class Names__: Templated class names end with a capital "T" and are PolyCapitalized. 
+ * These must not be confused with names ending with a "_t" which imply typedef types.
+ * * __Variable Names__: Variables and method parameters begin with a lower case letter, but are polyCapitalized.
+ * * __Interfaces__: Classes that end with an "I" are interface definitions. C++ interfaces are "Pure Virtual Classes", i.e., they have at least one "Pure Virtual Method". 
+ * These classes cannot be directly instantiated and need to be inherited and extended to be used. Interfaces may be templated in which case they still end with an I.
+ * * __Enums__: Enum names end with an "E" and are PolyCapitalized.
+ * * __Structs vs Classes__: There are only minor differences between a Struct and Class in C++. One of these is that in a Struct all members are by default "Public". 
+ * However, we use a Struct when no Methods are part of the object, and use a Class when Methods are part of the object. So a Struct is simply a way of bundling a bunch of variables. 
+ */
+

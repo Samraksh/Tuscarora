@@ -1,0 +1,13 @@
+--- a/dca-txop.cc     2015-04-16 13:48:23.435611862 -0400
++++ b/dca-txop.cc     2015-04-16 13:48:10.859611545 -0400
+@@ -660,6 +660,10 @@
+   m_dcf->ResetCw ();
+   m_dcf->StartBackoffNow (m_rng->GetNext (0, m_dcf->GetCw ()));
+   StartAccessIfNeeded ();
++  if (!m_txOkCallback.IsNull ())
++    {
++      m_txOkCallback (m_currentHdr);
++    }
+ }
+   
+ } // namespace ns3

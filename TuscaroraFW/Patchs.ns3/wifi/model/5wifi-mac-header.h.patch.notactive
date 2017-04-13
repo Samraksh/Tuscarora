@@ -1,0 +1,27 @@
+--- a/wifi-mac-header.h	2015-04-24 14:56:54.821717727 -0400
++++ b/wifi-mac-header.h	2015-04-24 01:06:06.053308071 -0400
+@@ -72,6 +72,24 @@
+   WIFI_MAC_QOSDATA_NULL_CFACK_CFPOLL,
+ };
+ 
++  class DbmHeader : public Header
++  {
++  public:
++    // must be implemented to become a valid new header.
++    static TypeId GetTypeId (void);
++    virtual TypeId GetInstanceTypeId (void) const;
++    virtual uint32_t GetSerializedSize (void) const;
++    virtual void Serialize (Buffer::Iterator start) const;
++    virtual uint32_t Deserialize (Buffer::Iterator start);
++    virtual void Print (std::ostream &os) const;
++    // allow protocol-specific access to the header data.
++    void SetData (double data) { m_data = data; }
++    double GetData (void) const { return m_data;}
++  private:
++    double m_data;
++  };
++
++
+ /**
+  * \ingroup wifi
+  *

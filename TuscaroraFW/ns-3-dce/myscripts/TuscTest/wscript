@@ -1,0 +1,26 @@
+## -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+import ns3waf
+import glob
+
+def configure(conf):
+	conf.load('compiler_c')
+	conf.load('compiler_cxx')
+	ns3waf.check_modules(conf, ['core', 'antenna', 'slim', 'wifi', 'mobility', 'netanim'], mandatory = True)
+	 
+def build(bld):
+    for path in glob.glob("myscripts/TuscTest/*.cc"):
+        basename_cc = path.split('/')[-1]; # strip off leading directories from path
+        basename = basename_cc.split('.', 1)[0] # strip off trailing extensions from basename_cc
+        # print path        # example myscripts/TuscTest/nhood-mpi-test.cc
+        # print basename_cc # example nhood-mpi-test.cc
+        # print basename    # example nhood-mpi-test
+        bld.build_a_script('dce', needed = ['core', 'antenna', 'slim',  'wifi', 'mobility', 'dce', 'netanim' ],
+                           target='bin/'+basename, source=[basename_cc])
+
+        
+	# bld.build_a_script('dce', needed = ['core', 'wifi', 'mobility', 'dce' ], target='bin/asnp-test', source=['asnp-test.cc'] )
+	# bld.build_a_script('dce', needed = ['core', 'wifi', 'mobility', 'dce' ], target='bin/tuscarora-test', source=['tuscarora-test.cc'] )
+	# bld.build_a_script('dce', needed = ['core', 'wifi', 'mobility', 'dce' ], target='bin/mobility-test', source=['mobility-test.cc'] )
+	# bld.build_a_script('dce', needed = ['core', 'wifi', 'mobility', 'dce' ], target='bin/if-test', source=['interference-test.cc'] )
+	# bld.build_a_script('dce', needed = ['core', 'wifi', 'mobility', 'dce' ], target='bin/nhood-test', source=['nhood-test.cc'] )

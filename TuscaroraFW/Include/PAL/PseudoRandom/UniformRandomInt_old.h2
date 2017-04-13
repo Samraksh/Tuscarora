@@ -1,0 +1,148 @@
+/*
+ Author: Vinod Kulathumani
+ Date: Dec 04, 2013.
+ */
+
+#ifndef UniformRandomInt_h
+#define UniformRandomInt_h
+
+
+#include <cstdlib>
+
+#include <Base/BasicTypes.h>
+#include <Base/FrameworkTypes.h>
+#include <PAL/PseudoRandomI.h>
+#include "rng-stream.h"
+#include "rng-seed-manager.h"
+
+extern NodeId_t MY_NODE_ID;
+
+
+namespace PAL {
+	struct UniformRNGState {
+		CMRG_State cmrgState;
+		uint64_t mean;
+		uint64_t range;
+	public:
+		UniformRNGState() {
+			mean=0; range=0;
+		}
+		void SetcmrgState(CMRG_State _cmrgState){
+			cmrgState = _cmrgState;
+		}
+		CMRG_State GetcmrgState() const{
+			return cmrgState;
+		}
+		UniformRNGState(CMRG_State i_s, uint64_t i_min = 0, uint64_t i_max = 1 ){
+			if (i_min<0 || i_max<0 || (i_min>i_max))
+			{
+				printf("Random int exception; check mean and range");
+				exit(1);
+			}
+			cmrgState = i_s;
+			mean = (i_max + i_min)/2;
+			range = (i_max - i_min)/2;
+		}
+	};
+
+	class UniformRandomInt : public PseudoRandomI<UniformRNGState, uint64_t> {
+	private:
+		UniformRNGState state;
+		uint64_t min;
+		uint64_t max;
+		RngStream* m_generator;  // underlying generator being wrapped
+
+	public:
+		/* Default constructor; returns random int between 0 and 1*/
+		UniformRandomInt(){
+			min=0;
+			max=1;
+			state.cmrgState.stream = RngSeedManager::GetNextStreamIndex ();
+     			state.cmrgState.run = RngSeedManager::GetRun();		
+      			m_generator = new RngStream (RngSeedManager::GetSeed(),
+				   state.cmrgState.stream,
+				   state.cmrgState.run);
+		}
+
+		/* Default constructor; returns random int between (mean-range) and (mean+range)*/
+		/* internally allocated RNG stream */
+		UniformRandomInt(int mean, int range){
+			state.mean=mean;
+			state.range=range;
+			min=mean-range;
+			max=mean+range;
+			if (min<0 || max<0 || (min>max))
+			{
+				printf("Random int exception; check mean and range");
+				exit(1);
+			}
+			state.cmrgState.stream = RngSeedManager::GetNextStreamIndex ();
+     			state.cmrgState.run = RngSeedManager::GetRun();
+			
+      			m_generator = new RngStream (RngSeedManager::GetSeed(),
+				   state.cmrgState.stream,
+				   state.cmrgState.run);
+		}
+
+		/*Here stream number is explicitly specified*/
+		UniformRandomInt(const UniformRNGState _state){
+			state.mean=_state.mean;
+			state.range=_state.range;
+			min = _state.mean-(_state.range);
+			max = _state.mean+(_state.range);
+			if (min<0 || max<0 || (min>max))
+			{
+				printf("Random int exception; check mean and range");
+				exit(1);
+			}
+			//printf("max and min: %ld %ld \n", max, min); fflush(stdout);
+			state.cmrgState.run =_state.cmrgState.run;
+			state.cmrgState.stream = _state.cmrgState.stream;
+			m_generator = new RngStream (RngSeedManager::GetSeed(),
+							state.cmrgState.stream,
+							state.cmrgState.run);
+			
+
+		}
+
+
+		uint64_t GetNext(){
+			return static_cast<uint64_t> (min + m_generator->RandU01 () * (max - min + 1)); //The plus 1 is because static_cast always truncates when converting to integer
+		}
+		
+		const UniformRNGState GetState(){
+			return state;  //return stream number for this random variable
+		}
+
+		void SetState(const UniformRNGState& _state){
+			min = _state.mean-(_state.range);
+			max = _state.mean+(_state.range);
+			if (min<0 || max<0 || (min>max))
+			{
+				printf("Random int exception; check mean and range");
+				exit(1);
+			}
+			delete(m_generator);
+			//printf("UniformRandomInt::SetState: %lu, run: %lu , max: %ld, min: %ld \n", _state.cmrgState.stream, _state.cmrgState.run, max, min); fflush(stdout);
+			state.cmrgState.run =_state.cmrgState.run;
+			state.cmrgState.stream = _state.cmrgState.stream;
+			m_generator = new RngStream (RngSeedManager::GetSeed(),
+								   _state.cmrgState.stream,
+								   state.cmrgState.run);
+			
+		}
+
+		void SetRange(uint64_t mean, uint64_t range)
+		{
+			state.mean=mean;
+			state.range=range;
+			min = state.mean-(state.range);
+			max = state.mean+(state.range);
+		}
+
+
+	};
+
+}	//End of namespace PAL
+
+#endif // UniformRandInt_h

@@ -1,0 +1,17 @@
+--- a/libc-ns3.h	2016-09-22 11:46:10.743927308 -0400
++++ b/libc-ns3.h	2016-09-29 16:52:51.808755569 -0400
+@@ -605,8 +605,14 @@ DCE    (__lxstat64)
+ DCE    (__fxstat64)
+ DCE    (__fxstatat)
+ NATIVE (__cmsg_nxthdr)
++NATIVE (dl_iterate_phdr)
+ 
+ // math.h
++NATIVE (sqrt)
++NATIVE (pow)
++NATIVE (log2)
++NATIVE (logl)
++NATIVE (ceilf)
+ NATIVE (lrintl)
+ NATIVE (llrintl)
+ NATIVE (ceil)

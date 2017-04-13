@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# set -x # Debug script
+
+
+function Die()
+{
+    # Print exit message and exit shell
+    # also print the trailing file as a convenience
+    # example: Die "There was an error! Exiting." diagnosis_File
+    echo "$*"
+    [[ -f $2 ]] && echo "$2:" && cat "$2"
+    exit 1
+    echo uncomment exit
+}
+
+cd $TUS
+
+dir=$TUS/dceln
+echo using simple wireless radio
+./runOrDebug.sh -p dce NS3 -- Size 10 Density 1 RunTime 10 LinkEstimationPeriod 1000000 WFConfig $TUS/Config/1wf-10nodes-sw-ack.cnf > /dev/null
+
+received=`cat $dir/files-1/stdout | grep "Core_Test::Received Message" | wc -l`
+acked=`cat $dir/files-0/stdout | grep "Positive PDN_DST_RECV ACK from 1" | wc -l`
+nacked=`cat $dir/files-0/stdout | grep "Negative PDN_DST_RECV ACK from 1" | wc -l`
+
+echo $received unicast messages received
+echo $acked positive PDN_DST_RECV acks received
+echo $nacked negative PDN_DST_RECV acks received
+echo
+
+if [ $acked -lt "`expr $received / 2`" ]; then
+   Die "Number of positive acks too low"
+fi
+
+if [ ! $received -ge $acked ]; then 
+   Die "Number of received messages should >= number of postive acks"
+else
+   echo Positive acks working
+fi
+
+if [ $nacked -eq 0 ]; then
+   Die "Need to receive at least 1 nack"
+else
+  echo "Negative acks working"
+fi
+
+if [ `cat $dir/files-0/stdout | grep "Location: 1\." | wc -l` -lt "5" ]; then
+   Die "Location putenv not working"
+else
+   echo Location putenv working
+fi
+
+echo using default wifi radios
+./runOrDebug.sh NS3 -- Size 9 Density 1 RunTime 10 LinkEstimationPeriod 1000000 > /dev/null
+
+received=`cat $dir/files-1/stdout | grep "Core_Test::Received Message" | wc -l`
+acked=`cat $dir/files-0/stdout | grep "Positive PDN_DST_RECV ACK from 1" | wc -l`
+nacked=`cat $dir/files-0/stdout | grep "Negative PDN_DST_RECV ACK from 1" | wc -l`
+
+echo $received unicast messages received
+echo $acked positive PDN_DST_RECV acks received
+echo $nacked negative PDN_DST_RECV acks received
+echo
+
+if [ $acked -lt "`expr $received / 2`" ]; then
+   Die "Number of positive acks too low"
+fi
+
+if [ ! $received -ge $acked ]; then 
+   Die "Number of received messages should >= number of postive acks"
+else
+   echo Positive acks working
+fi
+
+if [ $nacked -eq 0 ]; then
+   Die "Need to receive at least 1 nack"
+else
+  echo "Negative acks working"
+fi
+
+./runOrDebug.sh NS3 -- Size 10 Density 1 RunTime 10 LinkEstimationPeriod 1000000 InterferenceModel FriisPropagationLossModel > /dev/null
+if [ `cat dceln/files-1/stdout | grep Rss | wc -l` -lt "1" ]; then
+   Die "Rss and snr not being outputted. No messages?"
+else
+   echo "Rss and snr present"
+fi
+
+if [ `cat dceln/files-1/stdout | grep Rss | awk '$4 > 1000 || $4 < 1 || $6 > 0 || $6 < -1000 {print $4, "\t", $6;}' | wc -l` -gt "0" ]; then
+   Die "Rss and snr out of bounds"
+else
+   echo Rss and snr are sane values
+fi
+
+echo "PASS"

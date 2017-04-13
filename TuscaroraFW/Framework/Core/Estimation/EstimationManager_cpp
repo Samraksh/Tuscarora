@@ -1,0 +1,25 @@
+/*
+ * LinkEstimationManager.cpp
+ *
+ *  Created on: Apr 1, 2014
+ *      Author: Mukundan Sridharan
+ */
+
+#include "EstimationManager.h"
+
+namespace Core {
+namespace Estimation{
+  bool EstimationManager::RegisterCustomizer(LinkEstimatorI* est)
+  {
+    return false;
+  }
+
+  bool EstimationManager::UpdatePatternNegihborhood()
+  {
+    return false;
+  }
+
+
+}//End of namespace
+}
+
