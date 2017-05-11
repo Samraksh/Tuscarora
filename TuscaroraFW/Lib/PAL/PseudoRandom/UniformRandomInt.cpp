@@ -66,6 +66,11 @@ void UniformRandomInt::SetState(const State& state){
 	*(implPtr->m_internal_state_ptr) = state;
 
 	state.GetEngineState(*implPtr->m_engine_ptr);
+
+	//	UniformDoubleRVDistributionParametersType dist = state.GetDistributionParameters();
+	//	SetRange(state.GetDistributionParameters().min, state.GetDistributionParameters().max);
+	if(implPtr->m_distribution_ptr != NULL) delete implPtr->m_distribution_ptr;
+	implPtr->m_distribution_ptr = new Tuscarora_UniformIntDist(state.GetDistributionParameters().min, state.GetDistributionParameters().max);
 }
 
 UniformRandomInt::~UniformRandomInt(){

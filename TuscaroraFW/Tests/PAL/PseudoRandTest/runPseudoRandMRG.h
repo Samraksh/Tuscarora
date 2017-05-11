@@ -30,6 +30,9 @@ using namespace PAL;
 #define iterations_MRG 10000
 #define iterations_MeanTest 10000
 
+#define DIST_MIN 10
+#define DIST_MAX 44
+
 class PseudoRandMRGTest {
 
 	UniformRandomValue *rnd1; //to test user assigned stream numbers
@@ -40,15 +43,19 @@ class PseudoRandMRGTest {
 	double randArray2[iterations_MRG];
 	// uint64_t base = ((1ULL)<<63);
 	uint64_t base;
+	void ExecuteTwoIdenticalRNG(std::ofstream& outFile);
+	void ExecuteTwoDifferentRNG(std::ofstream& outFile);
+
+	void ExecuteMeanTest(std::ofstream& outFile);
+	bool RandomDrawingSanityCheck(const double& draw, UniformRandomValue* rnd) const;
 
 public:
 	PseudoRandMRGTest();
 	void Execute();
 
-	void ExecuteTwoIdenticalRNG(std::ofstream& outFile);
-	void ExecuteTwoDifferentRNG(std::ofstream& outFile);
 
-	void ExecuteMeanTest(std::ofstream& outFile);
+
+
 };
 
 //int testRandomFloat(int argc, char* argv[]);

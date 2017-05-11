@@ -45,7 +45,8 @@ void UniformRandomValue::SetRange(double minVal, double maxVal){
 	implPtr->m_internal_state_ptr->SetDistributionParameters(dist);
 
 	if(implPtr->m_distribution_ptr != NULL) delete implPtr->m_distribution_ptr;
-	implPtr->m_distribution_ptr = new Tuscarora_UniformDoubleDist(dist.min, dist.max);}
+	implPtr->m_distribution_ptr = new Tuscarora_UniformDoubleDist(dist.min, dist.max);
+}
 
 //Inherited through PseudoRandomI
 
@@ -68,6 +69,11 @@ const UniformRandomValue::State UniformRandomValue::GetState(){
 void UniformRandomValue::SetState(const State& state){
 	*(implPtr->m_internal_state_ptr) = state;
 	state.GetEngineState(*implPtr->m_engine_ptr);
+
+//	UniformDoubleRVDistributionParametersType dist = state.GetDistributionParameters();
+//	SetRange(state.GetDistributionParameters().min, state.GetDistributionParameters().max);
+	if(implPtr->m_distribution_ptr != NULL) delete implPtr->m_distribution_ptr;
+	implPtr->m_distribution_ptr = new Tuscarora_UniformDoubleDist(state.GetDistributionParameters().min, state.GetDistributionParameters().max);
 }
 
 UniformRandomValue::~UniformRandomValue(){

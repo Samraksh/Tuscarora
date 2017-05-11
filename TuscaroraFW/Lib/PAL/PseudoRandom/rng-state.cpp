@@ -87,6 +87,7 @@ RNGState<DistributionParametersType>& RNGState<DistributionParametersType>::oper
 		//implPtr->engine_state_string = st.implPtr->engine_state_string;
 		implPtr->num_drawals = st.implPtr->num_drawals;
 
+		this->SetDistributionParameters(st.GetDistributionParameters());
 //		min = st.min;
 //		max = st.max;
 		return (*this);

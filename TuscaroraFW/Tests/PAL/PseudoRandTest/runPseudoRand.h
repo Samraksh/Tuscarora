@@ -32,6 +32,12 @@ class PseudoRandTest {
   uint32_t randArray0[iter], randArray1[iter];
   std::ofstream outFile;
 
+  bool RandomDrawingSanityCheck(const uint32_t& draw, UniformRandomInt* rnd) const{
+	UniformIntDistParameter distpar = rnd->GetState().GetDistributionParameters();
+  	if(draw < distpar.min || draw > distpar.max) return false;
+  	return true;
+  }
+
  public:
  PseudoRandTest() {
 	/*RNStreamID cmrgState;
@@ -156,7 +162,11 @@ class PseudoRandTest {
     //rnd->Initialize(987654);
     for (int i=0;i<iter; i++){
       randArray0[i] = rnd0->GetNext();
+      if(!RandomDrawingSanityCheck(randArray0[i], rnd0)) printf ("FAIL RandomDrawingSanityChec: The random number instantiation fails sanity test \n" );
+
       randArray1[i] = rnd1->GetNext();
+      if(!RandomDrawingSanityCheck(randArray1[i], rnd1)) printf ("FAIL RandomDrawingSanityChec: The random number instantiation fails sanity test \n" );
+
       mean1+=randArray0[i];
 	  mean2+=randArray1[i];
       printf ("%d %d \n", randArray0[i], randArray1[i]);

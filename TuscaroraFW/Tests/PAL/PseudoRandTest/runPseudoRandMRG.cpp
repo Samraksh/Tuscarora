@@ -35,12 +35,18 @@ void PseudoRandMRGTest::Execute(){
 	outFile.close();
 }
 
+bool PseudoRandMRGTest::RandomDrawingSanityCheck(const double& draw, UniformRandomValue* rnd) const{
+	UniformDoubleRVDistributionParametersType distpar = rnd->GetState().GetDistributionParameters();
+	if(draw < distpar.min || draw > distpar.max) return false;
+	return true;
+}
+
 void PseudoRandMRGTest::ExecuteTwoDifferentRNG(std::ofstream &outFile){
 	printf("PseudoRandTest:: Starting ExecuteTwoDifferentRNG...\n");
 	outFile << "PseudoRandTest:: Starting ExecuteTwoDifferentRNG...\n";
 
 	UniformValueRNGState rngState1;
-	UniformDoubleRVDistributionParametersType dist; dist.min = 0; dist.max = 1;
+	UniformDoubleRVDistributionParametersType dist; dist.min = DIST_MIN; dist.max = DIST_MAX;
 	rngState1.SetDistributionParameters(dist);
 	UniformValueRNGState rngState2;
 	rngState1.SetDistributionParameters(dist);
@@ -52,6 +58,7 @@ void PseudoRandMRGTest::ExecuteTwoDifferentRNG(std::ofstream &outFile){
 
 	for (int i=0;i<iterations_MRG; i++){
 			randArray1[i] = rnd1->GetNext();
+			if(!RandomDrawingSanityCheck(randArray1[i], rnd1)) printf ("FAIL RandomDrawingSanityChec: The random number instantiation fails sanity test \n" );
 			mean1+=randArray1[i];
 			//printf ("%f ", randArray1[i]);
 			outFile << randArray1[i] << " ";
@@ -60,6 +67,7 @@ void PseudoRandMRGTest::ExecuteTwoDifferentRNG(std::ofstream &outFile){
 //		printf("Printing 10000 random numbers from rnd2, Stream %lu \n",(rnd1->GetState()).GetRNStreamID().stream);
 	for (int i=0;i<iterations_MRG; i++){
 			randArray2[i] = rnd2->GetNext();
+			if(!RandomDrawingSanityCheck(randArray2[i], rnd2)) printf ("FAIL RandomDrawingSanityChec: The random number instantiation fails sanity test \n" );
 			mean2+=randArray2[i];
 			//printf ("%f ", randArray1[i]);
 			outFile << randArray2[i] << " ";
@@ -92,7 +100,7 @@ void PseudoRandMRGTest::ExecuteTwoIdenticalRNG(std::ofstream &outFile){
 
 
 	UniformValueRNGState rngState;
-	UniformDoubleRVDistributionParametersType dist; dist.min = 0; dist.max = 1;
+	UniformDoubleRVDistributionParametersType dist; dist.min = DIST_MIN; dist.max = DIST_MAX;
 	rngState.SetDistributionParameters(dist);
 
 
@@ -105,6 +113,7 @@ void PseudoRandMRGTest::ExecuteTwoIdenticalRNG(std::ofstream &outFile){
 //		printf("Printing 10000 random numbers from rnd1, Stream %lu \n",(rnd1->GetState()).GetRNStreamID().stream);
 	for (int i=0;i<iterations_MRG; i++){
 			randArray1[i] = rnd1->GetNext();
+			if(!RandomDrawingSanityCheck(randArray1[i], rnd1)) printf ("FAIL RandomDrawingSanityChec: The random number instantiation fails sanity test \n" );
 			mean1+=randArray1[i];
 			//printf ("%f ", randArray1[i]);
 			outFile << randArray1[i] << " ";
@@ -114,6 +123,7 @@ void PseudoRandMRGTest::ExecuteTwoIdenticalRNG(std::ofstream &outFile){
 	outFile << "PseudoRandTest:: Starting ExecuteTwoIdenticalRNG   rnd2 iterations_MRG = " << iterations_MRG << "\n";
 	for (int i=0;i<iterations_MRG; i++){
 			randArray2[i] = rnd2->GetNext();
+			if(!RandomDrawingSanityCheck(randArray2[i], rnd2)) printf ("FAIL RandomDrawingSanityChec: The random number instantiation fails sanity test \n" );
 			mean2+=randArray2[i];
 			//printf ("%f ", randArray1[i]);
 			outFile << randArray2[i] << " ";
@@ -159,14 +169,17 @@ void PseudoRandMRGTest::ExecuteMeanTest(std::ofstream &outFile){
 	outFile << "PseudoRandTest:: Starting ExecuteMeanTest...\n";
 
 	UniformValueRNGState rngState;
-	UniformDoubleRVDistributionParametersType dist; dist.min = 0; dist.max = 1;
+	UniformDoubleRVDistributionParametersType dist; dist.min = DIST_MIN; dist.max = DIST_MAX;
 	rngState.SetDistributionParameters(dist);
 
 	if(rnd1 != NULL) delete rnd1;
 	rnd1 = new UniformRandomValue(rngState);
 
+	double r;
 	for (int i=0;i<iterations_MeanTest; i++){
-			mean1+=rnd1->GetNext();
+			r = rnd1->GetNext();
+			if(!RandomDrawingSanityCheck(r, rnd1)) printf ("FAIL RandomDrawingSanityChec: The random number instantiation fails sanity test \n" );
+			mean1+=r;
 	}
 	mean1 /= iterations_MRG;
 
