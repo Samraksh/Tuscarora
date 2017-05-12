@@ -815,7 +815,7 @@ public:
     	rv = false;
     	num_vars_read = 0;
     	printf("SocketDeSerializer reading on %d : ", socketID); fflush(stdout);
-        if(this->GetVariable(i1));
+        if(this->GetVariable(i1))
         	rv = this->GetVariable(i1, i2, ins...);
         printf("\nSocketDeSerializer END OF reading on %d : rv = %d ", socketID, rv); fflush(stdout);
         return rv;
@@ -956,7 +956,7 @@ bool Write(const T1& i1, const T2& i2, const TNs&... ins){
 	 bool rv = false;
 	 printf("SocketSerializer writing on %d : ", socketID); fflush(stdout);
 
-	 if(this->AddVariable(i1, true));
+	 if(this->AddVariable(i1, true))
 	 	 rv =  this->AddVariable(i1, i2, ins...);
 	 printf("\n SocketSerializer END OF writing on %d : rv = %d ", socketID, rv); fflush(stdout);
 	 return rv;
