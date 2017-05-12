@@ -30,7 +30,8 @@ class App2GossipShim : public Gossip_I<GOSSIPVARIABLE, GOSSIPCOMPARATOR>, Socket
 
     GossipVariableUpdateDelegate_t_l* m_recvDelegate;
 
-    bool Deserialize(const GenericSocketMessages& fw2ptnmsg, int32_t sockfd) const;
+//    bool Deserialize(const GenericSocketMessages& fw2ptnmsg, int32_t sockfd) const;
+    bool Deserialize(); // Inherited form SocketCommunicatorClientBase
 
 public:
 
@@ -88,23 +89,39 @@ void App2GossipShim<GOSSIPVARIABLE,GOSSIPCOMPARATOR>::UpdateGossipVariable(GOSSI
 //	delete msg_ptr;
 }
 
+//template<typename GOSSIPVARIABLE, typename GOSSIPCOMPARATOR >
+//bool App2GossipShim<GOSSIPVARIABLE,GOSSIPCOMPARATOR>::Deserialize(const GenericSocketMessages& fw2ptnmsg, int32_t sockfd) const {
+//	Debug_Printf(DBG_SHIM, "App2GossipShim::Deserialize ... ReadBytes / TotalBytes = %lu / %lu \n", fw2ptnmsg.GetBytesRead(), fw2ptnmsg.GetPayloadSize() );
+//    int calltype = 0;
+//    GenericDeSerializer<int> (&fw2ptnmsg, calltype);
+//    Debug_Printf(DBG_SHIM, "App2GossipShim::Deserialize: msg.GetType() = %d \n", calltype);
+//
+//    if(calltype == GOSSIP2APP_Event_RcvMsg){
+//    	GOSSIPVARIABLE gosVariable;
+//        GenericDeSerializer< GOSSIPVARIABLE >
+//                  gds(&fw2ptnmsg, gosVariable);
+//
+//        m_recvDelegate->operator()(gosVariable);
+//    }
+//    return true;
+//}
+
 template<typename GOSSIPVARIABLE, typename GOSSIPCOMPARATOR >
-bool App2GossipShim<GOSSIPVARIABLE,GOSSIPCOMPARATOR>::Deserialize(const GenericSocketMessages& fw2ptnmsg, int32_t sockfd) const {
-	Debug_Printf(DBG_SHIM, "App2GossipShim::Deserialize ... ReadBytes / TotalBytes = %lu / %lu \n", fw2ptnmsg.GetBytesRead(), fw2ptnmsg.GetPayloadSize() );
+bool App2GossipShim<GOSSIPVARIABLE,GOSSIPCOMPARATOR>::Deserialize( ){
+	Debug_Printf(DBG_SHIM, "App2GossipShim::Deserialize ...  \n");
     int calltype = 0;
-    GenericDeSerializer<int> (&fw2ptnmsg, calltype);
+
+    Peek<int>(calltype);
+
     Debug_Printf(DBG_SHIM, "App2GossipShim::Deserialize: msg.GetType() = %d \n", calltype);
 
     if(calltype == GOSSIP2APP_Event_RcvMsg){
     	GOSSIPVARIABLE gosVariable;
-        GenericDeSerializer< GOSSIPVARIABLE >
-                  gds(&fw2ptnmsg, gosVariable);
-
+        Read< GOSSIPVARIABLE >(gosVariable);
         m_recvDelegate->operator()(gosVariable);
     }
     return true;
 }
-
 
 
 //template<typename GOSSIPVARIABLE, typename GOSSIPCOMPARATOR = SimpleGenericComparator<GOSSIPVARIABLE> >
@@ -113,6 +130,9 @@ bool App2GossipShim<GOSSIPVARIABLE,GOSSIPCOMPARATOR>::Deserialize(const GenericS
 
 template<typename GOSSIPVARIABLE, typename GOSSIPCOMPARATOR >
 Gossip_I<GOSSIPVARIABLE, GOSSIPCOMPARATOR>* GetApp2GossipShimPtr(){
+
+
+
 	 Gossip_I<GOSSIPVARIABLE, GOSSIPCOMPARATOR> *pS = static_cast<Gossip_I<GOSSIPVARIABLE, GOSSIPCOMPARATOR> *> (new App2GossipShim<GOSSIPVARIABLE>());
 	 return pS;
 }

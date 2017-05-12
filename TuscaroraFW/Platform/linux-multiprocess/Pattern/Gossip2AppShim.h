@@ -82,7 +82,7 @@ bool Gossip2AppShim<GOSSIPVARIABLE, GOSSIPCOMPARATOR>::Deserialize (int32_t sock
 
 	if (calltype == APP2GOSSIP_Call_Send){
 		AppId_t pid = 0;
-		uint16_t nonce;
+//		uint16_t nonce;
 		GOSSIPVARIABLE gossipvar;
 
 		rv = Read<int>(calltype);
