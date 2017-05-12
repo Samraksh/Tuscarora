@@ -59,7 +59,7 @@ bool App2FWPShim::Deserialize() {
     if(calltype == FWP2APP_Event_RcvMsg){
         GenericMsgPayloadSize_t totalsize;
         void* payload = NULL;
-        Read< GenericMsgPayloadSize_t, void* >(totalsize,  payload);
+        Read<int,   GenericMsgPayloadSize_t, void* >(calltype, totalsize,  payload);
         m_recvDelegate->operator()(payload, totalsize);
     }
     return true;

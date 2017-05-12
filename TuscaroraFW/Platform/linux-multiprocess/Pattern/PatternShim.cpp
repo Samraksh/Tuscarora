@@ -56,8 +56,8 @@ bool PatternShim::Deserialize() {
         GenericMsgPayloadSize_t totalsize;
 //        GenericDeSerializer< uint32_t, ControlResponseTypeE&, GenericMsgPayloadSize_t, void* >
 //                gds(&fw2ptnmsg,  _param0.sequenceNo,  _param0.type, totalsize, _param0.data);
-        Read< uint32_t, ControlResponseTypeE&, GenericMsgPayloadSize_t, void* >
-                        (  _param0.sequenceNo,  _param0.type, totalsize, _param0.data);
+        Read<int, uint32_t, ControlResponseTypeE&, GenericMsgPayloadSize_t, void* >
+                        ( calltype,  _param0.sequenceNo,  _param0.type, totalsize, _param0.data);
         //_param0.type = (ControlResponseTypeE)dummytype;
         _param0.dataSize = totalsize;
         m_controlDelegate->operator()(_param0);
@@ -72,8 +72,8 @@ bool PatternShim::Deserialize() {
         GenericMsgPayloadSize_t totalsize;
         void* payload = NULL;
 
-        Read< MessageTypeE, WaveformId_t, NodeId_t, GenericMsgPayloadSize_t, void* >
-                  ( type, wfid, src, totalsize,  payload);
+        Read< int, MessageTypeE, WaveformId_t, NodeId_t, GenericMsgPayloadSize_t, void* >
+                  ( calltype, type, wfid, src, totalsize,  payload);
 
         _param0.SetType(type);
         _param0.SetWaveform(wfid);
@@ -92,8 +92,8 @@ bool PatternShim::Deserialize() {
         void* st = (void*)_param0.statusType;
         void* stValue = (void*)_param0.statusValue;
         void* destArray = (void*)_param0.destArray;
-        Read<  GenericMsgPayloadSize_t, void*, GenericMsgPayloadSize_t, void*, GenericMsgPayloadSize_t, void*, MessageId_t, bool, uint16_t >
-         (           totalsize1,         st,         totalsize2,        stValue,  totalsize3,          destArray ,  _param0.messageId, _param0.readyToReceive, _param0.nonce   );
+        Read< int,  GenericMsgPayloadSize_t, void*, GenericMsgPayloadSize_t, void*, GenericMsgPayloadSize_t, void*, MessageId_t, bool, uint16_t >
+         ( calltype,          totalsize1,         st,         totalsize2,        stValue,  totalsize3,          destArray ,  _param0.messageId, _param0.readyToReceive, _param0.nonce   );
         _param0.noOfDest = totalsize1 / sizeof(NodeId_t);
 
         m_dataNotifierDelegate->operator()(_param0);
@@ -101,8 +101,8 @@ bool PatternShim::Deserialize() {
     else if (calltype == FW2PTN_Event_NeighborUpdate){
         NeighborUpdateParam param0;
 
-        Read< NeighborUpdateParam>
-              (  param0);
+        Read< int, NeighborUpdateParam>
+              ( calltype,  param0);
 
         m_nbrDelegate->operator()(param0);
     }

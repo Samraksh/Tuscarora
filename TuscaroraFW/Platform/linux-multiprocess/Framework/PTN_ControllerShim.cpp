@@ -71,8 +71,8 @@ bool PTN_ControllerShim::Deserialize (int32_t sockfd) {
          //char* uniqueName = NULL;
          char uniqueName[128];
          char* uniqueNamePtr = uniqueName;
-         Read< PatternId_t, GenericMsgPayloadSize_t, char*, PatternTypeE >
-			(sockfd,   patternId, sizeofchararray, uniqueNamePtr, type);
+         Read<int,   PatternId_t, GenericMsgPayloadSize_t, char*, PatternTypeE >
+			(sockfd, calltype,   patternId, sizeofchararray, uniqueNamePtr, type);
 
         Debug_Printf(DBG_SHIM, "PTN_ControllerShim::Deserialize: PTN2FW_Call_RegisterPatternRequest patternId = %d type = %d \n", patternId, type);
 
@@ -101,8 +101,8 @@ bool PTN_ControllerShim::Deserialize (int32_t sockfd) {
 		 bool noAck;
 
 
-		Read< PatternId_t, GenericMsgPayloadSize_t, void*, GenericMsgPayloadSize_t, void*, uint16_t, bool >
-			(sockfd, pid, totalsize, destArrayptr, serial_msg_size, serial_msg, nonce, noAck);
+		Read<int,   PatternId_t, GenericMsgPayloadSize_t, void*, GenericMsgPayloadSize_t, void*, uint16_t, bool >
+			(sockfd, calltype, pid, totalsize, destArrayptr, serial_msg_size, serial_msg, nonce, noAck);
 
 		msg.DeSerialize( serial_msg_size, serial_msg);
 
@@ -125,8 +125,8 @@ bool PTN_ControllerShim::Deserialize (int32_t sockfd) {
          void* serial_msg = NULL;
 		 uint16_t nonce;
 		 bool noAck;
-		Read< PatternId_t, GenericMsgPayloadSize_t, void*, LinkComparatorTypeE, GenericMsgPayloadSize_t, void*, uint16_t, bool >
-			(sockfd,  pid, totalsize, destArrayptr, lcType, serial_msg_size, serial_msg, nonce, noAck);
+		Read<int,   PatternId_t, GenericMsgPayloadSize_t, void*, LinkComparatorTypeE, GenericMsgPayloadSize_t, void*, uint16_t, bool >
+			(sockfd, calltype,  pid, totalsize, destArrayptr, lcType, serial_msg_size, serial_msg, nonce, noAck);
 		msg.DeSerialize( serial_msg_size, serial_msg);
 		noOfDest = totalsize / sizeof(NodeId_t);
 
@@ -142,8 +142,8 @@ bool PTN_ControllerShim::Deserialize (int32_t sockfd) {
 //         void* serial_msg = NULL;
 //		 WaveformId_t wid;
 //		 uint16_t nonce;
-//		Read< PatternId_t, GenericMsgPayloadSize_t, void*, WaveformId_t, uint16_t >
-//			(sockfd,  pid, serial_msg_size, serial_msg, wid, nonce);
+//		Read<int,   PatternId_t, GenericMsgPayloadSize_t, void*, WaveformId_t, uint16_t >
+//			(sockfd, calltype,  pid, serial_msg_size, serial_msg, wid, nonce);
 //
 //		msg.DeSerialize( serial_msg_size, serial_msg);
 //
@@ -155,8 +155,8 @@ bool PTN_ControllerShim::Deserialize (int32_t sockfd) {
 		 MessageId_t msgId;
 		 void* payload = NULL;
 		 GenericMsgPayloadSize_t sizeOfPayload;
-		Read< PatternId_t, MessageId_t, GenericMsgPayloadSize_t, void* >
-			(sockfd,  patternId, msgId, sizeOfPayload, payload);
+		Read<int,   PatternId_t, MessageId_t, GenericMsgPayloadSize_t, void* >
+			(sockfd, calltype,  patternId, msgId, sizeOfPayload, payload);
 	fi->ReplacePayloadRequest(patternId, msgId, payload, sizeOfPayload);
 	}
 
@@ -169,8 +169,8 @@ bool PTN_ControllerShim::Deserialize (int32_t sockfd) {
 		 void* destArrayptr = (void*)destArray;
 		 GenericMsgPayloadSize_t totalsize;
 
-		Read< PatternId_t, MessageId_t, GenericMsgPayloadSize_t, void* >
-			(sockfd,  patternId, msgId, totalsize, destArrayptr);
+		Read<int,   PatternId_t, MessageId_t, GenericMsgPayloadSize_t, void* >
+			(sockfd, calltype,  patternId, msgId, totalsize, destArrayptr);
 
 		noOfNbrs = totalsize / sizeof(NodeId_t);
 
@@ -187,8 +187,8 @@ bool PTN_ControllerShim::Deserialize (int32_t sockfd) {
 	         GenericMsgPayloadSize_t totalsize;
 
 		 LinkComparatorTypeE lcType;
-		Read< PatternId_t, MessageId_t, GenericMsgPayloadSize_t, void*, LinkComparatorTypeE >
-			(sockfd,  patternId, msgId, totalsize, destArrayptr, lcType);
+		Read<int,   PatternId_t, MessageId_t, GenericMsgPayloadSize_t, void*, LinkComparatorTypeE >
+			(sockfd, calltype,  patternId, msgId, totalsize, destArrayptr, lcType);
 
 		noOfNbrs = totalsize / sizeof(NodeId_t);
 
@@ -204,8 +204,8 @@ bool PTN_ControllerShim::Deserialize (int32_t sockfd) {
          void* destArrayptr = (void*)destArray;
          GenericMsgPayloadSize_t totalsize;
 
-		Read< PatternId_t, MessageId_t, GenericMsgPayloadSize_t, void* >
-			(sockfd,  patternId, msgId, totalsize, destArrayptr);
+		Read<int,   PatternId_t, MessageId_t, GenericMsgPayloadSize_t, void* >
+			(sockfd, calltype,  patternId, msgId, totalsize, destArrayptr);
 
 		noOfDest = totalsize / sizeof(NodeId_t);
 
@@ -215,8 +215,8 @@ bool PTN_ControllerShim::Deserialize (int32_t sockfd) {
 	else if (calltype == PTN2FW_Call_DataStatus){
 		PatternId_t patternId;
 		 MessageId_t msgId;
-		Read< PatternId_t, MessageId_t >
-			(sockfd,  patternId, msgId);
+		Read<int,   PatternId_t, MessageId_t >
+			(sockfd, calltype,  patternId, msgId);
 	fi->DataStatusRequest(patternId, msgId);
 	}
 
@@ -233,16 +233,16 @@ bool PTN_ControllerShim::Deserialize (int32_t sockfd) {
 
 	else if (calltype == PTN2FW_Call_FrameworkAttributes){
 		PatternId_t patternId;
-		Read< PatternId_t >
-			(sockfd,  patternId);
+		Read<int,   PatternId_t >
+			(sockfd, calltype,  patternId);
 	fi->FrameworkAttributesRequest(patternId);
 	}
 
 	else if (calltype == PTN2FW_Call_SelectDataNotification){
 		PatternId_t patternId;
 		 uint8_t notifierMask;
-		Read< PatternId_t, uint8_t >
-			(sockfd,  patternId, notifierMask);
+		Read<int,   PatternId_t, uint8_t >
+			(sockfd, calltype,  patternId, notifierMask);
 	fi->SelectDataNotificationRequest(patternId, notifierMask);
 	}
 
@@ -250,16 +250,16 @@ bool PTN_ControllerShim::Deserialize (int32_t sockfd) {
 	else if (calltype == PTN2FW_Call_SelectLinkComparator){
 		PatternId_t patternId;
 		 LinkComparatorTypeE lcType;
-		Read< PatternId_t, LinkComparatorTypeE >
-			(sockfd,  patternId, lcType);
+		Read<int,   PatternId_t, LinkComparatorTypeE >
+			(sockfd, calltype,  patternId, lcType);
 	fi->SelectLinkComparatorRequest(patternId, lcType);
 	}
 
 	else if (calltype == PTN2FW_Call_SetLinkThreshold){
 		PatternId_t patternId;
 		 LinkMetrics threshold;
-		Read< PatternId_t, LinkMetrics >
-			(sockfd,  patternId, threshold);
+		Read<int,   PatternId_t, LinkMetrics >
+			(sockfd, calltype,  patternId, threshold);
 	fi->SetLinkThresholdRequest(patternId, threshold);
 	}
 

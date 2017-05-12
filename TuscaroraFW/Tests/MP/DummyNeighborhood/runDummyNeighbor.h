@@ -16,7 +16,7 @@
 //#include <Interfaces/PWI/Framework_I.h>
 //#include "Src/Framework/PWI/StandardFI.h"
 #include <Interfaces/Pattern/PatternBase.h>
-#include "Lib/Pattern/NeighborTable/PatternNeighborIterator.h"
+#include "Lib/Pattern/NeighborTable/PatternNeighborTable.h"
 #include "Framework/PWI/StandardFI.h"
 #include "DummyEstimator2.h"
 #include <Sys/Run.h>

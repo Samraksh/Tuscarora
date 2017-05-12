@@ -85,8 +85,7 @@ bool Gossip2AppShim<GOSSIPVARIABLE, GOSSIPCOMPARATOR>::Deserialize (int32_t sock
 //		uint16_t nonce;
 		GOSSIPVARIABLE gossipvar;
 
-		rv = Read<int>(calltype);
-		rv = Read< AppId_t, GOSSIPVARIABLE>( pid, gossipvar);
+		rv = Read<int,   AppId_t, GOSSIPVARIABLE>( calltype, pid, gossipvar);
 
 		fi->UpdateGossipVariable(gossipvar);
 //		free(serial_msg); Consumed by AppMessage_t
@@ -94,8 +93,7 @@ bool Gossip2AppShim<GOSSIPVARIABLE, GOSSIPCOMPARATOR>::Deserialize (int32_t sock
 	else if(calltype == APP2GOSSIP_Call_RegisterApp){
 		AppId_t pid = 0;
 
-		rv = Read<int>(calltype);
-		rv = Read< AppId_t>( pid);
+		rv = Read<int,   AppId_t>(calltype, pid);
 
         client_init_ptr->InitClient(pid, sockfd);
 

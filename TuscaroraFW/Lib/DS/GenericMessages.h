@@ -38,8 +38,13 @@ struct TypeIsInt< GenericMsgPayloadSize_t >
 };
 
 
-template<typename T1, typename T2>
+template<typename T2>
 T2* AllocatePointerSpace(GenericMsgPayloadSize_t i1, T2* i2){
+	i2 = (T2*)malloc(i1);
+	return i2;
+}
+template<typename T1, typename T2>
+T2* AllocatePointerSpace(T1 i1, T2* i2){
 	i2 = (T2*)malloc(i1);
 	return i2;
 }
@@ -218,7 +223,7 @@ public:
 			if (i2 == NULL) {
 				//i2 = new T2[i1];
 				//i2 = (T2)malloc(i1);
-				i2 = AllocatePointerSpace<T1,T2>(i1, i2);
+				i2 = AllocatePointerSpace(i1, i2);
 			}
 			assert ( payload != NULL);
 			assert ( i2 != NULL);
@@ -669,7 +674,7 @@ class SocketDeSerializer{
 
 			if (i2 == NULL) {
 //				i2 = (T2)malloc(i1);
-				i2 = AllocatePointerSpace(i1,i2);
+				i2 = AllocatePointerSpace(i1,i2); //BK: TODO: For some reason this evaluates to the wrong template. //TODO: Look into why
 			}
 			if(i2 == NULL){
 				std::cout << "ReadFromSocket: Allocation unsuccessfull " << '\n';
@@ -783,6 +788,14 @@ public:
     			tip_of_buffer += readBytes;
     		}
     	}
+
+    	char* cbuf = (char*)buf;
+    	printf("-- ");
+		for (uint i=0; i< size; i++){
+			printf("%X ", cbuf[i]);
+		}
+		printf("--\n "); fflush(stdout);
+
     	++num_vars_read;
     	return true;
     }
@@ -939,9 +952,11 @@ class SocketSerializer{
 
 
     	char* cbuf = (char*)buf;
+    	printf("-- ");
 		for (uint i=0; i< size; i++){
-			printf("%X ", cbuf[i]); fflush(stdout);
+			printf("%X ", cbuf[i]);
 		}
+		printf("--\n "); fflush(stdout);
 
     	return sentBytes>0;
     }

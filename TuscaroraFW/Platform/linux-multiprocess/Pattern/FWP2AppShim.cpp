@@ -55,8 +55,7 @@ bool FWP2AppShim::Deserialize (int32_t sockfd) {
 
 		uint16_t nonce;
 
-		rv = Read<int>(calltype);
-		rv = Read< AppId_t, GenericMsgPayloadSize_t, void*, uint16_t>(pid, serial_msg_size, serial_msg, nonce);
+		rv = Read<int,  AppId_t, GenericMsgPayloadSize_t, void*, uint16_t>(calltype, pid, serial_msg_size, serial_msg, nonce);
 
 	    if(!rv){
 	    	Debug_Printf(DBG_SHIM, "FWP2AppShim::Deserialize Failed to Deserialize ... sockfd = %d \n", sockfd);
@@ -71,8 +70,7 @@ bool FWP2AppShim::Deserialize (int32_t sockfd) {
 	else if(calltype == APP2FWP_Call_RegisterApp){
 		AppId_t pid = 0;
 
-		rv = Read<int>(calltype);
-		rv = Read< AppId_t>(pid);
+		rv = Read<int,   AppId_t>(calltype, pid);
 
 	    if(!rv){
 	    	Debug_Printf(DBG_SHIM, "FWP2AppShim::Deserialize Failed to Deserialize ... sockfd = %d \n", sockfd);
