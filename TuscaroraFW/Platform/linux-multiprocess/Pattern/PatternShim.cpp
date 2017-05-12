@@ -225,11 +225,11 @@ void PatternShim::DataStatusRequest(PatternId_t patternId, MessageId_t msgId)
 //    this->SendMsg2Server(  ptn2fw_msg->GetPayload(), ptn2fw_msg->GetPayloadSize() );
 //}
 
-void PatternShim::RegisterPatternRequest(PatternId_t patternId, char uniqueName[128], PatternTypeE type){
+void PatternShim::RegisterPatternRequest(PatternId_t patternId, const char uniqueName[128], PatternTypeE type){
     Connect(0);
 
     int calltype = PTN2FW_Call_MethodE::PTN2FW_Call_RegisterPatternRequest;
-    SendMsg2Server<int, PatternId_t, GenericMsgPayloadSize_t, char*, PatternTypeE >
+    SendMsg2Server<int, PatternId_t, GenericMsgPayloadSize_t, const char*, PatternTypeE >
 	(calltype, patternId, 128*sizeof(char), (char*)uniqueName, type);
 
 }

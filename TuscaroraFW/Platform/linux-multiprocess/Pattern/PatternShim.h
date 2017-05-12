@@ -48,7 +48,7 @@ namespace Patterns {
     void BroadcastData(PatternId_t pid, FMessage_t& msg, WaveformId_t wid, uint16_t nonce );
     void ReplacePayloadRequest (PatternId_t patternId, MessageId_t msgId, void *payload, uint16_t sizeOfPayload);
     //void RegisterPatternRequest (PatternId_t patternId, PatternTypeE type);
-    void RegisterPatternRequest(PatternId_t patternId, char uniqueName[128], PatternTypeE type);
+    void RegisterPatternRequest(PatternId_t patternId, const char uniqueName[128], PatternTypeE type);
     void AddDestinationRequest (PatternId_t patternId, MessageId_t msgId, NodeId_t destArray[MAX_DEST], uint16_t noOfNbrs);
     void AddDestinationRequest (PatternId_t patternId, MessageId_t msgId, NodeId_t destArray[MAX_DEST], uint16_t noOfNbrs, LinkComparatorTypeE lcType);
     void CancelDataRequest (PatternId_t patternId, MessageId_t msgId, NodeId_t destArray[MAX_DEST], uint16_t noOfDest);

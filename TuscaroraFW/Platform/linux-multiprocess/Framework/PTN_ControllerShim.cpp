@@ -48,8 +48,6 @@ bool PTN_ControllerShim::Deserialize (int32_t sockfd) {
      	return false;
      }
 
-    Read<int>(sockfd, calltype) == 1;
-
 
 
     Debug_Printf(DBG_SHIM, "PTN_ControllerShim::Deserialize: Got a message msg.GetType() = %d \n", calltype);
