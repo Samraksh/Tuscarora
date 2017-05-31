@@ -1,0 +1,136 @@
+*/*
+pcap*
+!TuscaroraFW/*
+#BK: This is ignoring all files with no extension. Careful.
+*  
+!/**/
+!*/
+!*.*
+!validate*
+*.txt
+*.old
+*.h2
+*.cpp2
+*.orig
+*.py
+*.arch
+
+#Add all ide project files
+.kdev4/
+.project
+.pydevproject
+*.geany
+*.kdev4
+TuscaroraFW/.kdev4/
+TuscaroraFW/.cproject
+TuscaroraFW/.csettings/
+TuscaroraFW/Tuscarora.kdev4
+TuscaroraFW/.project
+
+
+TuscaroraFW/CopyOfCMakeCache.txt
+CMakeFiles/
+TuscaroraFW/dceln
+TuscaroraFW/Run
+#Makefile
+
+*.o
+*.cmd
+*.d
+*.gz
+*.pyc
+
+#cmake generated Makefile
+TuscaroraFW/Makefile
+
+#Dont ignore binaries under Toolchains
+!TuscaroraFW/Toolchains/arago-2013.12/*.o
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.backup
+
+.depend
+
+#Simulation output files
+#Pcap files
+*.pcap
+TuscaroraFW/*.pcap
+TuscaroraFW/pcap*
+TuscaroraFW/*.bin
+TuscaroraFW/elf-cache
+TuscaroraFW/CourseChangeData.txt
+
+
+#Ignore CMake files
+TuscaroraFW/CMakeCache.txt
+TuscaroraFW/cmake_install.cmake
+TuscaroraFW/CMakeFiles/
+
+
+#Latex document files
+TuscaroraFW/Doc/APIDoc/standaloneAPI_Docs_Output/
+TuscaroraFW/Doc/APIDoc/DoxyOutput/html/
+TuscaroraFW/Doc/APIDoc/DoxyOutput/latex/
+TuscaroraFW/Doc/APIDoc/standaloneAPI_Docs_Output/latex/
+TuscaroraFW/Doc/APIDoc/standaloneAPI_Docs_Output/html/
+TuscaroraFW/Doc/UserManual/TuscUserManual.aux
+TuscaroraFW/Doc/UserManual/TuscUserManual.blg
+TuscaroraFW/Doc/UserManual/TuscUserManual.glo
+TuscaroraFW/Doc/UserManual/TuscUserManual.idx
+TuscaroraFW/Doc/UserManual/TuscUserManual.log
+TuscaroraFW/Doc/UserManual/TuscUserManual.out
+TuscaroraFW/Doc/UserManual/TuscUserManual.pdf
+TuscaroraFW/Doc/UserManual/TuscUserManual.toc
+TuscaroraFW/Doc/UserManual/TuscUserManual.ind
+TuscaroraFW/Doc/UserManual/TuscUserManual.ilg
+TuscaroraFW/Doc/APIDoc/DoxyOutput/doxygen_sqlite3.db
+TuscaroraFW/Doc/APIDoc/FullAPI_current.pdf
+TuscaroraFW/Doc/TuscUserManual.pdf
+TuscaroraFW/Doc/SlimWaveformManual/*.log
+TuscaroraFW/Doc/SlimWaveformManual/*.toc
+TuscaroraFW/Doc/SlimWaveformManual/*.out
+TuscaroraFW/Doc/SlimWaveformManual/*.pdf
+TuscaroraFW/Doc/SlimWaveformManual/*.aux
+TuscaroraFW/Doc/SlimWaveformManual/*.blg
+TuscaroraFW/Doc/SlimWaveformManual/*.idx
+TuscaroraFW/Doc/SlimWaveformManual/*.glo
+
+
+# Miscellaneous
+*.suo
+*.csproj.user
+*.exe
+*.pdb
+*~
+*\#
+*\#*
+*.mmap
+TuscTest-dce
+# links to output files in the dce dir
+files-*
+repr
+repr.cpp
+jobs
+jobs.done
+jobs.log
+jobs.out
+*.lock
+*.exclusivelock
+*.output
+*.out
+*.err
+.externalToolBuilders
+.settings
+
+# MPP output
+MPP
+
+# Install phony targets
+TuscaroraFW/Install/t/
+
+# symlinks into user's space
+TuscaroraFW/simresults
+
