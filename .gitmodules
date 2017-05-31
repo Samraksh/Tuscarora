@@ -1,0 +1,3 @@
+[submodule "TuscaroraFW/googletest"]
+	path = TuscaroraFW/googletest
+	url = https://github.com/google/googletest.git
