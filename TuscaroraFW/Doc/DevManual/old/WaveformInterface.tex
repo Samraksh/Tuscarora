@@ -1,0 +1,144 @@
+\documentclass[letterpaper,
+ 11pt,
+ titlepage,
+ pdftex,
+ twoside=false,
+ openany,			% by default, new chapters are opened on right hand page, use this option to suppress that
+ headinclude,    %
+% headsepline,    % line between head an document text
+ %BCOR=12mm,      % 
+ appendixprefix=true,
+ chapterprefix=false,   
+ index= totoc,        % Index
+ bibliography=openstyle,
+ bibliography    = totoc         % Bib to ToC 
+]{article}
+
+% %set page layout
+\usepackage[
+  %paperwidth=6.5in,
+  %paperheight=10in,
+   top=0.75in,
+   %left=2cm,
+   %right=2cm,
+ % bottom=25mm,
+ % inner=10mm,
+ % outer=80mm,
+  %marginparsep=7mm,
+  %marginparwidth=48mm,
+]{geometry}
+
+\usepackage{listings}
+\lstset{
+      escapeinside={{(*@}{@*)}}, 
+      gobble=0,
+      stepnumber=1,numbersep=5pt, 
+      numberstyle={\footnotesize\color{gray}},%firstnumber=last,
+      breaklines=true,
+      framesep=5pt,
+      basicstyle=\small\ttfamily,
+      showstringspaces=false,
+      keywordstyle=\ttfamily\textcolor{blue},
+      stringstyle=\color{orange},
+      commentstyle=\color{black},
+      rulecolor=\color{gray!10},
+      breakatwhitespace=true,
+      showspaces=false,  % shows spacing symbol
+      backgroundcolor=\color{gray!15}
+}
+
+\usepackage[table]{xcolor}
+\usepackage[colorlinks=true,urlcolor=blue, citecolor=blue, linkcolor=black]{hyperref}
+\usepackage[english]{babel}
+\usepackage{blindtext}
+\usepackage{mathptmx}% Times Roman font
+\usepackage[scaled=.90]{helvet}% Helvetica, served as a model for arial
+
+\usepackage{titlesec}
+
+\usepackage{import}	% the import package helsp to find Doxygen files in the latex subdirectory
+\usepackage{doxygen}
+\usepackage[pdftex]{graphicx}   
+
+
+% % % % % % % %lets define some cool colors
+\definecolor{lightred}{rgb}{1.0,0.4,0.4}   % Light Redish Color
+
+
+
+% % %Reformat the title fonts
+%{\chaptertitlename\ \thechapter}{10pt}{\Huge}
+%\titleformat{\section}
+%  {\normalfont\sffamily\huge\bfseries\color{blue}}
+%  {\thechapter}{1em}{}
+  
+  %supported colors, blue, cyan, red
+\titleformat{\section}
+  {\normalfont\sffamily\Large\bfseries\color{blue}}
+  {\thesection}{1em}{}
+
+
+
+%\setkomafont{captionlabel}{
+
+
+% % % % %Make header and footer
+
+%\usepackage{fancyhdr}
+%\usepackage[automark,headsepline,footsepline]{scrlayer-scrpage}
+\usepackage{scrpage2}
+%\automark{section}
+
+\clearscrheadfoot
+\pagestyle{scrheadings}
+
+%\lehead[Samraksh]{Samraksh}        % equal page, right position (inner) 
+%\lohead[Samraksh]{Samraksh}       % odd   page, left  position (inner) 
+%\lehead[]{this is page \pagemark} % equal page, left (outer) position
+%\rohead[]{this is page \pagemark}
+% definitions/configuration for the footer
+\lefoot[\pagemark \ \ $\arrowvert$]{\pagemark \ \ $\arrowvert$}  % equal page, center position
+\lofoot[\pagemark \ \ $\arrowvert$] {\pagemark \ \ $\arrowvert$}    
+\refoot[\color{red} Limited Release, Do Not Redistribute.]{\color{red} Limited Release, Do Not Redistribute.}  % equal page, center position
+\rofoot[\color{red} Limited Release, Do Not Redistribute.]{\color{red} Limited Release, Do Not Redistribute.}
+
+
+% % % % % %redefine some commands
+
+%\renewcommand{\url}{ \color{lightred} {\url}}
+
+
+
+
+
+
+\makeindex
+\makeglossary
+
+% % % % % % % % % % %Header section heads, document begins
+\begin{document}
+% half-title page
+%\vspace*{\fill}
+\begin{titlepage}
+\title{
+{\Huge Tuscarora Waveform Interface Manual}\\
+Document Version 0.2 \\
+(Corresponds to Software Version 0.8.1)
+}
+\author{The Samraksh Company}
+\date{January 16, 2015}
+\end{titlepage}
+
+\maketitle
+\tableofcontents{}
+
+%\chapter{Waveform Interface}
+%\label{Chap:Waveform}
+\newpage
+\input{waveform.tex}
+
+%\bibliographystyle{unsrt}
+%\bibliography{TuscBib}
+
+
+\end{document}

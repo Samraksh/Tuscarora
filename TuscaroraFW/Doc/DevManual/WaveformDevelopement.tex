@@ -1,0 +1,119 @@
+%\section{Waveform Interface}
+
+This chapter explains some of the features of the waveform interface. The interface is defined in a flexible way to accommodate a diverse set of waveforms. 
+
+\section{Overview}
+
+The waveform interface serves as the lower interface of the Tuscarora Framework.  Any waveform that satisfies the interface definition may be plugged into the Framework for use alongside other waveforms, in order to support a heterogeneous MANET.
+
+To satisfy the waveform interface, a waveform provider needs to implement a single interface, called \CPPClassName{Waveform\_I}.  The interface, \CPPClassName{Waveform\_I} is a template class that is instantiated by passing the waveform’s address type as a template parameter.  In total, there are 10 methods in each instantiated class, of which 3 are optional, that is, a waveform provider can choose to not implement any or all of the optional methods. \cref{Fig:WaveformModules} shows the waveform
+interfaces as related to the framework interfaces.
+
+
+\begin{figure}[h]
+ \centering
+ \includegraphics[width=0.9\linewidth]{figures/WaveformModules}
+ \caption{Waveform Interfaces}
+ \label{Fig:WaveformModules}
+\end{figure}
+
+Please refer to the Framework API documentation for full detail about the \CPPClassName{Waveform\_I} interface. 
+
+
+\subsection {Programming Style:  Syntax and Semantics}
+The interface design uses asynchronous message passing semantics, with a functional syntax, to define interactions between the waveform and Tuscarora.  It consists of two sorts of methods:  1) incoming commands, exercised by the user of the interface (namely, the Framework, via a communication shim) on the waveform, and 2) outgoing events, sent by the waveform to the user of the interface.
+
+In terms of syntax, both commands and events are specified using function calls.  This simple representation yields ease of programming and, equally importantly, avoids restriction to a particular implementation of method invocation, such as socket communications between processes, which may be appropriate for some use cases (e.g., on large hardware platforms) but not others (e.g., for ns-3 simulation platforms where the overhead seems to matter).
+
+In terms of semantics, all interface methods are explicitly associated with a message passing semantics.  The message passing semantics is reflected by the fact that all incoming commands have a return type of void.  Moreover, for any command that expects some sort of response from the waveform, an associated event method exists in the waveform interface, to convey the result of the computation.
+
+The design assumes that a communication library, which we colloquially refer to as a “shim-layer”, is provided that implements the invocation of command and event methods using asynchronous message  passing.  The slightly different shim layer might be required for each waveform-platform pair, although generally far fewer shim layers would be required.
+
+\subsection {Data Plane and Control Plane}
+The waveform interface functionality spans a Data Plane and a Control Plane.  The Data Plan interface consists of the functions SendData, BroadcastData, Data Notification Event and the Received Message Event.  The remaining commands and events, as detailed below, which deal with the control status of the waveform, link estimation and schedules comprise the Control Plane. Figure 1 shows the Summary of the Commands and the Events that are expected by the framework in response to them, split across the Data and Control planes. The dotted lines show the dependency between a command and the event. 
+
+\subsection {Interface Interaction Pattern using Asynchronous Message Passing}
+In general, the data and control plane functions follow a common interaction pattern.  A command originates from Tuscarora to the waveform and, subsequently, one or more corresponding events are sent from the waveform back to the Framework.  Events are mapped and routed to particular modules and/or function within the Framework; it is convenient to think of each event as “named pipe” between the waveform and the Framework.  Each event is specified as a class with a single “Invoke” method that has a specific type of parameter. The Invoke method returns a bool (as against the void return type of most commands). The return type of Invoke indicates the status of queuing the Event on to the communication mechanism. The return type does not indicate the success or failure of sending the event to the framework. For example, if an Invoke returned a ‘true’ it means that the shim layer responsible for the communication has accepted the event and has queued it up for sending at a latter time. If it returns a ‘false’, it means either the communication mechanism is either broken or is busy processing existing events and cannot accept any new events to be sent out.
+Five types of events are defined for the waveform:
+\begin{enumerate}
+\item Received Message Event (WF\_RcvMessageEvent\_t):  This Event is sent whenever a data message is received on the waveform, with WF\_RecvMsgParam  as the parameter.
+\item	Data Notification Event (WF\_DataNotifierEvent\_t):  This Event is sent to convey the status of the SendData and BroadcastData calls and the WF\_DataNotifierParam is used as the event parameter. This Event might be generated up to three times for each data message, once to acknowledge the message has been received by the waveform, once when it is sent out and once when the message is received at the destination.
+\item	Control Response Event (WF\_ControlResponseEvent\_t):  This Event is sent in response to one of the request commands in the control plane with WF\_ControlRssponseParam as the parameter. The parameter contains a response type, response status (success/failure), any additional data and its size.
+\item	Link Estimation Event (WF\_LinkEstimateEvent\_t):  This Event is sent to provide to the Framework link estimates updates about a neighbor. The WF\_LinkEventParam is used as the parameter for this event.
+\item	Schedule Update Event (WF\_ScheduleUpdateEvent\_t):  This Event is sent by the waveform to provide updates about its sending or receiving schedules. WF\_ScheduleUpdateParam is used as the event parameter.
+\end{enumerate}
+
+Every command originating from the Framework has a sequence number and the events use the same sequence number to identify their response.  The Framework tracks the sequence number it uses for each command and if it fails to receive a response for some command, it may resend that command with the same sequence number.  The waveform using the same sequence number to send multiple response to the same command or to update/change the response to the command is acceptable.  For the control plane commands the sequence number is called as the “RequestId”, for the data plane it is called as the “MessageId”.  A couple of special cases are allowed:  The Link Estimation Event and the Schedule Update Event do not use sequence numbers in their events and error recovery is not provided for those events.  For the Received Message Event the sequence number is generated by the Waveform and sent to the Framework.
+
+\subsection {Control Plane State}
+
+As far as the Framework’s awareness of the control state of the waveform is concerned, it knows only that the state of the waveform can be one of the following states which are defined by the enum WF\_ControlP\_StatusE:
+\begin{itemize}
+	\item WF\_NORMAL:  Waveform has been initialized and is operating within “normal” bounds.
+	\item WF\_BUSY:  Waveform has been initialized, but is busy with non-data plane functions. The Framework should desist from sending messages to waveform, it is likely that the waveform might not accept the messages.
+	\item WF\_ERROR:  Waveform is in an error state. The Framework should not send messages to waveform, until the status changes.
+	\item WF\_BUFFER\_LOW:  The waveform is operating normally, but is at risk of running out of messages to send out. The Framework may respond by attempting to increase the data output to the waveform.
+	\item WF\_BUFFER\_FULL:  The waveform is operating normally, but is at risk of being overrun by data packets. The Framework should respond by slow down its rate of invoking data packet sends on the waveform.
+\end{itemize}
+
+
+\subsection {Flow Control}
+The Waveform accomplishes flow control between the Waveform and Framework in one of three ways:
+
+\begin{enumerate}
+	\item	Waveform can drop the packet being sent to it and return a negative status when sending a data notification message back to the Framework.  The Framework will interpret this as the waveform not being ready to receive data messages.
+	\item	Waveform can send a WF\_BUFFER\_LOW or WF\_BUFFER\_FULL response messages to the Framework, to request it to speed up or slow down the data message rate.
+	\item	Waveform can send a WF\_ERROR status message to completely stop receiving any data messages from the Framework if it has to clear a backlog.  It could subsequently send a WF\_NORMAL status message when it is ready to resume.
+	The remaining sections describe the API methods (first commands, then events) in detail.
+\end{enumerate}
+
+\subsection {Parameter Ownership}
+In Tuscarora whenever a function call happens across layers the ownership of the data structures passed as parameters is transferred to the callee. In this particular case, this applies to the commands the Waveform\_I interface receives and the event calls the waveform makes. We call the “Give” model of ownership where the ownership is given when to the callee. The Give model is used to avoid deep copying of packets and other parameters at the callee so that efficiency of processing can be improved. However, there are some implications of this “Give” model. 
+\begin{itemize}
+\item Pass by reference: Any large parameter objects should be passed by reference in a function to make optimum use of the Give model. Passing by value does not utilize the Give model. However, for small objects this might not matter much.
+
+\item Allocation on heap: The caller must also be explicitly aware of which parameters are passed as references, since these objects must be allocated on the heap (and not on the local stack). Creating a local object and passing this as reference to another method will result in run time errors. Also, once a parameter has been passed as reference and the call has been made, the same object cannot be modified by the caller anymore. This would also result in run time errors.
+
+\item Deallocation:  It is the callee’s responsibility to deallocate any parameter that is  passed by reference, since these were originally allocated on the heap by the caller. Failing to deallocate (or reuse) such objects will result in a memory leak. 
+\end{itemize}
+
+
+
+\section{Packet Metadata}
+
+Waveforms should also provide metadata for each packet received.
+The metadata provided is standardized across all
+waveforms. Currently 3 types of metadata have been defined, (i)
+Received signal strength indicator (RSSI), (ii) Signal to noise and
+interference ratio (SINR) and (iii) Packet reception time stamp.
+The metadata is used by the framework to create and/or improve the
+estimates for the properties of links.
+%estimates of the the neighbors.
+
+\if false
+\begin{lstlisting}[style=boralargefile][captionpos=b,caption={Waveform attributes structure used to expose information about the waveform to framework},label=List:Attributes]
+ 
+struct WaveformAttributes{
+  uint16_t wfId;		///Waveform Ids given by the framework
+  WF_TypeE type;		///Type of waveform	
+  WF_EstimatorTypeE estType;	///Type of estimator provided by the waveform
+  WF_AntennaTypeE antType;	///Type of antenna used by the waveform
+  WF_ModeE mode;		///Current mode of the waveform
+  uint16_t ifindex;		///Waveform OS/Platform interfce index number
+  char name[32];		///Name of waveform
+  uint16_t headerSize;		///Size of the waveform header in bytes
+  uint16_t maxPayloadSize;	///Maximum payload that can be sent on the waveform in 			bytes
+  uint16_t maxPacketSize;	///Maximum packet size that can be sent on the waveform 			(in bytes), including the waveform header
+  uint16_t minPacketSize;	///Minimum packet size that can be sent on the waveform 			(in bytes), including the waveform header
+  uint32_t minInterPacketDelay; ///Minimum interpacket rate in micro seconds
+  uint32_t channelRate; 	///The channel rate in bytes per second
+  uint32_t maxBurstRate; 	///Maximum data burst rate in bytes per second
+};
+\end{lstlisting}
+
+\fi
+
+%\input{apis/class_waveform_1_1_waveform_base.tex}
+
+
+%\input{apis/class_waveform_1_1_waveform___i.tex}

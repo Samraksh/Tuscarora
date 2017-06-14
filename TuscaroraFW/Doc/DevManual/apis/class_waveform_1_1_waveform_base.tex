@@ -1,0 +1,184 @@
+\hypertarget{class_waveform_1_1_waveform_base}{}\section{Waveform\+:\+:Waveform\+Base Class Reference}
+\label{class_waveform_1_1_waveform_base}\index{Waveform\+::\+Waveform\+Base@{Waveform\+::\+Waveform\+Base}}
+
+
+Inheritance diagram for Waveform\+:\+:Waveform\+Base\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=334pt]{class_waveform_1_1_waveform_base__inherit__graph}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \hyperlink{class_waveform_1_1_waveform_base_a67053c3a29b7fa3f477dce71a15fc624}{Replace\+Payload\+Request} (Request\+Id\+\_\+t r\+Id, W\+F\+\_\+\+Message\+Id\+\_\+t msg\+Id, uint8\+\_\+t $\ast$payload, uint16\+\_\+t payload\+Size)=0
+\begin{DoxyCompactList}\small\item\em Requests the replacement the payload of a message, passed in an earlier call to ‘\+Send\+Data’ or ‘\+Broadcast\+Data’ method with the given Message\+Id. The previous payload will be discarded. \end{DoxyCompactList}\item 
+virtual void \hyperlink{class_waveform_1_1_waveform_base_aad9cfbc04a5168caa1780edd812d6f7d}{Attributes\+Request} (Request\+Id\+\_\+t r\+Id)=0
+\begin{DoxyCompactList}\small\item\em Request the attributes of the waveform. \end{DoxyCompactList}\item 
+virtual void \hyperlink{class_waveform_1_1_waveform_base_ac5a64312ea70923af969c51cc4e0363d}{Control\+Status\+Request} (Request\+Id\+\_\+t r\+Id)=0
+\begin{DoxyCompactList}\small\item\em Requests the control status of waveform. A W\+F\+\_\+\+StatusE enum type is sent as the data of the response message, to indicate the status of the variable. \end{DoxyCompactList}\item 
+virtual void \hyperlink{class_waveform_1_1_waveform_base_a767db0e1d92d0e3ae46da3b2335e9b87}{Data\+Status\+Request} (Request\+Id\+\_\+t r\+Id, W\+F\+\_\+\+Message\+Id\+\_\+t m\+Id)=0
+\begin{DoxyCompactList}\small\item\em Requests the status of a data message already sent to the waveform. \end{DoxyCompactList}\item 
+virtual void \hyperlink{class_waveform_1_1_waveform_base_ad0e6f375f176315332c7e90d57fb8a21}{Set\+Schedule\+Request} (Request\+Id\+\_\+t r\+Id, Node\+Id\+\_\+t node\+Id, W\+F\+\_\+\+Schedule\+TypeE type, Schedule\+BaseI \&schedule, uint16\+\_\+t schedule\+Size)
+\begin{DoxyCompactList}\small\item\em Sends information about a schedule for one of 3 kinds of functions\+: link estmation, sending or receiving to the waveform. \end{DoxyCompactList}\item 
+virtual void {\bfseries Schedule\+Request} (Request\+Id\+\_\+t r\+Id, Node\+Id\+\_\+t nodeid, W\+F\+\_\+\+Schedule\+TypeE type)\hypertarget{class_waveform_1_1_waveform_base_ac443d02d12315ac2aeb4cb0f62c35862}{}\label{class_waveform_1_1_waveform_base_ac443d02d12315ac2aeb4cb0f62c35862}
+
+\end{DoxyCompactItemize}
+
+
+\subsection{Member Function Documentation}
+\index{Waveform\+::\+Waveform\+Base@{Waveform\+::\+Waveform\+Base}!Attributes\+Request@{Attributes\+Request}}
+\index{Attributes\+Request@{Attributes\+Request}!Waveform\+::\+Waveform\+Base@{Waveform\+::\+Waveform\+Base}}
+\subsubsection[{\texorpdfstring{Attributes\+Request(\+Request\+Id\+\_\+t r\+Id)=0}{AttributesRequest(RequestId_t rId)=0}}]{\setlength{\rightskip}{0pt plus 5cm}virtual void Waveform\+::\+Waveform\+Base\+::\+Attributes\+Request (
+\begin{DoxyParamCaption}
+\item[{Request\+Id\+\_\+t}]{r\+Id}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_waveform_1_1_waveform_base_aad9cfbc04a5168caa1780edd812d6f7d}{}\label{class_waveform_1_1_waveform_base_aad9cfbc04a5168caa1780edd812d6f7d}
+
+
+Request the attributes of the waveform. 
+
+{\bfseries Semantic Behavior\+:} \hyperlink{namespace_waveform}{Waveform} should return its attributes to the Framework by generating a response through the Control Response Event, with the same request ID. The status of the response message should be true, unless otherwise the attributes are not available to be sent to the Framework. The response contains attributes in the \hyperlink{struct_waveform_1_1_w_f___attributes}{W\+F\+\_\+\+Attributes} structure, which is copied into the data portion of the \hyperlink{struct_waveform_1_1_w_f___control_response_param}{W\+F\+\_\+\+Control\+Response\+Param}.
+
+
+\begin{DoxyParams}{Parameters}
+{\em r\+Id} & Specifies the ID of the request, which the waveform will use to in its response message. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void. 
+\end{DoxyReturn}
+
+
+Implemented in \hyperlink{class_waveform_1_1_waveform__64b___i_a11e3bb3d2db8b8f1f7f63159782af9ce}{Waveform\+::\+Waveform\+\_\+64b\+\_\+I}.
+
+\index{Waveform\+::\+Waveform\+Base@{Waveform\+::\+Waveform\+Base}!Control\+Status\+Request@{Control\+Status\+Request}}
+\index{Control\+Status\+Request@{Control\+Status\+Request}!Waveform\+::\+Waveform\+Base@{Waveform\+::\+Waveform\+Base}}
+\subsubsection[{\texorpdfstring{Control\+Status\+Request(\+Request\+Id\+\_\+t r\+Id)=0}{ControlStatusRequest(RequestId_t rId)=0}}]{\setlength{\rightskip}{0pt plus 5cm}virtual void Waveform\+::\+Waveform\+Base\+::\+Control\+Status\+Request (
+\begin{DoxyParamCaption}
+\item[{Request\+Id\+\_\+t}]{r\+Id}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_waveform_1_1_waveform_base_ac5a64312ea70923af969c51cc4e0363d}{}\label{class_waveform_1_1_waveform_base_ac5a64312ea70923af969c51cc4e0363d}
+
+
+Requests the control status of waveform. A W\+F\+\_\+\+StatusE enum type is sent as the data of the response message, to indicate the status of the variable. 
+
+{\bfseries Semantic Behavior\+:} The Framework expects the waveform to be in one of the data plane states defined by the W\+F\+\_\+\+Control\+P\+\_\+\+StatusE enum. The waveform should return the current status of its data plane by generating a response through the Control Response Event, with the same Request\+Id. The status that response message should be true. The actual data plane status should be copied into the data part of the response
+
+
+\begin{DoxyParams}{Parameters}
+{\em r\+Id} & Specifies the ID of the request, which the waveform will use to in its response message. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void. 
+\end{DoxyReturn}
+
+
+Implemented in \hyperlink{class_waveform_1_1_waveform__64b___i_ae13e7e49359ea2e45b010cdf4f1d3227}{Waveform\+::\+Waveform\+\_\+64b\+\_\+I}.
+
+\index{Waveform\+::\+Waveform\+Base@{Waveform\+::\+Waveform\+Base}!Data\+Status\+Request@{Data\+Status\+Request}}
+\index{Data\+Status\+Request@{Data\+Status\+Request}!Waveform\+::\+Waveform\+Base@{Waveform\+::\+Waveform\+Base}}
+\subsubsection[{\texorpdfstring{Data\+Status\+Request(\+Request\+Id\+\_\+t r\+Id, W\+F\+\_\+\+Message\+Id\+\_\+t m\+Id)=0}{DataStatusRequest(RequestId_t rId, WF_MessageId_t mId)=0}}]{\setlength{\rightskip}{0pt plus 5cm}virtual void Waveform\+::\+Waveform\+Base\+::\+Data\+Status\+Request (
+\begin{DoxyParamCaption}
+\item[{Request\+Id\+\_\+t}]{r\+Id, }
+\item[{W\+F\+\_\+\+Message\+Id\+\_\+t}]{m\+Id}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_waveform_1_1_waveform_base_a767db0e1d92d0e3ae46da3b2335e9b87}{}\label{class_waveform_1_1_waveform_base_a767db0e1d92d0e3ae46da3b2335e9b87}
+
+
+Requests the status of a data message already sent to the waveform. 
+
+{\bfseries Semantic Behavior\+:} If the Framework is uncertain about the status of a message that it sent to the waveform, it can send the Data\+Status\+Request command. A response message should be generated through the Control Response Event, with the same Request\+Id, that should have the status set as ‘true’ if the waveform received the particular message and a W\+F\+\_\+\+Data\+Notifier\+Param object must be created that reflects the current status of the message and should be copied into the data part of the \hyperlink{struct_waveform_1_1_w_f___control_response_param}{W\+F\+\_\+\+Control\+Response\+Param}.
+
+
+\begin{DoxyParams}{Parameters}
+{\em r\+Id} & Specifies the ID of the request, which the waveform will use to in its response message. \\
+\hline
+{\em m\+Id} & Specified the ID of the message, for which status is requested. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void. 
+\end{DoxyReturn}
+
+
+Implemented in \hyperlink{class_waveform_1_1_waveform__64b___i_a06bcaf416cc353850232ee373b3bac01}{Waveform\+::\+Waveform\+\_\+64b\+\_\+I}.
+
+\index{Waveform\+::\+Waveform\+Base@{Waveform\+::\+Waveform\+Base}!Replace\+Payload\+Request@{Replace\+Payload\+Request}}
+\index{Replace\+Payload\+Request@{Replace\+Payload\+Request}!Waveform\+::\+Waveform\+Base@{Waveform\+::\+Waveform\+Base}}
+\subsubsection[{\texorpdfstring{Replace\+Payload\+Request(\+Request\+Id\+\_\+t r\+Id, W\+F\+\_\+\+Message\+Id\+\_\+t msg\+Id, uint8\+\_\+t $\ast$payload, uint16\+\_\+t payload\+Size)=0}{ReplacePayloadRequest(RequestId_t rId, WF_MessageId_t msgId, uint8_t *payload, uint16_t payloadSize)=0}}]{\setlength{\rightskip}{0pt plus 5cm}virtual void Waveform\+::\+Waveform\+Base\+::\+Replace\+Payload\+Request (
+\begin{DoxyParamCaption}
+\item[{Request\+Id\+\_\+t}]{r\+Id, }
+\item[{W\+F\+\_\+\+Message\+Id\+\_\+t}]{msg\+Id, }
+\item[{uint8\+\_\+t $\ast$}]{payload, }
+\item[{uint16\+\_\+t}]{payload\+Size}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_waveform_1_1_waveform_base_a67053c3a29b7fa3f477dce71a15fc624}{}\label{class_waveform_1_1_waveform_base_a67053c3a29b7fa3f477dce71a15fc624}
+
+
+Requests the replacement the payload of a message, passed in an earlier call to ‘\+Send\+Data’ or ‘\+Broadcast\+Data’ method with the given Message\+Id. The previous payload will be discarded. 
+
+{\bfseries Semantic Behavior\+:} \hyperlink{namespace_waveform}{Waveform} should replace the payload of a message passed in an earlier call to ‘\+Send\+Data’ or ‘\+Broadcast\+Data’ method with the given message ID, if the message has not been sent out. A response message should be generated through the Control Response Event, with the same request ID, that should include a status which will be set to false if the message has been sent out or if the waveform is unable to replace the payload of a message. Otherwise, the status should be set to true in the response message.
+
+
+\begin{DoxyParams}{Parameters}
+{\em r\+Id} & Specifies the ID of the request, which the waveform will use to in its response message. \\
+\hline
+{\em msg\+Id} & specifies the message ID of the packet. \\
+\hline
+{\em payload} & pointer to the new payload. \\
+\hline
+{\em payload\+Size} & size of the new payload. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void. 
+\end{DoxyReturn}
+
+
+Implemented in \hyperlink{class_waveform_1_1_waveform__64b___i_a90bdc9d75233d1453c486ad200126b90}{Waveform\+::\+Waveform\+\_\+64b\+\_\+I}.
+
+\index{Waveform\+::\+Waveform\+Base@{Waveform\+::\+Waveform\+Base}!Set\+Schedule\+Request@{Set\+Schedule\+Request}}
+\index{Set\+Schedule\+Request@{Set\+Schedule\+Request}!Waveform\+::\+Waveform\+Base@{Waveform\+::\+Waveform\+Base}}
+\subsubsection[{\texorpdfstring{Set\+Schedule\+Request(\+Request\+Id\+\_\+t r\+Id, Node\+Id\+\_\+t node\+Id, W\+F\+\_\+\+Schedule\+Type\+E type, Schedule\+Base\+I \&schedule, uint16\+\_\+t schedule\+Size)}{SetScheduleRequest(RequestId_t rId, NodeId_t nodeId, WF_ScheduleTypeE type, ScheduleBaseI &schedule, uint16_t scheduleSize)}}]{\setlength{\rightskip}{0pt plus 5cm}virtual void Waveform\+::\+Waveform\+Base\+::\+Set\+Schedule\+Request (
+\begin{DoxyParamCaption}
+\item[{Request\+Id\+\_\+t}]{r\+Id, }
+\item[{Node\+Id\+\_\+t}]{node\+Id, }
+\item[{W\+F\+\_\+\+Schedule\+TypeE}]{type, }
+\item[{Schedule\+BaseI \&}]{schedule, }
+\item[{uint16\+\_\+t}]{schedule\+Size}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}\hypertarget{class_waveform_1_1_waveform_base_ad0e6f375f176315332c7e90d57fb8a21}{}\label{class_waveform_1_1_waveform_base_ad0e6f375f176315332c7e90d57fb8a21}
+
+
+Sends information about a schedule for one of 3 kinds of functions\+: link estmation, sending or receiving to the waveform. 
+
+{\bfseries Semantic Behavior\+:} This method enables the Framework to pass on some scheduling information to the waveform. The expectation is that this method will be implemented only if the waveform needs scheduling information from the Framework or an external third party provider. The method enables receiving scheduling information specific to a neighbor specified by the \+\_\+node\+Id parameter. The schedule information is sent as abstract schedule object represented by the \+\_\+schedule object and the size of this object is specified by the \+\_\+schedule\+Size parameter. The expectation is that, if a waveform needs scheduling information, it will derive from the Schedule\+BaseI class and will implement its own scheduling class. The Framework defines three types of waveform schedules as the W\+F\+\_\+\+Schedule\+TypeE enum (one each for link estimation, sending, and receiving messages).
+
+The waveform should regenerate a response to this request through the Control Response Event, with the same Request\+Id. The status of that response message should be true if the waveform able to successfully use the scheduler information or false otherwise.
+
+Since this is an optional feature for waveforms, if it choose to implement it, the waveform should set the scheduler\+Info\+Support field in its Attribute as true whenever it responds to the Attribute\+Request.
+
+
+\begin{DoxyParams}{Parameters}
+{\em r\+Id} & Specifies the ID of the request, which the waveform will use to in its response message. \\
+\hline
+{\em nodeid} & Specifies the node ID for which the schedule should be used. \\
+\hline
+{\em type} & Enum that specifies the type of the schedule. There are 3 types of schedules, sending, receiving and link estimation. \\
+\hline
+{\em schedule} & Reference to an abstract schedule object. It is expected that this class will be derived and implemented by different waveforms. \\
+\hline
+{\em schedule\+Size} & Size of the schedule object. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void. 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Tuscarora\+F\+W/\+Include/\+Interfaces/\+Waveform/W\+F\+\_\+\+I.\+h\end{DoxyCompactItemize}

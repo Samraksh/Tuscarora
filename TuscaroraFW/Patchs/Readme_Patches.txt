@@ -1,4 +1,4 @@
-qReadMe for Applying the Patches to add Samraksh features and fixes
+ReadMe for Applying the Patches to add Samraksh features and fixes
 Author: Mukundan Sridhran
 
 Apply the following four patches to dce. No need to apply the ns3-socket-fd-factory.cc.patch

@@ -341,7 +341,7 @@ SlimNetDevice::IsBridge (void) const
 void SlimNetDevice::TransmitStart ()
 {
   NS_LOG_DEBUG("Starting transmit");
-	Ptr<Packet> p = m_queue->Dequeue ();
+	Ptr<Packet> p = m_queue->Dequeue ()->GetPacket();
 	if(p == 0 ){
 		return;
 	}
@@ -452,8 +452,9 @@ SlimNetDevice::Send(Ptr<Packet> packet, const Address& dest, uint16_t protocolNu
 
 	NS_LOG_DEBUG ("Received packet to send. Protocol "<<  protocolNumber << " Current state is: " << m_txMachineState);
 
-	// We should enqueue and dequeue the packet to hit the tracing hooks.
-	m_queue->Enqueue (packet);
+	// We should enqueue and dequeue a queueitem contaiing the packet to hit the tracing hooks.
+	Ptr<QueueItem> p_qi(new QueueItem(packet));
+	m_queue->Enqueue (p_qi);
 
 	Decide2TxorSchedule();
 	// TO DO: do we return true or false here??
@@ -610,7 +611,7 @@ uint8_t SlimNetDevice::GetContentionWindowSize(){
 
 
 bool SlimNetDevice::CanITXInCurrentSlot() {
-	Time txTime = m_phy->CalculateTxDuration (PrepareTxVector(m_queue->Peek()));
+	Time txTime = m_phy->CalculateTxDuration (PrepareTxVector(m_queue->Peek()->GetPacket() ));
 	if (txTime < TimeTilltheEndofCurrentSlot()) return true;
 	return false;
 }

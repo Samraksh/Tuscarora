@@ -1,7 +1,9 @@
-/*
- Author: Vinod Kulathumani
- Date: Dec 04, 2013.
- */
+////////////////////////////////////////////////////////////////////////////////// 
+// Tuscarora Software Suite. The Samraksh Company.  All rights reserved. 
+// Please see License.txt file in the software root directory for usage rights. 
+// Please see developer's manual for implementation notes. 
+////////////////////////////////////////////////////////////////////////////////// 
+
 
 #ifndef UniformRandomInt_h
 #define UniformRandomInt_h
@@ -146,3 +148,4 @@ namespace PAL {
 }	//End of namespace PAL
 
 #endif // UniformRandInt_h
+

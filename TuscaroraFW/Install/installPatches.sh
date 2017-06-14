@@ -23,16 +23,21 @@ ns3PatchSrc="$TUS/Patchs.ns3"
 DCE_PATCHES="$(cd $dcePatchSrc; find . -name '*.patch')"
 NS3_PATCHES="$(cd $ns3PatchSrc; find . -name '*.patch')"
 
+patchNo=0
+
 #echo $DCE_PATCHES
 #echo $NS3_PATCHES
 echo "Installing ns3 patches..."
+echo "========================="
+echo ""
 
 src_dir=$NS3_PATCH_DIR
 for p in $NS3_PATCHES
 do
   p_src="$ns3PatchSrc/$p"
   p_t="$src_dir/$p"
-  echo "Patch target: $p_t"
+  patchNo=$(expr $patchNo + 1)
+  echo "Patch Number $patchNo : input file : $p_t"
   
   p_d=$(dirname $p_t)
   #patch --dry-run -Nd $p_d < $p_src
@@ -41,12 +46,15 @@ do
 done
 
 echo "Instaing dce patches.."
+echo "========================="
+echo ""
 src_dir=$DCE_PATCH_DIR
 for p in $DCE_PATCHES
 do
   p_src="$dcePatchSrc/$p"
   p_t="$src_dir/$p"
-  echo "Patch target: $p_t"
+  patchNo=$(expr $patchNo + 1)
+  echo "Patch Number $patchNo : input file : $p_t"
   
   p_d=$(dirname $p_t)
   #patch --dry-run -Nd $p_d < $p_src

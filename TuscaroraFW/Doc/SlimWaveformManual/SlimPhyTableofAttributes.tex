@@ -1,0 +1,83 @@
+ \begin{longtable}{ | c | c | c |}
+
+\caption{Attributes of TuscaroraSlimPhy}\label{table:SlimPhyTableofAttributes}	\\
+ 
+     \hline
+  \textbf{Attribute} & \textbf{Short Description} & \textbf{Default Value} \\ \hline
+ 
+     
+    
+ EnergyDetectionThreshold & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright The energy of a received signal should be higher than 
+                   this threshold (dbm) to allow the PHY layer to detect the signal.} & 
+                   -96.0 \\ \hline 
+
+ TxGain & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright Transmission gain (dB).} & 
+                   1.0 \\ \hline 
+
+ RxGain & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright Reception gain (dB).} & 
+                   1.0 \\ \hline 
+
+ TxPowerLevels & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright Number of transmission power levels available between 
+                   TxPowerStart and TxPowerEnd included.} & 
+                   1 \\ \hline 
+
+ TxPowerEnd & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright Maximum available transmission level (dbm).} & 
+                   16.0206 \\ \hline 
+
+ TxPowerStart & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright Minimum available transmission level (dbm).} & 
+                   16.0206 \\ \hline 
+
+ RxNoiseFigure & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright Loss (dB) in the signal to noise ratio due to non-idealities in the receiver.} & 
+                   0 \\ \hline 
+
+ StateHelperPtr & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright The pointer to the helper class object that keeps the state of the phy layer} & 
+                   PointerValue () \\ \hline 
+
+ ChannelSwitchDelay & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright Time it takes to switch channels.} & 
+                   250000ns \\ \hline 
+
+ ChannelNumber & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright Channel number among multiple orthogonal channels.}
+ %Channel center frequency = Channel starting frequency + 5 MHz * nch} & 
+                  & 1 \\ \hline 
+
+ Frequency & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright The central operating frequency.} & 
+                   2407 \\ \hline 
+
+ AntennaPtr & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright The pointer pointing to the associated antenna object.} & 
+                  IsotropicAntennaModel \\ \hline 
+
+% Transmitters & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright The number of transmitters.} & 
+%                   UintegerValue (1) \\ \hline 
+%
+% Receivers & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright The number of receivers.} & 
+%                   UintegerValue (1) \\ \hline 
+%
+% ShortGuardEnabled & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright Whether or not short guard interval is enabled.} & 
+%                   BooleanValue (false) \\ \hline 
+%
+% LdpcEnabled & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright Whether or not LDPC is enabled.} & 
+%                   BooleanValue (false) \\ \hline 
+%
+% STBCEnabled & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright Whether or not STBC is enabled.} & 
+%                   BooleanValue (false) \\ \hline 
+%
+% GreenfieldEnabled & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright Whether or not STBC is enabled.} & 
+%                   BooleanValue (false) \\ \hline 
+%
+% ChannelBonding & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright Whether 20MHz or 40MHz.} & 
+%                   BooleanValue (false) \\ \hline 
+%
+% CenterFrequency & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright The center frequency of the channel} & 
+%				   DoubleValue (2407) \\ \hline 
+%
+% RateDefinitions & \parbox[][][t]{5cm}{\vspace{6pt}\raggedright The objects that hold rates supported} & 
+%				   PointerValue () \\ \hline 
+
+ 
+				   
+
+			   
+				   
+				   
+	   
+ \end{longtable}   

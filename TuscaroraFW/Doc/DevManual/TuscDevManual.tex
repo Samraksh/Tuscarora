@@ -1,0 +1,197 @@
+%\documentclass[ebook,12pt,oneside,openany]{memoir}
+
+\documentclass[letterpaper,
+ 12pt,
+ titlepage,
+% pdftex,
+ oneside,
+ openany,			% by default, new chapters are opened on right hand page, use this option to suppress that
+ headinclude,    %
+ headsepline,    % line between head an document text
+ footsepline=false, %line between document text and footer
+ %BCOR=12mm,      % 
+ appendixprefix=true,
+ chapterprefix=true,   
+ index= totoc,        % Index
+ bibliography=openstyle,
+ bibliography    = totoc         % Bib to ToC 
+]{book}
+
+% %set page layout
+\usepackage[
+top=0.75in,   bottom=0.75in, left=0.75in, right=0.75in
+]{geometry}
+
+\usepackage{titlesec}
+\input{scrbookStyles}
+
+\usepackage[english]{babel}
+%\usepackage{subcaption}
+
+
+\usepackage[htt]{hyphenat}
+\usepackage[table,usenames,dvipsnames]{xcolor}
+
+\input{cppStyling.tex}
+
+%\usepackage[table]{xcolor}
+\usepackage[colorlinks=true,urlcolor=blue, citecolor=blue, linkcolor=blue]{hyperref}
+
+\usepackage{blindtext}
+%\usepackage{newtxtext,newtxmath}
+\usepackage{mathptmx}% Times Roman font
+\usepackage{textcomp}
+\usepackage[scaled=.90]{helvet}% Helvetica, served as a model for arial
+
+% % %stuff needed to parse doxygen files
+\usepackage{import}	% the import package helsp to find Doxygen files in the latex subdirectory
+\usepackage{doxygen}
+\usepackage{graphicx}   
+
+\usepackage{microtype}
+
+%\usepackage{varioref}
+\usepackage{cleveref}
+
+%\usepackage[capitalize]{cleveref}
+\crefname{figure}{Fig.}{Figs.}
+\Crefname{figure}{Fig.}{Figs.}
+%\crefname{algorithm}{Algorithm}{Algorithms}
+
+\renewcommand{\DoxyLabelFont}{%
+	\fontseries{bc}\selectfont%
+	\color{darkgray}%
+}
+\newcommand{\+}{\discretionary{\mbox{\scriptsize$\hookleftarrow$}}{}{}}
+
+
+\addto{\captionsenglish}{\renewcommand{\bibname}{List of References}}
+
+
+% % % % % % % %lets define some cool colors
+\definecolor{lightred}{rgb}{1.0,0.4,0.4}   % Light Redish Color
+\definecolor{bottlegreen}{rgb}{0.11, 0.64, 0.22}
+\definecolor{steelblue}{rgb}{0.14, 0.42, 0.56}	
+\definecolor{purple3}{rgb}{0.54, 0.41, 0.80}
+
+%\usepackage{sectsty}% http://ctan.org/pkg/sectsty
+
+%\chapterfont{\color{blue}}
+%\sectionfont{\color{steelblue}}
+%\subsectionfont{\color{purple3}}
+%\subsubsectionfont{\color{blue!50!white}}
+
+\makeindex
+\makeglossary
+
+
+\newcommand{\TuscConcept}[1]{``#1''}
+
+%\usepackage[obeyspaces,spaces]{url}
+\usepackage{hyperref}
+\newcommand{\FilePath}[1]{``\path{#1}''}
+% to quickly comment text during revisions ;-)
+% Select what to do with todonotes: 
+% \usepackage[disable]{todonotes} % notes not showed
+\usepackage[draft]{todonotes}   % notes showed
+\usepackage{xstring}
+%\newcommand{\bk}[1]{}
+\newcommand{\bk}[1]{\todo[inline]{(BK: #1)}}
+\newcommand{\bora}[2]{
+	\IfEqCase{#1} {
+		{1}{\todo[inline]{(BK: #2)}}
+		{0}{}
+	}[\PackageError{bora}{Undefined option to bora: #1}{}]%
+}
+
+
+
+% % % % % % % % % % %Header section heads, document begins
+\begin{document}
+% half-title page
+%\vspace*{\fill}
+%\begin{titlepage}
+\title{Tuscarora Developers Manual\\
+ Version 2.0 \\
+}
+\author{The Samraksh Company\\
+	\\
+	\\
+	\\}
+%\date{Sept 15, 2016}
+\date{This research was developed with funding from the Defense Advanced Research Projects Agency (DARPA). The views, opinions, and/or findings contained in this article/presentation are those of the author(s)/presenter(s) and should not be interpreted as representing the official views or policies of the Department of Defense or the U.S. Government.}
+%\end{titlepage}
+
+
+
+\maketitle
+\tableofcontents{}
+
+
+\chapter {Introduction}
+\label{Chap:Intro}
+\input{intro.tex}
+
+\chapter {Getting Started}
+\label{Chap:Install}
+\input{GettingStarted.tex}
+
+\chapter{Inter Layer Messaging and Build Options}
+\label{Chap:ILS}
+\input{InterLayerComms.tex}
+%\section{Typical Deployment Scenarios}
+%\input{DeploymentScenarios}
+%\section{Implementing a Multi-process Shim}
+
+\chapter{Application Development}
+\label{Chap:Architecture}
+\input{application.tex}
+
+
+\chapter{Pattern Development}
+\label{Chap:Pattern}
+\input{PatternDevelopement.tex}
+\section{Pattern Libraries}
+\input{patternBase.tex}
+\section{Pattern Example}
+\input{PatternExample.tex}
+
+\chapter{Waveform Development}
+\label{Chap:Waveform}
+\input{WaveformDevelopement.tex}
+\section {Link Estimation and Network Discovery}
+\label{Chap:Estimation}
+\input{linkEstimationAndDiscovery.tex}
+
+\chapter{Customizing Build, Testing and Execution}
+\label{Chap:Exec}
+\input{testing.tex}
+
+
+\chapter{Porting and Platform Abstraction Layer}
+\input{pal.tex}
+
+\chapter{Support}
+\label{Chap:Support}
+\input{support.tex}
+
+
+%%%%Commment below section to include API document as appendix
+
+%\clearpage
+%\begin{titlepage}\centering
+%\vspace*{\fill}
+%\Huge{Appendices: API References}  
+%\vspace*{\fill}
+%\end{titlepage}\newpage
+
+%\appendix
+%\appendixname{API Documentation}
+%\label{Chap:APIDoc}
+%\subimport{../APIDoc/DoxyOutput/latex/}{myrefman.tex}
+
+\bibliographystyle{unsrt}
+\bibliography{TuscBib}
+
+
+\end{document}

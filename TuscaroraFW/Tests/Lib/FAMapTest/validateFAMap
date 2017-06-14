@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# set -x # Debug script
+
+function Die()
+{
+    # Print exit message and exit shell
+    # also print the trailing file as a convenience
+    # example: Die "There was an error! Exiting." diagnosis_File
+    echo "$*"
+    [[ -f $2 ]] && echo "$2:" && cat "$2"
+    exit 1
+}
+
+echo "Executing $0"
+cd ${TUS}
+echo "Running FAMap"
+tmpdir="$(mktemp -dtp dceln/ FAMap.XXXXX)"
+echo ${tmpdir}
+
+echo 
+./runOrDebug.sh -p dce --isolate ${tmpdir##*/} --doNotCopy --force  FAMap -- Size 1 &> ${tmpdir}/run || Die "Couldn't run. See ${tmpdir}/run for output" ${tmpdir}/run
+
+echo -n "Validating FAMap ... "
+
+
+#ErrorCount=`tail -n 5 $tmpdir/files-0/stdout | grep "Error" | head -n 1 | wc -l`
+ErrorCount=`grep -q "FAIL" $tmpdir/files-0/stdout | wc -l`
+[ $ErrorCount -eq 0 ] ||  Die `grep "Ps" $tmpdir/files-0/stdout`
+
+rm -r ${tmpdir}
+
+echo "PASS"

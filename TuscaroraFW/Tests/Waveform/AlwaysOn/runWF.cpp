@@ -52,8 +52,8 @@ WF_Test::WF_Test(){
 	//wf = new WF_AlwaysOn_DCE("wlan0",*recvDelegate,*ackDelegate);
  
 #if defined(PLATFORM_LINUX)
-	char localWflink_ [] = "eth0";
-	//char localWflink_ [] = "enp0s3";
+	//char localWflink_ [] = "eth0";
+	char localWflink_ [] = "enp0s3";
 	//char *localWflink_ = GetFirstInterface();
 	Debug_Printf(DBG_TEST, "Creating waveform for linux platform on device %s\n", localWflink_);
 #elif defined(PLATFORM_DCE)
@@ -185,6 +185,7 @@ void WF_Test::Execute(RuntimeOpts *opts){
 int main(int argc, char* argv[]) {
 	//Make sure RuntimeOpts construction is the very first line of main
 	RuntimeOpts opts ( argc-1, argv+1 );
+
 
 	InitPlatform(&opts);	//This does a platform specific initialization
 	NETWORK_SIZE = opts.nodes;

@@ -1,0 +1,66 @@
+\TuscConcept{SLIM}(Synchronous Lightweight Interference Modeling) waveform is a waveform model that simulate a distributed TDMA (time division multiple access) MAC layer with a very flexible physical layer. 
+The PHY layer consists of a lightweight model that can be configured for a large range of real life physical layers.
+
+
+
+\section{SLIM Overview}
+SLIM waveform provides a flexible and customizable abstract waveform that mimics real life waveforms to estimate their performance in simulation. Rather than implementing the details of a particular PHY layer to measure the performance metrics on a per-device basis, SLIM waveform takes a generic approach and uses apriori knowledge of simple performance metrics of a PHY layer to simulate system level performance.
+
+We envision four types of use cases for SLIM:
+\begin{itemize}
+	\item \textbf{Study emergent behavior:} A user can quickly implement a Waveform/PHY layer with a  well known behavior using SLIM and simulate it in ns3 in vairous scenarios and configurations and study the network wide performance of the waveform along with other higher layer protocols.
+	\item \textbf{Modify or adapt waveforms:} A user can implement a existing Wavform/PHY but then modify certains parameters like FEC ratios or datarate/bandwidth to understand tradeoffs; 
+	\item \textbf{Isolate higher layer protocols effects:} Many a times it becomes tough to isolate the performance/cost of a higher level protocol such as routing or transport from the effects (such as cost/stabilty) of lower level MAC/PHY protocols. This is especially try for complex lower layer protocols. SLIM provides a simple AND a wireless channel/phy model with well known characteristics that the user herself specifies.
+	\item \textbf{Study custom or proprietary waveforms:} Many of the commercial radios have proprietary code or non standard implementations that a user might not want to reveal outside of the organization. SLIM provides for a way of studying those Waveforms under simulation, since only performance characteristics are needed rather than implementation details.
+\end{itemize}
+
+The key characteristics of the SLIM waveform are as follows: 
+\begin{itemize}
+	\item Models interference in the system including far-field interference effects;
+	\item Simulates packet errors under highly varying SINR; 
+	\item Supports a wide range of modulation and FEC models;
+	\item Supports packets structures consisting of different transmission modes;
+	\item Supports customizable propagation models suitable for larege airborne networks including the curvature of the earth models (This feature is not available in the current release);
+	\item Incorporates customizable antenna radiation pattern. (Although requires non trivial development of new radiation patterns)
+\end{itemize}
+
+Samraksh will provide configurations for SLIM Waveforms that corresponds to some well-known and commercially available PHY models. These PHY models can be readily used by users. In addition to those, SLIM waveform can easily be configured to model a custom PHY layer of a known waveform. Packet transmissions in SLIM are governed by a Transmission Vector (TxVector) configuration. A transmission  consists of a one or more packet sections each with transmission characteristics that are specified by a “SLIMMode”. A SLIMMode is defined by the specifying physical layer characteristics such as bandwidth, data rates, BER, and FEC functions. Each SlimMode determines receiver’s decoding capabilities of that packet section. Users can create custom waveforms by creating one or more new SLIMModes, by providing SLIMMode parameters needed as abstract statistical models. These new modes can then be chained to form new TxVectors to be used by the custom waveform. 
+Samraksh will create some examples of how the SLIM waveform can be used to simulate well know waveforms. The task is expected to be complete in next reporting period and will be released on the repository.
+
+The rest of the document explains how to install and use the \TuscConcept{SLIM} 
+(i) with standalone ns-3 simulations, and (ii) with the Samraksh's Tuscarora framework. 
+
+\section{Installation} \label{sec:install}
+
+\subsection{Standalone installation for ns-3} \label{sec:install_standalone}
+
+SLIM waveform source files reside inside the Tuscarora package in \FilePath{/TuscaroraFW/ns-3.x/src/slim/}. 
+To integrate these source files with the ns-3 simulator, we recommend creating a symlink of this directory under \FilePath{<ns3path>/src/} using the following commands.
+
+\begin{quote}
+	\$ cd $<ns3path>$/src/\\
+	\$ ln -s \$\{TUS\}/ns-3.x/src/slim \$\{NS3\_DIR\}/src/
+	
+	Additionally install SLIM tests using \\
+	\$ ln -s \$\{TUS\}/ns-3.x/scratch/slim*.cc \$\{NS3\_DIR\}/scratch/
+\end{quote}
+
+Next, ns-3 configuration is updated and the ns-3 is rebuild via the following commands.
+
+\begin{quote}
+	\$ ./waf configure\\
+	\$ ./waf\\
+	\$ ./waf build
+\end{quote}
+
+\subsection{Along with Tuscarora} \label{sec:install_wTusc}
+
+Tuscarora installer also installs SLIM waveform automatically. 
+Using a configuration file passed as a parameter to Tuscarora binarys using --WFConfig parameter the SLIM can be created on all or a selected subset of the nodes. 
+For details on creating and using configuration files please refer to the Tuscarora User Manual.
+
+
+
+
+
+

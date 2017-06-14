@@ -55,7 +55,7 @@
 #endif
 
 #ifndef DBG_CORE_ESTIMATION_
-#define DBG_CORE_ESTIMATION_ 0
+#define DBG_CORE_ESTIMATION_ 1
 #endif
 
 #ifndef DBG_CORE_WFCONTROL_
@@ -90,7 +90,7 @@
 
 // Debug waveform
 #ifndef DBG_WAVEFORM_
-#define DBG_WAVEFORM_ 0
+#define DBG_WAVEFORM_ 1
 #endif
 
 #ifndef DBG_WF_EVENT_

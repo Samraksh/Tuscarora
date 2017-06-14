@@ -1,0 +1,51 @@
+This is BibTeX, Version 0.99d (TeX Live 2015/Debian)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: TuscDevManual.aux
+The style file: unsrt.bst
+Database file #1: TuscBib.bib
+Warning--entry type for "dce" isn't style-file defined
+--line 1 of file TuscBib.bib
+Warning--entry type for "cmake" isn't style-file defined
+--line 31 of file TuscBib.bib
+You've used 2 entries,
+            1791 wiz_defined-function locations,
+            451 strings with 3712 characters,
+and the built_in function-call counts, 220 in all, are:
+= -- 16
+> -- 2
+< -- 0
++ -- 2
+- -- 0
+* -- 2
+:= -- 27
+add.period$ -- 4
+call.type$ -- 2
+change.case$ -- 2
+chr.to.int$ -- 0
+cite$ -- 2
+duplicate$ -- 10
+empty$ -- 37
+format.name$ -- 0
+if$ -- 55
+int.to.chr$ -- 0
+int.to.str$ -- 2
+missing$ -- 0
+newline$ -- 11
+num.names$ -- 0
+pop$ -- 12
+preamble$ -- 1
+purify$ -- 0
+quote$ -- 0
+skip$ -- 12
+stack$ -- 0
+substring$ -- 0
+swap$ -- 2
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 0
+warning$ -- 0
+while$ -- 0
+width$ -- 3
+write$ -- 16
+(There were 2 warnings)
