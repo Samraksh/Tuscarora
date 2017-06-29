@@ -1,0 +1,118 @@
+\section{Platform Abstraction Layer}
+
+Tuscarora's dependency on the platform that it runs on  is abstracted through a set of classes forming platform abstraction layer, \TuscConcept{PAL}. 
+All other Tuscarora modules interact with this layer for platform layer functionality such as:
+
+\begin{itemize}
+	\item time and timer related operations,
+	\item inter process messaging mechanisms,
+	\item interactions with the radio hardware,
+	\item random number generation,
+	\item logging and file I/O.
+\end{itemize} 
+
+The interfaces for these classes are listed by the header files in \FilePath{Include/PAL/}
+
+When porting the framework to a different platform, it is expected to check the compatibility of these classes with the new platform and re-implement them as necessary. 
+
+
+\subsection{Modules necessary to port framework}
+
+\subsection{Time}
+
+\CPPClassName{U64NanoTime} defined in \FilePath{Include/Interfaces/PAL/Time\_I.h} provides time related services such as time retrieval, resetting, and comparisons for the Tuscarora system. It uses nano seconds as the smallest time unit and represents time with \CPPClassName{uint64\_t}. 
+
+The interface for the particular queries to get the system time is defined by \CPPClassName{SysTime} structure in \FilePath{Include/Interfaces/PAL/SysTime.h}
+
+%The class provides the following services:
+%
+%\begin{itemize}
+%	\item \CPPSingleLine{U64NanoTime()} : Default constuctor
+%	
+%	\item \CPPSingleLine{U64NanoTime(uint64\_t time)} : Constructs the object with the given initial state. The initial state should be defined in nanoseconds. 
+%	
+%	\item \CPPSingleLine{SetTime(uint64_t time)} : Constructs the object with the given initial state. The initial state should be defined in nanoseconds.
+%	
+%	\item \CPPSingleLine{U64NanoTime(uint64\_t time)} : Constructs the object with the given initial state. The initial state should be defined in nanoseconds.  
+%\end{itemize}
+
+\subsection{Timer}
+
+\CPPClassName{Timer} defined in \FilePath{Include/Interfaces/PAL/Timer\_I.h} provides a timer service for Tuscarora system. The objects of this class is created by providing 4 inputs: 
+a period defined in microseconds, 
+a timer type defining \CPPConstant{ONE\_SHOT} or \CPPConstant{PERIODIC} operation, 
+a \CPPClassName{TimerDelegate} that is invoked at the time of firing, 
+and an optional name for the timer. 
+Timer objects start in inactive state. They start their operation when their \CPPFuncName{Start()} method is called. 
+A timer in active state call the function specified by its delegate at its due time. 
+Timers specified as \CPPConstant{PERIODIC} automatically reschedule themselves and fire up periodically while \CPPConstant{ONE\_SHOT} timers goes to an inactive state at the end of their operation. 
+Users can suspend or modify the period and the type of a timer by \CPPFuncName{Suspend()} and \CPPFuncName{Change(uint32\_t period, uint8\_t type)} methods. 
+
+
+
+\subsection{Random Number Generator}
+
+Tuscarora system internally uses \CPPClassName{UniformRandomInt} that provides  random variables of integer type and the \CPPClassName{UniformRandomValue} class that provide random values of double type from real numbers domain. Platform independent definitions for these classes are available \FilePath{Include/PAL/PseudoRandom/UniformRandomInt.h} and in \FilePath{Include/PAL/PseudoRandom/UniformRandomValue.h}. These random number generators use a state definitions specialized from the common \CPPClassName{RNGState} that has a platform independent definition available in platform-independent definition available in \FilePath{Include/PAL/PseudoRandom/rng-state.h}. 
+
+\subsubsection{RNGState}
+
+These random number generators use a state definitions specialized from the common \CPPClassName{RNGState}.  The platform-independent definition of \CPPClassName{RNGState} is available in \FilePath{Include/PAL/PseudoRandom/rng-state.h}. 
+
+The numbers obtained from a random number generator engine forms a stream of numbers. \CPPClassName{RNGState} object represents a state identifying the position of the next random number to be generated within that stream. The stream is identified by platform dependent \CPPClassName{RNStreamID}.  \CPPClassName{RNGState} also holds a private templated \CPPTemplateName{DistributionParametersType} that define the distribution of the random numbers generated from the random number generator. The distribution parameters can be retrieved/set using \CPPFuncName{GetDistributionParameters}/\CPPFuncName{SetDistributionParameters} methods. 
+
+Other than the default and the copy constructors, \CPPClassName{RNGState} also provides a constructor that initializes state based on a random number stream definition, \CPPClassName{RNStreamID}.
+\CPPClassName{RNStreamID} can be retrieved/set using \CPPFuncName{GetRNStreamID}/\CPPFuncName{SetRNStreamID} methods. However, setting 
+\CPPClassName{RNStreamID} reinitializes the state to the beginning of a random stream.
+
+Finally, \CPPFuncName{SetEngineStateBuffer}/\CPPFuncName{GetEngineState} can retrieve/set the state from a given random number generator engine. 
+
+\subsubsection{UniformRandomInt}
+Produces uniform random values of type \CPPClassName{uint\_64\_t}. The distribution  parameters for this class is \CPPClassName{UniformIntRVDistributionParametersType}, which defines the minimum and maximum of the range of the random values. The limits are included in this range. The internal state of this RNG is derived from \CPPClassName{RNGState}, which encapsulates \CPPClassName{UniformIntRVDistributionParametersType}.
+
+\subsubsection{UniformRandomValue}
+Produces uniform random values of type \CPPClassName{double}. The distribution  parameters for this class is \CPPClassName{UniformDoubleRVDistributionParametersType}, which defines the minimum and maximum of the range of the random values. The limits are included in this range. The internal state of this RNG is derived from \CPPClassName{RNGState}, which encapsulates \CPPClassName{UniformDoubleRVDistributionParametersType}.
+
+
+
+
+
+\subsection{Logging}
+Creating logs of is critical for effective debugging as well as getting statistics from the system. At the early development stages, simple text based logs may be preferred thanks to their ease of use. However, as the system complexity grows, the size of these logs grew too large to be useful. In that case, using memory mapped I/O is the preferred method for many developers. 
+
+Tuscarora merges these two concepts by providing a common logging element that can easily switch between text based logs and memory mapping based logs through the templated class \CPPClassName{InfoLogger<}\CPPTemplateName{Obj}\CPPClassName{>}.
+
+\CPPClassName{InfoLogger<}\CPPTemplateName{Obj}\CPPClassName{>} can create a memory mapped output file, a text based logging file or both based on the constructor parameters. 
+
+\begin{lstlisting}[style=boralargefileNoNumbers][label=Listing:InfoLoggerConstructor]
+InfoLogger(std::string filename, bool _record_in_txt = true, bool _record_in_memmap = false )
+\end{lstlisting}
+
+The template parameter \CPPTemplateName{Obj} defines the logging element. The logging element should be derived from \CPPClassName{GenericLogElement} class and should internally implement the following methods:
+
+\begin{itemize}
+
+\item \CPPSingleLine{std::string PrintHeader()}: This method is executed at the beginning of a txt based log. It prints textual representation of the variables being written in order they are defined in the logging element. 
+
+\item \CPPSingleLine{std::ofstream& operator<< (std::ofstream &out, const GenericLogElement &nUpLogEl)} : This method directs the member variables to the ofstream. The order used for this operation must match the order defined in PrintHeader().
+
+\end{itemize}
+
+An example use for this library is available in \FilePath{Patterns/Pplsc/Pplsc.h}. \CPPClassName{PplscRecvMsgLogElement} and \CPPClassName{PplscSentMsgLogElement} are defined as the logging elements. \CPPClassName{PplscSentMsgLogElement} defines recording (i) the time of the log, (ii) the destination node ID, (iii) the link selection criteria ID, and (iv) a message ID. \CPPClassName{PplscRecvMsgLogElement} defines (i) the time of the log, (ii) the source node ID, (iii) the waveform ID from which the message is received, and (iv) a message ID.
+
+\CPPClassName{Pplsc}'s constructor creates information loggers to record receiving and sending messages and selects only txt based logging. 
+
+\begin{lstlisting}[style=boralargefileNoNumbers][label=Listing:InfoLoggerConstructorPplsc]
+	msg_logger_ptr_rx = new InfoLogger<PplscRecvMsgLogElement>("PplscReceivedMessages.bin", true, false);
+	msg_logger_ptr_tx = new InfoLogger<PplscSentMsgLogElement>("PplscSentMessages.bin", true, false);
+\end{lstlisting}
+
+\CPPClassName{Pplsc}'s constructor creates information loggers to record receiving and sending messages and selects only txt based logging. 
+
+\begin{lstlisting}[style=boralargefileNoNumbers][label=Listing:InfoLoggerConstructorPplsc]
+msg_logger_ptr_rx->addRecord(PplscRecvMsgLogElement(msg.GetSource(), msg.GetWaveform(),gMsg->numofMessagesSend));
+\end{lstlisting}
+
+For each received message or sent message, the corresponding logging element is created and \CPPVarName{addRecord} method of the corresponding logger is invoked with this element. For example, a log for the received messages is created with the following call to \CPPVarName{msg\_logger\_ptr\_rx}.
+\begin{lstlisting}[style=boralargefileNoNumbers][label=Listing:InfoLoggerConstructorPplsc]
+msg_logger_ptr_rx->addRecord(PplscRecvMsgLogElement(msg.GetSource(), msg.GetWaveform(),gMsg->numofMessagesSend));
+\end{lstlisting}

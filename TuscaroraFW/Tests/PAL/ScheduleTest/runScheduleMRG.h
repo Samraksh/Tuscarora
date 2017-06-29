@@ -5,7 +5,6 @@
 ////////////////////////////////////////////////////////////////////////////////// 
 
 
-
 #ifndef SCHEDULEMRGTEST_H_
 #define SCHEDULEMRGTEST_H_
 
@@ -46,8 +45,13 @@ public:
 	  
   }
   
-  void Execute(){    
-	  rand = new UniformRandomInt(80000,120000);
+  void Execute(){
+	  RNStreamID stream(23,37);
+	  UniformRNGState rngState(stream);
+	  UniformIntDistParameter dist; dist.min = 80000; dist.max = 120000;
+	  rngState.SetDistributionParameters(dist);
+
+	  rand = new UniformRandomInt(rngState);
 	  event_del = new Delegate<void, EventInfoU64&>(this, &ScheduleMRGTest::Event_Handler);
 	  
 	  randSch = new RandomSchedule<UniformRandomInt,UniformRNGState,uint64_t,uint64_t>(*rand,0);

@@ -1,0 +1,129 @@
+
+\section{Customizing the build of Tuscarora}
+Tuscarora has been designed with the unique ability to customize the build to a given platform by turning on or off certain features even while keeping the key interfaces and therefore the Patterns and Applications portable across platforms. In general the `Platform' directory contains files and implementations that are specific to a platform. The Tuscarora build system looks for a \CPPKeyword{PlatformConfig.h} file under a given platform directory. Every platform should have this file. A number of customizations can be done by defining (\#define) certain contants in this file. Currently the following customizations are supported.
+
+\begin{enumerate}
+	\item \textbf{ENABLE\_FW\_BROADCAST:} By defining this flag to either 0 or 1, the BroadcastData API in the Framework\_I can either be removed or added. This flag is the only one that actually changes an interface module. Samraksh believes that the BroadcastData method should be removed from the framework interface, but this could be too drastic a change for a community that has grown up equating wireless network with broadcast. Also the versions of framework before 2.0 had this APi. Hence the API is kept for backward compatibility. However it is possible, that this option might disappear in future versions and NOT having the BroadcastData might  become the mainstream version. 
+	To be sure, this has no connection to how the message is actually sent out by the waveform, since that is completely left to the waveform implementation. Also, if a given waveform offers BroadcastData api, the framework itself might continue to use that API for purposes such as Link Estimation or Discovery. This flag is only about the interface provided to the Pattern and not about what the framework uses with a Waveform.
+	
+	\item \textbf{ENABLE\_PIGGYBACKING:} By defining this flag to either 0 or 1 piggybacking can be turned On or Off. Piggybacking is the capability of framework to add a small message  to an already scheduled packet on a particular waveform. This capability can now be used only with time stamping service.
+	\item \textbf{ENABLE\_EXPLICIT\_SENDER\_TIMESTAMPING:} Tuscarora supports two kinds of timestamping services, a explicit sender based one and an implicit receiver based one. Either the explicit or the implicit will be turned on. Both or them cant be turned on simultaneously. The explicit service super seeds the implicit service. Setting this tag to one will enable the Explicit Time Stamping Service.  Please see \cref{Subsec:Services} for more details about timestamping service.
+	\item \textbf{ENABLE\_IMPLICIT\_SYNC\_TIMESTAMPING:} Setting this flag to 0 or 1 will turn Off or turn On the implicit timestamping service. If explicit timestamping service is turn on, that will super seed this flag. Please see \cref{Subsec:Services} for more details about timestamping service. 
+	
+\end{enumerate}
+
+\section{Deploying Tuscarora Binaries}
+\subsection{Cross Compilation}
+Tuscarora and associated sofware is written mostly in C++, with minimal C functions. The build system uses CMake \cite{cmake} to configure the build for a particular platform. CMake is a cross platform open source tool, that can generate configuration scripts (such as Makefiles) for build tools (such as make) and also setup the compiler to be used and its associated toolchain. This gives the framework the ability to run the exact same code on many different platforms such as from embedded microcontrollers to Ubuntu Desktops to Windows PCs. However, some platform specific implementations will be needed when porting to a new system. These are mostly the PAL layer modules (where it might be possible to copy large parts of the code) and the shim layer modules that enable binding between the layers according to the needs of the deployment.
+
+Currently, the ./runOrDebug.sh script recognizes three types of platforms, a native x64\_linux platform, a `dce' simulator platform and an `arm-linux' platform. Depending on platform specified, the script invokes the CMake with the corresponding toolchain file. All of the platform specific setup for a CMake given platform goes to into a Toolchain-platform-arch.cmake file. These files are found under the `Platform' directory. For example for dce this file is called, `Toolchain-ns3-dce.cmake'
+
+To add a new platform, first a toolchain.cmake file needs to be created that will specify the location of the compiler and toolchains, compiler options, etc. Then the runOrDebug.sh needs to be modified minimally to call the platform as an option.
+
+\subsection{Installing Binaries Remotely}
+Deployment of binaries to target system depends on the types of file transfers supported by the target system. There are no special requirements for cross compiled Tuscarora binaries. Transfer modes such as using a USB cable or SSH or ftp is generally used. A tool to deploy the compiled binaries to remote systems that support SSH is expected to be available soon.
+
+\section{Executing Tuscarora Framework Modules in a Simulator}
+
+The `runOrDebug.sh' in the root directory is the primary script to execute the modules and tests under framework. The script cleans, builds, runs and collects the output for the 'test-name' specified for a given platform. For simulations, the platform is called `dce'. Run the script without parameters for information on supported options. Run the script with the test-name and `-h' option to get test-specific help.
+
+% XXXX GIVE MORE INFO about options, e.g., put general ns3 options
+% before the '--' and sim-specific options after.
+
+\subsection{Example Executions}
+
+
+0. Getting help for the usage of runOrDebug.sh, to find the list of available tests.
+
+\begin{quote}
+	\$ ./runOrDebug.sh  \\
+\end{quote}
+
+1. Getting help for Gossip test, to find the list of all test parameters with their default values.
+
+\begin{quote}
+	\$ ./runOrDebug.sh -h Gossip  \\
+\end{quote}
+
+2. Running the Gossip pattern test for 60 secs on a 100 node network.
+
+\begin{quote}
+	\$ ./runOrDebug.sh -p dce Gossip -\mbox{}- RunTime 60 Size 100\\
+\end{quote}
+
+
+3. Running the Gossip pattern test inside the gdb to debug for 100 nodes (and a default duration of 6 secs).
+
+\begin{quote}
+	\$ ./runOrDebug.sh -p dce -d Gossip -- Size 100\\
+\end{quote}
+
+
+4. Running the Framework Interface test `FI' with Periodic Link Estimation with a dead neighbor period of 2 seconds and a Link Estimation Period of 1Hz using Global Network Discovery.
+
+\begin{quote}
+\$ ./runOrDebug.sh -p dce  I -\mbox{}- LinkEstimationType periodic LinkEstimationPeriod 1000000 DeadNeighborPeriod 2 DiscoveryType global\\
+\end{quote}
+	
+5. Running the Framework Interface test `FI' with Schedule Aware
+Periodic Link Estimation, a Link Estimation Period of 10Hz, and
+2-hop Long Link Network Discovery.
+
+\begin{quote}
+\$ ./runOrDebug.sh FI -\mbox{}- LinkEstimationType
+scheduleAwarePeriodic LinkEstimationPeriod 100000 DiscoveryType longlink2hop
+\end{quote}
+	
+
+6. Running the Gossip pattern test with 10 nodes with a waveform configuration file.
+
+\begin{quote}
+	\$ ./runOrDebug.sh Gossip -- Size 100 WFConfig ~\$\{TUS\}/dceln/wf-config.cnf  \\
+\end{quote}
+
+7. Running the Gossip pattern test with a tracefile based mobility model. The tracefile needs to be in the ns-2 mobility trace file format.
+
+\begin{quote}
+	\$ ./runOrDebug.sh Gossip -- Size 10 RunTime 10 Mobility TracefileMobilityModel Tracefile ~\$\{TUS\}/TraceFiles/Simple-Size10-10secs.tr  \\
+\end{quote}
+
+
+\subsection{Waveform Configuration File}
+Each line in the the waveform configuration file has 6 columns separated by spaces specifying 
+the waveform ID, 
+the implementation of the waveform within DCE, 
+the underlying network device in ns-3, 
+cost metric associated with using this waveform,
+energy metric associated with this waveform, 
+and the list of nodes that this network device will be available on. 
+The list of nodes is a comma separated list that is a combination of node IDs and/or node ID ranges. 
+
+An example configuration of 20 nodes is given in \${TUS}/Config/hybrid-20nodes.cnf file that has the following contents:  
+
+\begin{quote}
+2 WF\_AlwaysOn\_DCE\_Ack WifiNetDevice 4 3 0-9,15 \\
+3 WF\_AlwaysOn\_DCE\_Ack SimpleWirelessNetDevice 2 4 5-19
+\end{quote}
+
+The first line in this configuration file specifies a Wifi ns3 radio module, the WF\_AlwaysOn\_DCE\_Ack waveform in Tuscarora with an ID of 2 on nodes 0,1,..,9 and on node 15. Similarly, the second line specifies a SimpleWireless radio with an ID of 3 on nodes 5,6,..., 20.  
+
+
+%\section{Executing Tuscarora Framework Modules in a Simulator}
+
+%\section{Executing Tests on a Local Network and/or Testbed}
+
+
+\section{Testing Methodology}
+
+Tuscarora provides a testing methodology where the user has complete control over what tests are run and they are run for how long. More over the testing itself is written in such a way that it is portable and platform independent. Test code is cleanly seperated from framework and ASNP code to enhance portability. All tests must reside under the `Tests' directory. The runOrDebug.sh will find all the tests unders the `Tests' directory, that are named using a particular naming convention (explained below) and make them available to be executed on any platform. The validate.sh script does the same for validations (or stage 2).
+
+There are two steps to a test (1) to orchestrate and run a test, (2) to validate the output of the test. The two steps can be separated or integrated into a single test file/script. Step 1 needs to be done in C/C++ and usually are names as `runTestName.cpp', for example, a file that runs a time test is named 'runTimer.cpp'. Step 1 should contain a main file, which is where the test logic will start and the test writer can instantiate the various modules of the framework that are needed for the test and run them. If step 1 is separate from step 2, then step 1 should generate the output files / data that is necessary of step 2. Step 2 files can be implemented in any language/script, but should be named as `validateTestName.*'. For example, a python validation script to verify timer's correct behavior is called as `validateTimer.py'. 
+
+There are several reasons to adopt this two step process;
+\begin{itemize}
+	\item When running in the simulation mode inside the ns3-dce, every node has access only to its own state and therefore end-to-end validation tests or network-level behaviors need to be run outside of the simulator using output files collected from every node. Thus necessitating the two step process.
+	\item The first state essentially just setup and runs a given test, therefore in many cases this code can double up as an deployment app. Or in otherwords an app is not very different from a test and this enhances the tight coupling between the testing-to-deployment cycle
+	\item The second step can be more flexible and versatile. It can use state from across nodes, either in simulation mode or otherwise. Also it can be written in any language, that a platform can support. Many a times the actual validation involves data analysis and running the second stage using Python or even Matlab would be more appropriate.
+\end{itemize}
+
+

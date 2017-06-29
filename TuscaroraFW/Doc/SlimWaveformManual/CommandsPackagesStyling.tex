@@ -1,0 +1,154 @@
+% %set page layout
+\usepackage[
+  %paperwidth=6.5in,
+  %paperheight=10in,
+   top=0.75in,
+   %left=2cm,
+   %right=2cm,
+ % bottom=25mm,
+ % inner=10mm,
+ % outer=80mm,
+  %marginparsep=7mm,
+  %marginparwidth=48mm,
+]{geometry}
+
+\usepackage[table,usenames,dvipsnames]{xcolor}
+\usepackage{listings}
+\lstset{ %
+language=C++,                % choose the language of the code
+basicstyle=\footnotesize,       % the size of the fonts that are used for the code
+numbers=left,                   % where to put the line-numbers
+numberstyle=\footnotesize,      % the size of the fonts that are used for the line-numbers
+stepnumber=1,                   % the step between two line-numbers. If it is 1 each line will be numbered
+numbersep=5pt,                  % how far the line-numbers are from the code
+backgroundcolor=\color{gray!15},  % choose the background color. You must add \usepackage{color}
+commentstyle=\color{PineGreen},
+keywordstyle=\color{magenta},
+stringstyle=\color{purple},
+showspaces=false,               % show spaces adding particular underscores
+showstringspaces=false,         % underline spaces within strings
+showtabs=false,                 % show tabs within strings adding particular underscores
+frame=single,           % adds a frame around the code
+tabsize=2,          % sets default tabsize to 2 spaces
+captionpos=b,           % sets the caption-position to bottom
+breaklines=true,        % sets automatic line breaking
+breakatwhitespace=false,    % sets if automatic breaks should only happen at whitespace
+escapeinside={\%*}{*)}          % if you want to add a comment within your code
+}
+
+%\usepackage[table]{xcolor}
+\usepackage[colorlinks=true,urlcolor=blue, citecolor=blue, linkcolor=blue]{hyperref}
+\usepackage[english]{babel}
+\usepackage{blindtext}
+%\usepackage{newtxtext,newtxmath}
+\usepackage{mathptmx}% Times Roman font
+\usepackage{textcomp}
+\usepackage[scaled=.90]{helvet}% Helvetica, served as a model for arial
+
+% % %stuff needed to parse doxygen files
+%\usepackage{import}	% the import package helsp to find Doxygen files in the latex subdirectory
+%\usepackage{doxygen}
+\usepackage[pdftex]{graphicx}   
+
+
+\usepackage{cleveref}
+%\usepackage[capitalize]{cleveref}
+\crefname{figure}{Fig.}{Figs.}
+\Crefname{figure}{Fig.}{Figs.}
+%\crefname{algorithm}{Algorithm}{Algorithms}
+
+%\renewcommand{\DoxyLabelFont}{%
+%	\fontseries{bc}\selectfont%
+%	\color{darkgray}%
+%}
+\newcommand{\+}{\discretionary{\mbox{\scriptsize$\hookleftarrow$}}{}{}}
+
+
+
+% % % % % % % %lets define some cool colors
+\definecolor{lightred}{rgb}{1.0,0.4,0.4}   % Light Redish Color
+
+
+
+% % %Reformat the title fonts
+\usepackage{titlesec}
+%{\chaptertitlename\ \thechapter}{10pt}{\Huge}
+\titleformat{\chapter}
+  {\normalfont\sffamily\huge\bfseries\color{blue}}
+  {\thechapter}{1em}{}
+  
+\titleformat{\section}
+  {\normalfont\sffamily\Large\bfseries\color{cyan}}
+  {\thesection}{1em}{}
+
+\titleformat{\subsection}
+{\normalfont\sffamily\large\bfseries\color{gray!125}}
+{}{1em}{}
+%{\textnormal{\roman{subsection}.}}{1em}{}
+
+
+%\setkomafont{captionlabel}{
+
+
+% % % % %Make header and footer
+
+%\usepackage{fancyhdr}
+%\usepackage[automark,headsepline,footsepline]{scrlayer-scrpage}
+\usepackage{scrpage2}
+%\automark{section}
+
+\usepackage{parskip}
+
+\clearscrheadfoot
+\pagestyle{scrheadings}
+
+%\lehead[Samraksh]{Samraksh}        % equal page, right position (inner) 
+%\lohead[Samraksh]{Samraksh}       % odd   page, left  position (inner) 
+%\lehead[]{this is page \pagemark} % equal page, left (outer) position
+%\rohead[]{this is page \pagemark}
+% definitions/configuration for the footer
+\lefoot[\pagemark \ \ $\arrowvert$]{\pagemark \ \ $\arrowvert$}  % equal page, center position
+\lofoot[\pagemark \ \ $\arrowvert$] {\pagemark \ \ $\arrowvert$}    
+\refoot[\color{red} Limited Release, Do Not Redistribute.]{\color{red} Limited Release, Do Not Redistribute.}  % equal page, center position
+\rofoot[\color{red} Limited Release, Do Not Redistribute.]{\color{red} Limited Release, Do Not Redistribute.}
+
+
+\renewcommand*{\chapterpagestyle}{plain}
+\addto{\captionsenglish}{\renewcommand{\bibname}{List of References}}
+
+% % % % % %redefine some commands
+
+%\renewcommand{\url}{ \color{lightred} {\url}}
+
+\makeindex
+\makeglossary
+
+% To control the appereance of CPP variables within text
+\newcommand{\CPPClassName}[1]{\emph{#1}}
+\newcommand{\CPPVarName}[1]{\emph{#1}}
+\newcommand{\CPPFuncName}[1]{\emph{#1}}
+\newcommand{\CPPConstant}[1]{\emph{#1}}
+
+\newcommand{\TuscConcept}[1]{``#1''}
+\newcommand{\TuscDocuments}[1]{``#1''}
+
+%\usepackage[obeyspaces,spaces]{url}
+\usepackage{hyperref}
+\newcommand{\FilePath}[1]{``\path{#1}''}
+% to quickly comment text during revisions ;-)
+% Select what to do with todonotes: 
+% \usepackage[disable]{todonotes} % notes not showed
+\usepackage[draft]{todonotes}   % notes showed
+\usepackage{xstring}
+%\newcommand{\bk}[1]{}
+\newcommand{\bk}[1]{\todo[inline]{(BK: #1)}}
+\newcommand{\bora}[2]{
+	\IfEqCase{#1} {
+		{1}{\todo[inline]{(BK: #2)}}
+		{0}{}
+	}[\PackageError{bora}{Undefined option to bora: #1}{}]%
+}
+
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{longtable}

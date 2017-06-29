@@ -39,6 +39,8 @@ struct EstMsg {
 
 class EstBase : public LinkEstimatorI<LinkAddress_t> {
  protected:
+	 
+	const float windowPeriod = 10; 
 	UniformRandomInt *randInt;
 	RandomSchedule<UniformRandomInt, UniformRNGState,uint64_t,  TimeStamp_t> *beaconSchedule;
 	EstimatorCallback_I<LinkAddress_t> *callbackI;
@@ -60,12 +62,18 @@ class EstBase : public LinkEstimatorI<LinkAddress_t> {
 	NeighborTable *coreNbrTable;
 	//std::map<NodeId_t, std::vector<timeval> > events;
 	BSTMapT<LinkAddress_t,ListT<TimeStamp_t, false, EqualTo<TimeStamp_t> > > events;
+	//BSTMapT< LinkAddress_t, uint16_t > receiveCountOverWindow;
+	BSTMapT< LinkAddress_t, float > packetReceptionRateMap;
 	
 	WF_LinkChangeDelegate_n64_t *leDel;
 
 	//methods
 	void SendHB(EventInfoU64& event);
 	double GetQuality(LinkAddress_t linkAddress);
+	
+	double StabilityQuality(LinkAddress_t linkAddress);
+	double PacketReceptionRate(LinkAddress_t linkAddress);
+	
 	void LogQualityEvent(LinkAddress_t linkAddress, TimeStamp_t time);
  public:
 	//Inherited from interface
@@ -88,6 +96,9 @@ class EstBase : public LinkEstimatorI<LinkAddress_t> {
 //	bool EvaluateAll() {return false;}
 //bool EvaluateNbr(NodeId_t node) {return false;}
  private:
+	//void DecrementReceptionCount();
+	void DecrementPRR();
+	void IncrementOrSetPRR(LinkAddress_t _linkAddress, float value=-1);
 };
 
 }

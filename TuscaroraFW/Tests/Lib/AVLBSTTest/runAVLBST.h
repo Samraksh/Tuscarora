@@ -10,7 +10,7 @@
 #define AVLBSTTEST_H_
 
 #include "Lib/PAL/PAL_Lib.h"
-#include "Lib/DS/AVLBinarySearchTreeT.h"
+#include "Lib/DS/FAAVLBinarySearchTreeT.h"
 #include "Lib/Math/Rand.h"
 
 extern uint16_t MY_NODE_ID;
@@ -30,10 +30,12 @@ public:
   AVLBSTTest();
   void Execute(int argc, char *argv[]);
   void Level_0A();
-  void Level_0B();
+//  void Level_0B();
+  void Level_0C();
+  void Level_0D();
+
   void PrintElemnentsofTreeStructured(AVLBSTElement<uint16_t> *curElement, AVLBSTHeight_t offsetheight );
   void PrintElemnentsofTreeDepthFirst(AVLBSTElement<uint16_t> *curElement );
 };
-
 
 #endif /* AVLBSTTEST_H_ */

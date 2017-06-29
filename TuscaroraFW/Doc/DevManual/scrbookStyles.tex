@@ -1,0 +1,57 @@
+%\usepackage{fancyhdr}
+%\usepackage[automark,headsepline,footsepline]{scrlayer-scrpage}
+\usepackage{scrpage2}
+%\automark{section}
+
+\usepackage{parskip}
+
+\clearscrheadfoot
+\pagestyle{scrheadings}
+\automark[section]{chapter}
+
+%%%Header
+%\lehead[Samraksh]{Samraksh}        % equal page, right position (inner) 
+%\lohead[Samraksh]{Samraksh}       % odd   page, left  position (inner) 
+%\lehead[]{\includegraphics[width=3cms]{figures/Samraksh-logo.png}} % equal page, left (outer) position
+%\rohead[LOGO]{\includegraphics[width=3cms]{figures/Samraksh-logo.png}}
+
+\rehead[ ]{Tuscarora Developers Manual}              
+\rohead[ ]{The Samraksh Company}  
+\lohead[ ]{Tuscarora Developers Manual}              
+\rohead[ ]{The Samraksh Company}  
+%\lehead[ ]{\headmark}   
+ 
+%\lehead[ ]{\includegraphics{figures/Samraksh-logo.png}}                   
+%\rohead[ ]{\headmark \hspace{3cm}\includegraphics{figures/Samraksh-logo.png}}                   
+
+
+% definitions/configuration for the footer
+\lefoot[\pagemark \ \ $\arrowvert$]{\pagemark \ \ $\arrowvert$}  % equal page, center position
+\lofoot[\pagemark \ \ $\arrowvert$] {\pagemark \ \ $\arrowvert$}    
+%\refoot[\color{red} Limited Release, Do Not Redistribute.]{\color{red} Limited Release, Do Not Redistribute.}  % equal page, center position
+%\rofoot[\color{red} Limited Release, Do Not Redistribute.]{\color{red} Limited Release, Do Not Redistribute.}
+
+%\renewcommand*{\chapterpagestyle}{plain}
+
+%\renewcommand{\url}{ \color{lightred} {\url}}
+
+
+% % %Reformat the title fonts
+%Sytax for %\titleformat{command}[shape]{format}{label}{sep}{before-code}{after-code}
+\titleformat{\chapter}[block]
+{\normalfont\sffamily\huge\bfseries\color{blue}}
+{\thechapter}{1em}{}
+
+\titleformat{\section}[hang]
+{\normalfont\sffamily\Large\bfseries\color{steelblue}}
+{\thesection}{1em}{}
+
+\titleformat{\subsection}
+{\normalfont\sffamily\large\bfseries\color{purple3}}
+{}{0.7em}{}
+
+\titleformat{\subsubsection}
+{\normalfont\sffamily\itshape}
+{\thesubsubsection}{0.4em}{}
+
+%\setkomafont{captionlabel}{

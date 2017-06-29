@@ -418,9 +418,15 @@ struct physicalWorld_hybrid_t {
 			phy->SetDevice (device);
 			
 			Ptr<DropTailQueue> queue;
-			Config::SetDefault ("ns3::DropTailQueue::Mode", StringValue ("QUEUE_MODE_PACKETS"));
-			Config::SetDefault ("ns3::DropTailQueue::MaxPackets", UintegerValue (100));
+			//Config::SetDefault ("ns3::DropTailQueue::Mode", StringValue("QUEUE_MODE_PACKETS"));
+			//Config::SetDefault ("ns3::DropTailQueue::MaxPackets", UintegerValue (100));
+
+
 			queue = CreateObject<DropTailQueue> ();
+			queue->SetMode(ns3::Queue::QUEUE_MODE_PACKETS);
+			queue->SetAttributeFailSafe("MaxPackets", UintegerValue(100));
+
+
 			device->SetQueue(queue);
 			
 			//Attach device to the node

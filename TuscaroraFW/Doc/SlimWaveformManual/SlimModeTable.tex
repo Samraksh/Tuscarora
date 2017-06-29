@@ -1,0 +1,36 @@
+ \begin{longtable}{ | c | c | c |}
+
+\caption{Attributes of SlimMode}\label{table:SlimModeTable}	\\
+ 
+     \hline
+  \textbf{Attribute} & \textbf{Short Description} & \textbf{Default Value} \\ \hline
+ 
+     
+    
+ UniqueName & \parbox[][][t]{7cm}{\vspace{6pt}\raggedright A unique name for the mode\vspace{6pt}} & 
+                   "UNINITIALIZEDMODE" \\ \hline 
+
+ Bandwidth &  \parbox[][][t]{7cm}{\vspace{6pt}\raggedright The bandwidth(Hz) of the signal being modeled.\vspace{6pt}} & 
+                   20000 \\ \hline 
+                   
+ Tpb & \parbox{7cm}{\vspace{6pt}\raggedright Time it takes to transmit one bit of information. Only needed for modes specifying payload.\vspace{6pt}} & 
+                   1000ns \\ \hline 	
+                   
+Duration & \parbox{7cm}{\vspace{6pt}\raggedright Total time it takes to transmit the section. Only needed for fixed length sections of a packet. Calculated internally for payload.\vspace{6pt}} & 
+              1000ns\\ \hline            
+  
+FecF & \parbox{7cm}{\vspace{6pt}\raggedright The fraction of bits that the FEC can correct. A double value.\vspace{6pt}} & 
+                  0.0\\ \hline 	
+                                   
+ErrorModPtr & \parbox{7cm}{\vspace{6pt}\raggedright Pointer to the SlimModeError object implementing SINR vs. BER characteristics. The default is of type TuscaroraDsssDbpskModeError.\vspace{6pt}} & 
+               NULL\\ \hline       
+               
+
+
+
+%m\_noiseFigure & \parbox{5cm}{\centering Loss  } & 
+%              MicroSeconds(0)\\ \hline               
+
+       							  		
+	   
+ \end{longtable}   

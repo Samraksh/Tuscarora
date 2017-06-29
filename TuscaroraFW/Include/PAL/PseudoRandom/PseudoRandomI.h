@@ -4,9 +4,6 @@
 // Please see developer's manual for implementation notes. 
 ////////////////////////////////////////////////////////////////////////////////// 
 
-
-
-
 #ifndef PseudoRandomI_h
 #define PseudoRandomI_h
 
@@ -35,3 +32,4 @@ namespace PAL{
 }
 
 #endif // PseudoRandomI_h
+

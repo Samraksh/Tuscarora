@@ -17,6 +17,14 @@ extern NodeId_t MY_NODE_ID;
 namespace Core {
 namespace Estimation {
 
+	
+/*Notes: Packet Reception Rate is an approximate calculation, with a exponential weighted average with the weight being propotional to 1/windowPeriod . Consequently the PRR curve over time looks like a CDF of an exponential function.
+An accurate prr is possible, but this would require us to keep state proportional to the size of the windowperiod for each neighbor. But this would be very expensive in memeory.
+
+This would take a long time (technically never) to decrease the prr to zeor of a neighbor which goes away. Hence we have a timeout period to remove the neighbor if no activity is detected from it.
+
+Hence the PRR is biased towards quick estimation of existing neighbor. 
+*/
 
 #define SCWF(x) static_cast <Waveform::WF_Message_n64_t *>(x)
 
@@ -86,12 +94,15 @@ void EstBase::SetParam(uint32_t beaconPeriod, uint32_t inactivePeriod){
 void EstBase::NodeExpired(WF_LinkEstimationParam_n64_t _param) {
 	fworkNbrDel->operator ()(_param);
 	LogQualityEvent(_param.linkAddress, SysTime::GetEpochTimeInMicroSec());
+	//receiveCountOverWindow.Erase(_param.linkAddress);
+	packetReceptionRateMap.Erase(_param.linkAddress);
 	Debug_Printf( DBG_CORE_ESTIMATION,"EstBase:: Removed dead neighbor %lu from table expires\n", _param.linkAddress);
 }
 
 void EstBase::CleanUp(uint32_t event) {
 	//Debug_Printf(DBG_CORE_ESTIMATION, "EstBase::CleanUp: \n"); fflush(stdout);
 	estimationTable->CheckExpiration(*leDel);
+	
 }
 
 void EstBase::SendHB(EventInfoU64& event) {
@@ -116,33 +127,51 @@ void EstBase::SendHB(EventInfoU64& event) {
 	//fi->BroadcastData(0, *msg, wid);
 	logger.LogEvent(PAL::LINK_SENT, leSeqno);
 	leSeqno++;
+	DecrementPRR();
 	Debug_Printf(DBG_CORE_ESTIMATION,"EstBase::SendHB: Checking framework delegate value: %p, my ptr is %p, period is %d \n", fworkNbrDel, this, period);fflush(stdout);
 }
 
-double EstBase::GetQuality(LinkAddress_t _linkAddress) {
+double EstBase::GetQuality(LinkAddress_t linkAddress)
+{
+	//return PacketReceptionRate(linkAddress);
+	return StabilityQuality(linkAddress);
+}
+
+//Simple Packet Reception Rate calculation
+double EstBase::PacketReceptionRate(LinkAddress_t linkAddress)
+{
+	return (double)packetReceptionRateMap[linkAddress];
+}
+
+//Uses a complex stability based link quality invented by Vinod Kulathumani
+double EstBase::StabilityQuality(LinkAddress_t _linkAddress) {
 	double c=1.5;
 	double max=5;
-	int w=30;
+	uint w=windowPeriod; //windows size in seconds
 	double maxValue=pow(c, max)*w + 1;
 	double value=1;
-	uint64_t curtime;
+	//uint64_t curtime;
 	
 	uint totalUnits=1000000;
+	uint64_t timeUnitToSec = 1000000;
 	
 	
 	bool nbr= ((events[_linkAddress].Size() % 2) == 1);
 	//uint64_t cur = (uint64_t)curtime.tv_sec * 1000000 + curtime.tv_usec;
-	//uint64_t last = (uint64_t)(curtime.tv_sec - w) * 1000000 + curtime.tv_usec;
+	//uint64_t windowBegintime = (uint64_t)(curtime.tv_sec - w) * 1000000 + curtime.tv_usec;
 	uint64_t cur = SysTime::GetEpochTimeInMicroSec();
-	uint64_t last = cur - w * 1000000;
+	uint64_t windowBegintime = cur - (w * timeUnitToSec);
 
 	for(int x = events[_linkAddress].Size(); x > 0; x--) {
-		curtime=events[_linkAddress][x - 1];
-		uint64_t pcur = curtime;
+		uint64_t eventTime=events[_linkAddress][x - 1];
 		if(nbr) {
-			uint64_t dcur = cur - pcur;
-			if(pcur < last) {
-				dcur = last - pcur;
+			uint64_t dcur = cur - eventTime;
+			//printf("EventTime: %lu, WindowBeginTime: %lu, Current Time: %lu:::\n", eventTime, windowBegintime, cur);
+			if(eventTime < windowBegintime) {
+			//	printf("Eventtime is beyond the window\n");
+				//dcur = windowBegintime - eventTime; //why?? this seems to be causing the rollover error in quality
+				//This is modified to below line by Mukundan to fix roll over error
+				dcur = w * timeUnitToSec;
 			}
 			if(dcur > totalUnits*max) {
 				value+=pow(c, max) * ((1.0f*dcur/totalUnits)-max);
@@ -158,12 +187,12 @@ double EstBase::GetQuality(LinkAddress_t _linkAddress) {
 				value += pow(c, i) * (1.0f*dcur/totalUnits);
 			}
 		}
-		if(pcur < last) break;
-		cur = pcur;
+		if(eventTime < windowBegintime) break;
+		cur = eventTime;
 		nbr=!nbr;
 	}
 
-	if(value >maxValue) return 1;
+	if(value >= maxValue) return 1.0;
 	
 	return value/maxValue;
 }
@@ -182,6 +211,54 @@ LinkMetrics* EstBase::OnPacketReceive(Waveform::WF_MessageBase *rcvMsg){
 }
 
 
+void EstBase::IncrementOrSetPRR(LinkAddress_t _linkAddress, float value)
+{
+	float weight = 1/windowPeriod;
+	BSTMapT< LinkAddress_t, float >::Iterator it = packetReceptionRateMap.Find(_linkAddress);
+	if (it != packetReceptionRateMap.End()){
+		
+		if(value >= 0){
+			it->Second()=value;
+			printf("Setting PRR for link %lu: to %f \n", _linkAddress, it->Second());
+		}else {
+			float prev = it->Second();
+			//it->Second() = prev*(1-weight)+weight;
+			it->Second() = prev+weight;
+			if(it->Second()> 1.0) it->Second() =1.0;
+			//printf("Increment PRR for link %lu: from  %f to %f, weigh is %f \n", _linkAddress, prev, it->Second(), weight);
+		}
+	}
+	else {
+		if(value >=0) {
+			packetReceptionRateMap[_linkAddress] = value;
+		}else {
+			packetReceptionRateMap[_linkAddress] = 0;
+		}
+		printf("Setting PRR for link %lu: to %f \n", _linkAddress, packetReceptionRateMap[_linkAddress]);
+	}
+}
+
+
+void EstBase::DecrementPRR()
+{
+	float weight = 1/windowPeriod;
+	BSTMapT< LinkAddress_t, float >::Iterator it = packetReceptionRateMap.Begin();
+	for (;it != packetReceptionRateMap.End(); ++it){
+		it->Second() = it->Second()*(1-weight);
+		if(it->Second()<0) it->Second() =0;
+	}
+}
+
+/*
+void EstBase::DecrementReceptionCount(){
+BSTMapT< LinkAddress_t, uint16_t >::Iterator it = receiveCountOverWindow.Begin();
+	for (;it != receiveCountOverWindow.End(); ++it){
+		if(it->Second()<=1) it->Second() =0;
+		else it->Second()--;
+	}
+}
+*/
+
 LinkMetrics* EstBase::ProcessMessage(Waveform::WF_MessageBase *rcvMsg, TimeStamp_t _expiryTime){
 	LinkAddress_t nbrWfAddress = SCWF(rcvMsg)->GetSource();
 	NodeId_t nbrId = SCWF(rcvMsg)->GetSrcNodeID();
@@ -194,6 +271,9 @@ LinkMetrics* EstBase::ProcessMessage(Waveform::WF_MessageBase *rcvMsg, TimeStamp
 
 	//if(coreNbrTable->GetNeighborLink(nbrWfAddress) == 0) {
 	if(!estimationTable->GetEstimationInfo(nbrWfAddress, wfid)) {
+		//receiveCountOverWindow[nbrWfAddress]=1;
+		IncrementOrSetPRR(nbrWfAddress, float(1/windowPeriod));
+		
 		LogQualityEvent(nbrWfAddress, curtime);
 		EstimationInfo<LinkAddress_t>* info = estimationTable->AddNeighbor(nbrWfAddress, wfid);
 		Link* link = new Link();
@@ -211,6 +291,8 @@ LinkMetrics* EstBase::ProcessMessage(Waveform::WF_MessageBase *rcvMsg, TimeStamp
 		info->metric = &link->metrics;
 		//info->metric->quality = 1;
 
+		
+		
 		estimationTable->SetLink(nbrWfAddress, wfid, link);
 
 		//Notify pattern interface about new link
@@ -227,6 +309,9 @@ LinkMetrics* EstBase::ProcessMessage(Waveform::WF_MessageBase *rcvMsg, TimeStamp
 	}
 	else {
 		EstimationInfo<uint64_t>* info = estimationTable->GetEstimationInfo(nbrWfAddress, wfid);
+		//receiveCountOverWindow[nbrWfAddress]=receiveCountOverWindow[nbrWfAddress]+1;
+		IncrementOrSetPRR(nbrWfAddress);
+			
 		if(info->link->metrics.quality != GetQuality(nbrWfAddress)) {
 			info->link->metrics.quality = GetQuality(nbrWfAddress);
 			estimationTable->UpdateExpiration(nbrWfAddress, wfid,_expiryTime);
@@ -236,7 +321,7 @@ LinkMetrics* EstBase::ProcessMessage(Waveform::WF_MessageBase *rcvMsg, TimeStamp
 			_param.linkAddress =nbrWfAddress;
 			_param.metrics = info->link->metrics;
 			_param.type = info->link->type;
-			_param.wfid = info->link->linkId.waveformId;
+			_param.wfid = info->link->linkId.waveformId;	
 			fworkNbrDel->operator ()(_param);
 		}
 	}

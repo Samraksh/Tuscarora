@@ -10,7 +10,8 @@ TUSC_VERSION:=2.0
 # See http://bost.ocks.org/mike/make/
 # SHELL=/bin/bash
 #DCE_VERSION=dce-linux-1.2
-DCE_VERSION:=dce-ns3-1.7
+DCE_VERSION:=dce-ns3-1.9
+#DCE_VERSION:=dce-ns3-1.7
 DCE_DIR:=${HOME}/dce
 #DCE_BUILD_METHOD=waf
 DCE_BUILD_METHOD:=bake
@@ -99,6 +100,7 @@ t/waveform:
 setIfNotSet =	if env -i bash -ci '[[ -z "$$$1" ]]'; then \
 		  echo installing ${$1}; echo "Printing $$$1"; \
 		  echo "$$(echo export $1=${$1} | cat -  $(XPROFILE))" >  $(XPROFILE); \
+		  echo "$$(echo export $1=${$1} | cat -  $(BASHRC))" >  $(BASHRC); \
 		else echo $1 exists; fi
 
 t/set-env: t/install-dce
@@ -404,12 +406,12 @@ t/dce-iperf.test:
 
 
 
-t/fw.test: t/fw-gossip.test
+t/fw.test: t/fw-fwp.test
 	@echo "$@ OK"
 
-t/fw-gossip.test: t/install-dce t/install-fw
+t/fw-fwp.test: t/install-dce t/install-fw
 	@echo $@
-	cd ${TUS}; ./runOrDebug.sh -c -p dce Gossip
+	cd ${TUS}; ./cmakeClean.sh; ./runOrDebug.sh -p dce FWPTest 
 	@echo "$@ OK"
 
 

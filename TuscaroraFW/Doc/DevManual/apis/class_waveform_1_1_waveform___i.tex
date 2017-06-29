@@ -1,0 +1,279 @@
+\hypertarget{class_waveform_1_1_waveform___i}{}\section{Waveform\+:\+:Waveform\+\_\+I$<$ W\+F\+\_\+\+Address\+Type $>$ Class Template Reference}
+\label{class_waveform_1_1_waveform___i}\index{Waveform\+::\+Waveform\+\_\+\+I$<$ W\+F\+\_\+\+Address\+Type $>$@{Waveform\+::\+Waveform\+\_\+\+I$<$ W\+F\+\_\+\+Address\+Type $>$}}
+
+
+Defines the generic iteractions for waveforms.  
+
+
+
+
+{\ttfamily \#include $<$W\+F\+\_\+\+I.\+h$>$}
+
+
+
+Inheritance diagram for Waveform\+:\+:Waveform\+\_\+I$<$ W\+F\+\_\+\+Address\+Type $>$\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=215pt]{class_waveform_1_1_waveform___i__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for Waveform\+:\+:Waveform\+\_\+I$<$ W\+F\+\_\+\+Address\+Type $>$\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=215pt]{class_waveform_1_1_waveform___i__coll__graph}
+\end{center}
+\end{figure}
+\subsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+typedef \hyperlink{class_waveform_1_1_w_f___event}{W\+F\+\_\+\+Event}$<$ W\+F\+\_\+\+R\+E\+C\+V\+\_\+\+M\+S\+G\+\_\+\+E\+VT, \hyperlink{struct_waveform_1_1_w_f___recv_msg_param}{W\+F\+\_\+\+Recv\+Msg\+Param}$<$ W\+F\+\_\+\+Address\+Type $>$ $>$ {\bfseries W\+F\+\_\+\+Rcv\+Message\+Event\+\_\+t}\hypertarget{class_waveform_1_1_waveform___i_ac3fb531925a9157639bf197fee7e8418}{}\label{class_waveform_1_1_waveform___i_ac3fb531925a9157639bf197fee7e8418}
+
+\item 
+typedef \hyperlink{class_waveform_1_1_w_f___event}{W\+F\+\_\+\+Event}$<$ W\+F\+\_\+\+D\+A\+T\+A\+\_\+\+N\+T\+Y\+\_\+\+E\+VT, \hyperlink{struct_waveform_1_1_w_f___data_status_param}{W\+F\+\_\+\+Data\+Status\+Param}$<$ W\+F\+\_\+\+Address\+Type $>$ $>$ {\bfseries W\+F\+\_\+\+Data\+Status\+Event\+\_\+t}\hypertarget{class_waveform_1_1_waveform___i_a5efbb2428b3d0dbe51994f70a352a1ba}{}\label{class_waveform_1_1_waveform___i_a5efbb2428b3d0dbe51994f70a352a1ba}
+
+\item 
+typedef \hyperlink{class_waveform_1_1_w_f___event}{W\+F\+\_\+\+Event}$<$ W\+F\+\_\+\+L\+I\+N\+K\+\_\+\+E\+S\+T\+\_\+\+E\+VT, \hyperlink{struct_core_1_1_w_f___link_estimation_param}{W\+F\+\_\+\+Link\+Estimation\+Param}$<$ W\+F\+\_\+\+Address\+Type $>$ $>$ {\bfseries W\+F\+\_\+\+Link\+Estimate\+Event\+\_\+t}\hypertarget{class_waveform_1_1_waveform___i_a90a5d0b20f5e152b91d3e9701c9db069}{}\label{class_waveform_1_1_waveform___i_a90a5d0b20f5e152b91d3e9701c9db069}
+
+\end{DoxyCompactItemize}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{class_waveform_1_1_waveform___i_a98959d954f80b314ef896d2f857b7e4c}{Waveform\+\_\+I} (Waveform\+Id\+\_\+t \+\_\+w\+Id, \hyperlink{namespace_waveform_a8362d1abeefedecd1142a174faedc096}{W\+F\+\_\+\+TypeE} \+\_\+type, \hyperlink{namespace_waveform_a264307e95d31e27c5a69031fd2615f98}{W\+F\+\_\+\+Estimator\+TypeE} \+\_\+est\+Type, char $\ast$\+\_\+device\+Name)
+\begin{DoxyCompactList}\small\item\em Constructor. Creates a waveform object. \end{DoxyCompactList}\item 
+virtual void \hyperlink{class_waveform_1_1_waveform___i_ab651687e82a54481718d2ee75e40ec53}{Send\+Data} (\hyperlink{class_waveform_1_1_w_f___message_t}{W\+F\+\_\+\+MessageT}$<$ W\+F\+\_\+\+Address\+Type $>$ \&\+\_\+msg, uint16\+\_\+t \+\_\+payload\+Size, W\+F\+\_\+\+Address\+Type $\ast$\+\_\+dest\+Array, uint16\+\_\+t \+\_\+no\+Of\+Dest, W\+F\+\_\+\+Message\+Id\+\_\+t \+\_\+msg\+Id, bool \+\_\+no\+Ack=false)=0
+\begin{DoxyCompactList}\small\item\em Send message indicated by the Message\+Id to a set of neighbors indicated by dest\+Array, with a given payload size. \end{DoxyCompactList}\item 
+virtual void \hyperlink{class_waveform_1_1_waveform___i_ac2ddb96d5fb3c8cd410f688acde95389}{Broadcast\+Data} (\hyperlink{class_waveform_1_1_w_f___message_t}{W\+F\+\_\+\+MessageT}$<$ W\+F\+\_\+\+Address\+Type $>$ \&\+\_\+msg, uint16\+\_\+t \+\_\+payload\+Size, W\+F\+\_\+\+Message\+Id\+\_\+t \+\_\+msg\+Id)
+\begin{DoxyCompactList}\small\item\em Sends a broadcast on a waveform. Destination received data notification will not be generated If the waveform does not support physical layer broadcasting, the implementation is upto the waveform or the waveform might simply not implement this interface. \end{DoxyCompactList}\item 
+virtual void \hyperlink{class_waveform_1_1_waveform___i_a0dc200e92cdff86e55d65ab270c988e6}{Cancel\+Data\+Request} (Request\+Id\+\_\+t \+\_\+r\+Id, W\+F\+\_\+\+Message\+Id\+\_\+t \+\_\+msg\+Id, W\+F\+\_\+\+Address\+Type $\ast$\+\_\+dest\+Array, uint16\+\_\+t \+\_\+no\+Of\+Destinations)=0
+\begin{DoxyCompactList}\small\item\em Requests the Cancellation of a data message already sent to the waveform for one or more destinations. \end{DoxyCompactList}\item 
+virtual void \hyperlink{class_waveform_1_1_waveform___i_ace837715041bdea1e7857ccd9858e3f2}{Add\+Destination\+Request} (Request\+Id\+\_\+t \+\_\+r\+Id, W\+F\+\_\+\+Message\+Id\+\_\+t \+\_\+msg\+Id, W\+F\+\_\+\+Address\+Type $\ast$\+\_\+dest\+Array, uint16\+\_\+t \+\_\+no\+Of\+Destinations)=0
+\begin{DoxyCompactList}\small\item\em Adds one or more destinations to a packet, that has already been sent to the waveform. \hyperlink{namespace_waveform}{Waveform} will send a Control Response Event as reply to this command. \end{DoxyCompactList}\item 
+virtual \hyperlink{class_waveform_1_1_waveform___i_a1f0f3d3a86e5b34ca19d84a5425ea7ba}{$\sim$\+Waveform\+\_\+I} ()\hypertarget{class_waveform_1_1_waveform___i_a1f0f3d3a86e5b34ca19d84a5425ea7ba}{}\label{class_waveform_1_1_waveform___i_a1f0f3d3a86e5b34ca19d84a5425ea7ba}
+
+\begin{DoxyCompactList}\small\item\em virtual destructor for interface \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+Waveform\+Id\+\_\+t {\bfseries W\+ID}\hypertarget{class_waveform_1_1_waveform___i_af7ee22c008f34e6ba23a8fe00f3db901}{}\label{class_waveform_1_1_waveform___i_af7ee22c008f34e6ba23a8fe00f3db901}
+
+\item 
+\hyperlink{namespace_waveform_a8362d1abeefedecd1142a174faedc096}{W\+F\+\_\+\+TypeE} {\bfseries wf\+Type}\hypertarget{class_waveform_1_1_waveform___i_a932ddf78b5aa0eab3b38f3ecddebb00a}{}\label{class_waveform_1_1_waveform___i_a932ddf78b5aa0eab3b38f3ecddebb00a}
+
+\item 
+char {\bfseries device\+Name} \mbox{[}32\mbox{]}\hypertarget{class_waveform_1_1_waveform___i_ae1d816e833a5a5941cb8fa3d8567508b}{}\label{class_waveform_1_1_waveform___i_ae1d816e833a5a5941cb8fa3d8567508b}
+
+\item 
+\hyperlink{namespace_waveform_a264307e95d31e27c5a69031fd2615f98}{W\+F\+\_\+\+Estimator\+TypeE} {\bfseries est\+Type}\hypertarget{class_waveform_1_1_waveform___i_a08a164eba2b7d5dceb88755dc39acaf4}{}\label{class_waveform_1_1_waveform___i_a08a164eba2b7d5dceb88755dc39acaf4}
+
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\subsubsection*{template$<$class W\+F\+\_\+\+Address\+Type$>$\\*
+class Waveform\+::\+Waveform\+\_\+\+I$<$ W\+F\+\_\+\+Address\+Type $>$}
+
+Defines the generic iteractions for waveforms. 
+
+The interface defines a asynchornous message passing interface for interacting with a waveform running either as part of same process or as seperate process on the same node. When running as two seperate processes, a shim-\/layer will be implementation that will translate the calls between the two processes.
+
+The control flow in general consist of a command/request orginating from the framework to the waveform and the waveform responding to the command/request using a event response. There four types of events that the waveform can send to the framework \+:
+\begin{DoxyEnumerate}
+\item Response Event (W\+F\+\_\+\+Control\+Response\+Event\+\_\+t)\+: This is called in response to one of the $\ast$\+Request message, with an appropriate response type, response status (sucuss/failure), any additional data and its size
+\item Received Message Event (W\+F\+\_\+\+Rcv\+Message\+Event\+\_\+t) \+: This delegate is called whenever a message is received on the waveform, with the message as the parameter
+\item Data notification delegate (W\+F\+\_\+\+Data\+Notifier\+Event\+\_\+t)\+: This is called to convey the status of the Send\+Data and Broadcast\+Data calls. The delegates are might be called upto three types for each message, once to acknowledge the message has been received by the waveform, once when it is sent out and once when the message is received at the destination.
+\item Link estimation delegate (W\+F\+\_\+\+Link\+Estimates\+Event\+\_\+t)\+: This is called by waveform to provide link estiamtions about neighbors to the framework, if the waveform can provide link estimates. 
+\end{DoxyEnumerate}
+
+\subsection{Constructor \& Destructor Documentation}
+\index{Waveform\+::\+Waveform\+\_\+I@{Waveform\+::\+Waveform\+\_\+I}!Waveform\+\_\+I@{Waveform\+\_\+I}}
+\index{Waveform\+\_\+I@{Waveform\+\_\+I}!Waveform\+::\+Waveform\+\_\+I@{Waveform\+::\+Waveform\+\_\+I}}
+\subsubsection[{\texorpdfstring{Waveform\+\_\+\+I(\+Waveform\+Id\+\_\+t \+\_\+w\+Id, W\+F\+\_\+\+Type\+E \+\_\+type, W\+F\+\_\+\+Estimator\+Type\+E \+\_\+est\+Type, char $\ast$\+\_\+device\+Name)}{Waveform_I(WaveformId_t _wId, WF_TypeE _type, WF_EstimatorTypeE _estType, char *_deviceName)}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$class W\+F\+\_\+\+Address\+Type$>$ {\bf Waveform\+::\+Waveform\+\_\+I}$<$ W\+F\+\_\+\+Address\+Type $>$\+::{\bf Waveform\+\_\+I} (
+\begin{DoxyParamCaption}
+\item[{Waveform\+Id\+\_\+t}]{\+\_\+w\+Id, }
+\item[{{\bf W\+F\+\_\+\+TypeE}}]{\+\_\+type, }
+\item[{{\bf W\+F\+\_\+\+Estimator\+TypeE}}]{\+\_\+est\+Type, }
+\item[{char $\ast$}]{\+\_\+device\+Name}
+\end{DoxyParamCaption}
+)}\hypertarget{class_waveform_1_1_waveform___i_a98959d954f80b314ef896d2f857b7e4c}{}\label{class_waveform_1_1_waveform___i_a98959d954f80b314ef896d2f857b7e4c}
+
+
+Constructor. Creates a waveform object. 
+
+{\bfseries  Semantic Behavior\+:} The constructor is expected to create and initialize the waveform object. The constructor is also expected to “connect” to the Framework process. The mechanism of connecting may be platform specific. The data plane of the waveform is expected to be in W\+F\+\_\+\+N\+O\+R\+M\+AL state at the end of this call.
+
+The Waveform\+Id is allocated statically during compile time in the current version of Tuscarora. Other parameters of the constructor are decided by the waveform provider.
+
+
+\begin{DoxyParams}{Parameters}
+{\em \+\_\+w\+Id} & Unique ID of the waveform. The Waveform\+Id is allocated when the Tuscarora is initialized. A waveform writter usually doesnot have to worry about how they are generated. A waveform is expected to store this ID and use it to uniquely identify itself when communicating with the framework. \\
+\hline
+{\em \+\_\+type} & Type of the waveform. This is one of the types of the waveform the framework supports. \\
+\hline
+{\em \+\_\+est\+Type} & Type of the estimator provided by the waveform. Indicated weather or not the waveform supports link estimation. \\
+\hline
+{\em \+\_\+device\+Name} & Name of the device which will be used by the waveform, if device names exist on the platform used to deploy the waveform. \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Member Function Documentation}
+\index{Waveform\+::\+Waveform\+\_\+I@{Waveform\+::\+Waveform\+\_\+I}!Add\+Destination\+Request@{Add\+Destination\+Request}}
+\index{Add\+Destination\+Request@{Add\+Destination\+Request}!Waveform\+::\+Waveform\+\_\+I@{Waveform\+::\+Waveform\+\_\+I}}
+\subsubsection[{\texorpdfstring{Add\+Destination\+Request(\+Request\+Id\+\_\+t \+\_\+r\+Id, W\+F\+\_\+\+Message\+Id\+\_\+t \+\_\+msg\+Id, W\+F\+\_\+\+Address\+Type $\ast$\+\_\+dest\+Array, uint16\+\_\+t \+\_\+no\+Of\+Destinations)=0}{AddDestinationRequest(RequestId_t _rId, WF_MessageId_t _msgId, WF_AddressType *_destArray, uint16_t _noOfDestinations)=0}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$class W\+F\+\_\+\+Address\+Type$>$ virtual void {\bf Waveform\+::\+Waveform\+\_\+I}$<$ W\+F\+\_\+\+Address\+Type $>$\+::Add\+Destination\+Request (
+\begin{DoxyParamCaption}
+\item[{Request\+Id\+\_\+t}]{\+\_\+r\+Id, }
+\item[{W\+F\+\_\+\+Message\+Id\+\_\+t}]{\+\_\+msg\+Id, }
+\item[{W\+F\+\_\+\+Address\+Type $\ast$}]{\+\_\+dest\+Array, }
+\item[{uint16\+\_\+t}]{\+\_\+no\+Of\+Destinations}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_waveform_1_1_waveform___i_ace837715041bdea1e7857ccd9858e3f2}{}\label{class_waveform_1_1_waveform___i_ace837715041bdea1e7857ccd9858e3f2}
+
+
+Adds one or more destinations to a packet, that has already been sent to the waveform. \hyperlink{namespace_waveform}{Waveform} will send a Control Response Event as reply to this command. 
+
+{\bfseries  Semantic Behavior\+:} \hyperlink{namespace_waveform}{Waveform} should add a destination to the outgoing message if it has not already sent out the message identified by the message ID and send a positive response. If the waveform has already sent out the message to all the destinations and has cleaned its local buffers of the message, it should send a negative response to this request. Once destination has been added to a message, the waveform should communicate the result of the operation using Data Status Response Events as usual.
+
+A response to this request should be generated through the Control Response Event, with the same Request\+ID, that should include a status which will be set to false if the message has been sent out or if the waveform is otherwise unable to add destinations to the message. Otherwise the status should be set to true in the response message.
+
+
+\begin{DoxyParams}{Parameters}
+{\em \+\_\+r\+Id} & Specifies the ID of the request, which the waveform will use in its response message \\
+\hline
+{\em \+\_\+msg\+Id} & ID of the message that to which the destinations needs to be added \\
+\hline
+{\em \+\_\+dest\+Array} & New destinations to be added to the message \\
+\hline
+{\em \+\_\+no\+Of\+Destinations} & Number of destinations in the dest\+Array. If this is 0, the request will be ignored by waveform. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void 
+\end{DoxyReturn}
+
+
+Implemented in \hyperlink{class_waveform_1_1_waveform__64b___i_a9b0bcd9f799da0bcb6bb9984679b0e19}{Waveform\+::\+Waveform\+\_\+64b\+\_\+I}.
+
+\index{Waveform\+::\+Waveform\+\_\+I@{Waveform\+::\+Waveform\+\_\+I}!Broadcast\+Data@{Broadcast\+Data}}
+\index{Broadcast\+Data@{Broadcast\+Data}!Waveform\+::\+Waveform\+\_\+I@{Waveform\+::\+Waveform\+\_\+I}}
+\subsubsection[{\texorpdfstring{Broadcast\+Data(\+W\+F\+\_\+\+Message\+T$<$ W\+F\+\_\+\+Address\+Type $>$ \&\+\_\+msg, uint16\+\_\+t \+\_\+payload\+Size, W\+F\+\_\+\+Message\+Id\+\_\+t \+\_\+msg\+Id)}{BroadcastData(WF_MessageT< WF_AddressType > &_msg, uint16_t _payloadSize, WF_MessageId_t _msgId)}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$class W\+F\+\_\+\+Address\+Type$>$ virtual void {\bf Waveform\+::\+Waveform\+\_\+I}$<$ W\+F\+\_\+\+Address\+Type $>$\+::Broadcast\+Data (
+\begin{DoxyParamCaption}
+\item[{{\bf W\+F\+\_\+\+MessageT}$<$ W\+F\+\_\+\+Address\+Type $>$ \&}]{\+\_\+msg, }
+\item[{uint16\+\_\+t}]{\+\_\+payload\+Size, }
+\item[{W\+F\+\_\+\+Message\+Id\+\_\+t}]{\+\_\+msg\+Id}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [virtual]}}\hypertarget{class_waveform_1_1_waveform___i_ac2ddb96d5fb3c8cd410f688acde95389}{}\label{class_waveform_1_1_waveform___i_ac2ddb96d5fb3c8cd410f688acde95389}
+
+
+Sends a broadcast on a waveform. Destination received data notification will not be generated If the waveform does not support physical layer broadcasting, the implementation is upto the waveform or the waveform might simply not implement this interface. 
+
+{\bfseries  Semantic Behavior\+:} Broadcast is an optional feature for waveforms. They can choose not to implement it. If implemented, the waveform should set the ‘broadcast\+Support’ field in its Attribute as true whenever it responds to the Attribute\+Request. When the Framework makes a broadcast request, it is expected that the waveform will transmit the message without any specific addressing and without any expectation of destination acknowledgements. The waveform should perform sufficient effort such that neighboring nodes as well as nodes that could be a neighbor might sometimes receive the packet under representative operating conditions.
+
+Efficiency is the key intent of the broadcast method. For example, if a waveform has neighbors across 7 different spectral-\/temporal channels and to reach all of the known neighbors it has to send the same message 7 times, once on each channel, then the nominal implementation would randomly select a channel and send one message on that channel. The randomization ensures that any given neighbor will be reached at least sometimes.
+
+The Message\+Id may be used by the pattern to cancel or replace the payload in future. The waveform is expected to generate 2 notifications through the Data Notification Event, for every message sent to it, the first indicating that the waveform has received the message and the second indicating that it has sent out the message. The waveform can generate a third notification indicating that the destination(s) has received the message if it can support destination acknowledgements.
+
+
+\begin{DoxyParams}{Parameters}
+{\em msg} & Reference to the packet to be broadcasted \\
+\hline
+{\em payload\+Size} & Size of the payload in the packet. \\
+\hline
+{\em msg\+Id} & Specifies the id of the framework will use to identify this packet in future calls. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void. 
+\end{DoxyReturn}
+
+
+Reimplemented in \hyperlink{class_waveform_1_1_waveform__64b___i_a7ba5150aa1b4e3a123f75dd80ce6ec5b}{Waveform\+::\+Waveform\+\_\+64b\+\_\+I}.
+
+\index{Waveform\+::\+Waveform\+\_\+I@{Waveform\+::\+Waveform\+\_\+I}!Cancel\+Data\+Request@{Cancel\+Data\+Request}}
+\index{Cancel\+Data\+Request@{Cancel\+Data\+Request}!Waveform\+::\+Waveform\+\_\+I@{Waveform\+::\+Waveform\+\_\+I}}
+\subsubsection[{\texorpdfstring{Cancel\+Data\+Request(\+Request\+Id\+\_\+t \+\_\+r\+Id, W\+F\+\_\+\+Message\+Id\+\_\+t \+\_\+msg\+Id, W\+F\+\_\+\+Address\+Type $\ast$\+\_\+dest\+Array, uint16\+\_\+t \+\_\+no\+Of\+Destinations)=0}{CancelDataRequest(RequestId_t _rId, WF_MessageId_t _msgId, WF_AddressType *_destArray, uint16_t _noOfDestinations)=0}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$class W\+F\+\_\+\+Address\+Type$>$ virtual void {\bf Waveform\+::\+Waveform\+\_\+I}$<$ W\+F\+\_\+\+Address\+Type $>$\+::Cancel\+Data\+Request (
+\begin{DoxyParamCaption}
+\item[{Request\+Id\+\_\+t}]{\+\_\+r\+Id, }
+\item[{W\+F\+\_\+\+Message\+Id\+\_\+t}]{\+\_\+msg\+Id, }
+\item[{W\+F\+\_\+\+Address\+Type $\ast$}]{\+\_\+dest\+Array, }
+\item[{uint16\+\_\+t}]{\+\_\+no\+Of\+Destinations}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_waveform_1_1_waveform___i_a0dc200e92cdff86e55d65ab270c988e6}{}\label{class_waveform_1_1_waveform___i_a0dc200e92cdff86e55d65ab270c988e6}
+
+
+Requests the Cancellation of a data message already sent to the waveform for one or more destinations. 
+
+{\bfseries  Semantic Behavior\+:} \hyperlink{namespace_waveform}{Waveform} should cancel the transmission of the message, passed in an earlier call to Send\+Data or Broadcast\+Data method with the given message ID, if the message has not been sent out. The message transmission should be cancelled only for the destinations passed as parameters. If the no\+Of\+Destinations parameter is 0, then the entire message should be cancelled. If the message ID is for a Broadcast message the whole message should be cancelled.
+
+A response message should be generated through the Control Response Event, with the same Request\+ID, that should include a status which will be set to false if the message has been sent out or if the waveform is otherwise unable to cancel the transmissions. Otherwise the status should be set to true in the response message.
+
+
+\begin{DoxyParams}{Parameters}
+{\em r\+Id} & Specifies the ID of the request, which the waveform will use to in its response message. \\
+\hline
+{\em msg\+Id} & ID of the message that needs to be cancelled. \\
+\hline
+{\em dest\+Array} & Array of destinations to which the packet should be cancelled. \\
+\hline
+{\em no\+Of\+Destinations} & Number of destinations in the dest\+Array. If the number of destinations is 0, the entire message is cancelled. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void 
+\end{DoxyReturn}
+
+
+Implemented in \hyperlink{class_waveform_1_1_waveform__64b___i_a070ad8ff9d1a4a6d66cfaa4bae072752}{Waveform\+::\+Waveform\+\_\+64b\+\_\+I}.
+
+\index{Waveform\+::\+Waveform\+\_\+I@{Waveform\+::\+Waveform\+\_\+I}!Send\+Data@{Send\+Data}}
+\index{Send\+Data@{Send\+Data}!Waveform\+::\+Waveform\+\_\+I@{Waveform\+::\+Waveform\+\_\+I}}
+\subsubsection[{\texorpdfstring{Send\+Data(\+W\+F\+\_\+\+Message\+T$<$ W\+F\+\_\+\+Address\+Type $>$ \&\+\_\+msg, uint16\+\_\+t \+\_\+payload\+Size, W\+F\+\_\+\+Address\+Type $\ast$\+\_\+dest\+Array, uint16\+\_\+t \+\_\+no\+Of\+Dest, W\+F\+\_\+\+Message\+Id\+\_\+t \+\_\+msg\+Id, bool \+\_\+no\+Ack=false)=0}{SendData(WF_MessageT< WF_AddressType > &_msg, uint16_t _payloadSize, WF_AddressType *_destArray, uint16_t _noOfDest, WF_MessageId_t _msgId, bool _noAck=false)=0}}]{\setlength{\rightskip}{0pt plus 5cm}template$<$class W\+F\+\_\+\+Address\+Type$>$ virtual void {\bf Waveform\+::\+Waveform\+\_\+I}$<$ W\+F\+\_\+\+Address\+Type $>$\+::Send\+Data (
+\begin{DoxyParamCaption}
+\item[{{\bf W\+F\+\_\+\+MessageT}$<$ W\+F\+\_\+\+Address\+Type $>$ \&}]{\+\_\+msg, }
+\item[{uint16\+\_\+t}]{\+\_\+payload\+Size, }
+\item[{W\+F\+\_\+\+Address\+Type $\ast$}]{\+\_\+dest\+Array, }
+\item[{uint16\+\_\+t}]{\+\_\+no\+Of\+Dest, }
+\item[{W\+F\+\_\+\+Message\+Id\+\_\+t}]{\+\_\+msg\+Id, }
+\item[{bool}]{\+\_\+no\+Ack = {\ttfamily false}}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_waveform_1_1_waveform___i_ab651687e82a54481718d2ee75e40ec53}{}\label{class_waveform_1_1_waveform___i_ab651687e82a54481718d2ee75e40ec53}
+
+
+Send message indicated by the Message\+Id to a set of neighbors indicated by dest\+Array, with a given payload size. 
+
+{\bfseries  Semantic Behavior\+:} This is the primary method the Framework uses to request that a message be transmitted by the waveform. The first two parameters are self-\/explanatory. The third parameter is an array of one or more neighbors to which the message is to be sent, each of which are identified by the neighbor’s waveform address. The Framework may use the given Message\+Id to cancel or replace the payload in future . The parameter \+\_\+no\+Ack specifies whether a notification is requested when this message has reached its intended destination(s). A true value for this field means the Framework does not need notifications for this message. If data notifications/acknowledgements are not supported by the waveform, this parameter may be ignored.
+
+{\bfseries Data Notifications\+:} It is recommended that Waveforms support acknowledgements from destinations for unicast and multi-\/cast (in local neighborhood) messages. However this is optional. If the waveform choose to implement receiver acks, it should set the ‘dest\+Receive\+Ack\+Support’ field in the Attribute record as true whenever it responds to the Attribute\+Request. If the waveform does not support this feature, then the framework will implement destination acknowledgements by replying to the source node on receiving messages from the waveform. The Message\+Id may be used by the Framework to cancel or replace the payload in future. The waveform is expected to generate at least 2 notifications through the Data Notification Event, for every message sent to it, the first indicating that the waveform has received the message and the second indicating that it has sent out the message. The waveform can generate a third notification indicating that the destination(s) has received the message if it chooses to support destination acknowledgement.
+
+{\bfseries Performance\+:} A request to send to multiple nodes should be fulfilled via a technique that is no less efficient than a sequence of transmissions to each node. The intent is that more advanced waveforms may internally optimize beyond this base performance level, by combining transmissions when possible and not unduly difficult. Any optimizations that\+: 1) are not naturally supported by the hardware and the waveform, 2) require non-\/local information, or 3) consume an order of magnitude more computational resources than required for the core send operation, should not be supported
+
+
+\begin{DoxyParams}{Parameters}
+{\em msg} & Reference to the packet be sent. \\
+\hline
+{\em payload\+Size} & Size of the payload in the packet. \\
+\hline
+{\em dest\+Array} & Array of destinations to which the packet should be sent. \\
+\hline
+{\em no\+Of\+Dest} & Number of destinations in the dest\+Array. \\
+\hline
+{\em msg\+Id} & Specifies the packet id the framework will use to identify this packet in future calls. \\
+\hline
+{\em no\+Ack} & Specifies if acks should not be generated. Defaults option generates acks \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void. 
+\end{DoxyReturn}
+
+
+Implemented in \hyperlink{class_waveform_1_1_waveform__64b___i_acdbf6669aa2e350f9a4b02b06dd4899e}{Waveform\+::\+Waveform\+\_\+64b\+\_\+I}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Tuscarora\+F\+W/\+Include/\+Interfaces/\+Waveform/W\+F\+\_\+\+I.\+h\end{DoxyCompactItemize}

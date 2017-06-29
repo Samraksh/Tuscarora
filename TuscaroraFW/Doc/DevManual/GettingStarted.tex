@@ -1,0 +1,218 @@
+
+Tuscarora is a cross platform software system and can be used on most desktop systems. Tuscarora comes pre-integrated with ns3 simulator that can be used to test the users code. The NS3 is designed for POSIX compliant systems and hence using the installation script for simulator will require POSIX systems. However, beginning Summer 2016 Windows is expected to support a POSIX/ubuntu environment. The following section is written for Ubuntu system. Howeve, it should work on most POSIX systems.
+
+
+\section{Supported Platforms}
+Ubuntu 16.04 64-bit and Ubuntu 14.04 64 bit are the recommended platforms. The instructions should work on most 64-bit Ubuntu platforms with the following restrictions.  32-bit distributions are not support.
+
+\begin{itemize}
+%\item Ubuntu 15.10 is supported with the following modiufications gcc change . ..
+	\item Ubuntu 16.04 is proffered developmental platform. 
+	\item Ubuntu 14.10 is not a long term release and reached EOL in July 2015. This version is not supported. % ?
+	\item Ubuntu 14.04: There are 6 sub-releases here, 14.04, 14.04.1, ..., 14.04.5. All of them should work with no modifications.
+	\item Other 64-bit Ubuntu versions starting at 12.04 should work, although Samraksh does not officially support anything older than 14.04.
+	\item Any other distribution is discouraged. If you are planning to
+	  use any other platform, first check out the requirements for ns3-dce~\cite{dce}.
+\end{itemize}
+
+\section{Installation}
+
+\subsection{Installation from Scratch} \label{subsec:InstallationFromScratch}
+
+\begin{enumerate}
+\item \textbf{Extract the source Files:} Move the Tuscarora package to
+  a new directory, say `C2E'. The release file is a password-protected
+  rar-archive, so you will need the \texttt{rar} package.
+\begin{quote}
+	\$ cd \\
+	\$ mkdir C2E\\
+	\$ mv Tuscarora-release-0.x-y.rar C2E\\
+	\$ sudo apt-get install rar \# if not already installed\\
+	\$ rar x Tuscarora-release-0.x-y.rar\\
+\end{quote}
+
+\item \textbf{Launch installation:} The previous step will create a Tuscarora directory, this is the root of the framework. Launch the `install.sh' script under 
+Tuscarora root directory. 
+Since the script adds some environment variables, it has to be called within the same shell. Please note the ``.'' before the command. 
+If not, a new shell should be started after the installation completes in order to set the environment variables. 
+\begin{quote}
+	\$ cd TuscaroraFW\\
+	\$ . ./install.sh\\
+\end{quote}
+\item \textbf{Installation:}  The installation script will ask for
+  your `sudo' password for installing some dependencies. Enter your
+  password. The script will download and install the required ubuntu dependencies
+  first. Next, it will proceed to download and install bake, ns3, and
+  dce from the nsnam repositories. Ns3 and dce will be installed under
+  a directory called `dce' under your home directory; let's call this
+  the \$DCE\_DIR directory. Next the script will make some symbolic
+  links between the Tuscarora source directory and the
+  \$DCE\_DIR. Finally, if all previous steps work fine, it will run
+  some existing modules, and will return the status of execution.
+% XXX status of execution, or status of installation?
+
+\end{enumerate}
+
+
+\subsection{Upgrading from Previous Release}
+To upgrade from an existing Tuscarora installation following the procedure below. 
+\begin{enumerate}
+	\item \textbf{Remove and Replace Tuscarora Directory}: Follow the path, where Tuscarora was installed, say C2E, and replace the Tuscarora directory with the contents of the new package. 
+	\begin{quote}
+		\$ cd C2E\\
+		\$ rm -r Tuscarora\\
+		\$ sudo apt-get install rar \# [if not already installed]\\
+		\$ rar x Tuscarora-release-x.y-z.rar\\
+		\$ cd Tuscarora/TuscaroraFW \\
+	\end{quote}
+	
+	\item \textbf{Reinstallation}: Before we can install the new version, the ns3/dce patches from previous version should be removed first. To do this:
+
+	\begin{quote}
+		\$ cd Tuscarora/TuscaroraFW \\
+		\$ ./install.sh -u  \# [this will remove the patches]\\
+	    \$ ./install.sh \\
+	\end{quote}
+\end{enumerate}
+
+
+If at any stage you encounter error, please contact support.
+
+
+\subsection{Validating the installation}
+Finally, once the installation finishes, you can validate the installation by running the command ``./validate.sh'' from the TuscaroraFW directory followed by ``-p platform'' option. This would run a number of predefined validation tests for the given platform and would print the result of the tests as FAILED or PASSED on the screen. If any of the tests fail, please contact support. Running the validate script with the `-h' option prints the list of validation tests available.
+
+
+\section{Executing Tuscarora Framework Modules}
+
+The `runOrDebug.sh' in the root directory is the primary script to execute the modules and tests under framework. The script cleans, builds, runs and collects the output for the 'test-name' specified. 
+Run the script without parameters for information on supported options. Run the script with the test-name and `-h' option to get test-specific help.
+
+% XXXX GIVE MORE INFO about options, e.g., put general ns3 options
+% before the '--' and sim-specific options after.
+
+\subsection{Example Executions}
+
+
+0. Getting help for the usage of runOrDebug.sh, to find the list of available tests.
+
+\begin{quote}
+	\$ ./runOrDebug.sh  \\
+\end{quote}
+
+1. Getting help for Gossip test, to find the list of all test parameters with their default values.
+
+\begin{quote}
+	\$ ./runOrDebug.sh -h Gossip  \\
+\end{quote}
+
+2. Running the Gossip pattern test for 60 secs on a 100 node network.
+
+\begin{quote}
+	\$ ./runOrDebug.sh Gossip -\mbox{}- RunTime 60 Size 100\\
+\end{quote}
+
+
+3. Running the Gossip pattern test inside the gdb to debug for 100 nodes (and a default duration of 6 secs).
+
+\begin{quote}
+	\$ ./runOrDebug.sh -d Gossip -- Size 100\\
+\end{quote}
+
+
+4. Running the Framework Interface test `FI' with Periodic Link Estimation with a dead neighbor period of 2 seconds and a Link Estimation Period of 1Hz using Global Network Discovery.
+
+\begin{quote}
+\$ ./runOrDebug.sh FI -\mbox{}- LinkEstimationType periodic LinkEstimationPeriod 1000000 DeadNeighborPeriod 2 DiscoveryType global\\
+\end{quote}
+	
+5. Running the Framework Interface test `FI' with Schedule Aware
+Periodic Link Estimation, a Link Estimation Period of 10Hz, and
+2-hop Long Link Network Discovery.
+
+\begin{quote}
+\$ ./runOrDebug.sh FI -\mbox{}- LinkEstimationType
+scheduleAwarePeriodic LinkEstimationPeriod 100000 DiscoveryType longlink2hop
+\end{quote}
+	
+
+6. Running the Gossip pattern test with 10 nodes with a waveform configuration file.
+
+\begin{quote}
+	\$ ./runOrDebug.sh Gossip -- Size 100 WFConfig ~\$\{TUS\}/dceln/wf-config.cnf  \\
+\end{quote}
+
+7. Running the Gossip pattern test with a tracefile based mobility model. The tracefile needs to be in the ns-2 mobility trace file format.
+
+\begin{quote}
+	\$ ./runOrDebug.sh Gossip -- Size 10 RunTime 10 Mobility TracefileMobilityModel Tracefile ~\$\{TUS\}/TraceFiles/Simple-Size10-10secs.tr  \\
+\end{quote}
+
+
+For more information on running Tuscarora on various platforms, testing methodology and configuration options see Chapter~\ref{Chap:Exec}.
+
+\section{Execution Output Files}
+
+The runOrDebug script creates outputs in the directory ``dceln''. This directory is a symlink to the main dce execution directory, which is located at ``\$HOME/dce/sources/ns-3-dce''. 
+
+Under this directory you will find a number of outputs generated:
+
+%The ability to create outputs as a memory map binary file will be enabled in the next release. 
+
+\begin{itemize}
+	\item time.output: This file summarizes the high level information about the test such seen from the operating system such as the command being run, its terminating condition, the time it takes to complete, the amount of system resources used, etc. 
+	\item simulation\_description: This file details various features of the simulation either set by the command line arguments or used as the default values. 
+	\item exitprocs: This file stores information about the execution process. 
+	\item CourseChangeData.txt: This file stores information about the mobility. More specifically, for each change in the velocity of a node, a line of record indicating the time instances, node's ID, node's new velocity and node's location at that time instant is stored.
+	\item elf-cache: The compiled program files are stored under this directory. 
+	\item file-x: Directories such as files-0, files-1, etc., store the file system of each simulated node. 
+	Each of these directories have a simulation\_desciription file identical to the one located at \FilePath{\$HOME/dce/sources/ns-3-dce}. 
+	In addition to that, the generated data at each node is stored in these directories.  
+	"Configuration.bin" stores the configuration parameters in binary format.
+	"linkestimation.bin" stores the link estimation state in binary format. 
+	The output for each node can be found under file-*/stdout. 
+	This file stores the outputs of the ``Debug\_Printf'' macro or the ``printf'' to ``stdout'' of each node during the simulation. 	
+\end{itemize}
+
+\section{Directory Structure}
+
+\begin{itemize}
+\item Config: Sample waveform configuration files for simulation
+\item Doc: Documentation
+\item Install: Scripts to automate installation of Tuscarora
+\item Include: Header files / API specifications
+\item Lib : Platform neutral library modules
+\item ns-3-dce: Simulation scripts to run under dce
+\item Patchs: Patches to DCE module to enable additional features %{\bf (Will be depreciated in future releases)}
+\item Patchs.ns3: Patches to the ns-3 modules.
+\item Platform: Platform-specific library modules
+\item Scripts: Various utility scripts
+\item Src: Framework and Pattern source files
+\item Tests : Tests for modules, layers and patterns
+\end{itemize}
+
+\section{Compilation, Linking and Execution Details}\label{CompilationDetails}
+
+Tuscarora's framework links with DCE source tree through the \$TUS/ns-3-dce/myscripts/TuscTest folder.  A link for this folder is created in the ``\$DCE\_DIR/sources/ns-3-dce/myscripts''.
+This folder includes c++ programs defining ns3 simulation environment to be used in the simulation. 
+The defaults setup of the runOrDebug.sh script uses the ``tuscarora-test.cc'' program that sets ns3 and DCE setup for the simulation depending on the run time arguments. It is compiled through waf system of the DCE and its binary is placed under ``\$DCE\_DIR/build/bin''.
+
+While executing a program using the DCE framework, the test program written using Tuscarora is compiled as a dynamically linked shared library and loaded into the DCE environment. Notionally, DCE provides the ``OS'' and  the tests written using Tuscarora are like "application" executed on that OS. DCE provides these ``OS services'' by utilizing either ns-3 modules or by using the native linux services.
+
+One difference between DCE and an actual OS is that DCE "runs" multiple copies of the application, one per node, while an actual OS would run only one copy. 
+
+The actual test/simulation that is run on top of DCE can be controlled by the Test parameter provided to the runOrDebug.sh script. ``TuscaroraFW/Tests'' folder includes a number of programs intended to be used as test applications. Each such program has its own main() function, which is where a given node's execution begins.
+
+
+%Essentially, they implement the main to be run at a node.
+%These tests are compiled separately by the runOrDebug.sh script and the binaries are copied under  ``\$DCE\_DIR/sources/ns-3-dce/build/bin\_dce''. The framework and the patterns used by this program is provided as a DLLs. 
+
+Finally, the source code for the framework and the source code for the sample patterns provided reside in ``TuscaroraFW/Src''. As explained above, depending on the test program being run, these individual tuscarora modules are compiled and linked into DLL binary by the runOrDebug.sh  script and an associated Makefile and are placed under ``\$DCE\_DIR/sources/ns-3-dce/build/bin\_dce''. These binary DLLs are loaded into a ns3-dce binary executable which is usually called ``tuscrora-test".
+
+A typical simulation consists of following run-time threads:
+\begin{itemize}
+\item Initially, a single thread starts  and runs the code in tuscarora-test. This thread act as the overall manager of the simulation, and does coordination between nodes, and also runs ns3 module code (simulating the waveform(s), the channel(s), nodes, events, etc.). 
+\item With the start of the ns3 simulation,  for each node a separate thread is created, which runs test program specified as the run time argument.
+\item The test program running on each node creates instance(s) of the pattern(s), an instance of the framework and instance(s) of the waveforms layer are created.
+\end{itemize}
+%ADD a figure showing the interactions

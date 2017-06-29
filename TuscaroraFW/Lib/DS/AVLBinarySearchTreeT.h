@@ -111,6 +111,10 @@ public:
 	template <class U2, class U3, class u4> friend class BSTMapT;
 	friend class AVLBSTTest;
 
+	template <uint32_t ARRAY_LEN, class U, class CompareU> friend class FAAVLBST_T;
+	template <uint32_t ARRAY_LEN, class U2, class U3, class u4> friend class FABSTMapT;
+	friend class FAAVLBSTTest;
+	friend class FAMapTest;
 };
 
 

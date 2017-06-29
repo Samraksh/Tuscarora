@@ -1,0 +1,29 @@
+%\begin{description}
+% \item[TxMode] The i'th TxMode in the list of allowed txmodes by the attached phy layer. The default value of this attribute is 0, making \CPPClassName{SlimNetDevice} use the first txmodes in the list of tx modes offered by the PHY layer.  
+%
+% \item[ContentionWindowSize] The window size among which to select the next tx slot. The default value of this attribute is 10.
+%
+% \item[SlotDuration] The size of each slot(in ns3::Time type). The default value of this attribute is 1ms.
+%
+% \item[TxQueue] A queue to use as the transmit queue in the device. The default value queue used by the device is a DropTailQueue. 
+%\end{description}
+\begin{longtable}{ | c | c | c |}
+
+\caption{Attributes of TuscaroraSlimNetDevice}\label{table:SlimNetDeviceTableofAttributes}	\\
+ 
+     \hline
+  \textbf{Attribute} & \textbf{Short Description} & \textbf{Default Value} \\ \hline
+ 
+
+ TxVectorIndex &  \parbox[][][t]{6.5cm}{\vspace{6pt}\raggedright The index of the SlimTxVector to be used for transmitting packets in the list of supported SlimTxVectors of the attached phy layer.\vspace{6pt}} &  0 \\ \hline 
+
+ ContentionWindowSize &  \parbox[][][t]{6.5cm}{\vspace{6pt}\raggedright Average number of slots in between two selected transmission slots.\vspace{6pt}}  & 10 \\ \hline 
+
+ SlotDuration &  \parbox[][][t]{6.5cm}{\vspace{6pt}\raggedright The size of each slot(in ns3::Time type).\vspace{6pt}} & 1ms \\ \hline 
+ 
+				   
+ TxQueue &  \parbox[][][t]{6.5cm}{\vspace{6pt}\raggedright The pointer to a queue object used as the transmit queue in the device.\vspace{6pt}}  & DropTailQueue \\ \hline 
+			   			   
+				   
+	   
+ \end{longtable}   

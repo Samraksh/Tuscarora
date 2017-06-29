@@ -1,0 +1,79 @@
+\documentclass[letterpaper,
+ 11pt,
+ titlepage,
+ pdftex,
+ twoside=false,
+ openany,			% by default, new chapters are opened on right hand page, use this option to suppress that
+ headinclude,    %
+% headsepline,    % line between head an document text
+ %BCOR=12mm,      % 
+ appendixprefix=true,
+ chapterprefix=false,   
+ index= totoc,        % Index
+ bibliography=openstyle,
+ bibliography    = totoc         % Bib to ToC 
+]{scrbook}
+
+\input{CommandsPackagesStyling}
+% % % % % % % % % % %Header section heads, document begins
+\begin{document}
+% half-title page
+%\vspace*{\fill}
+\begin{titlepage}
+\title{
+{\Huge SLIM Waveform Manual}\\
+Document Version 1.2 \\
+}
+\author{The Samraksh Company\\
+\\
+\\
+\\
+\\}
+\date{This research was developed with funding from the Defense Advanced Research Projects Agency (DARPA). The views, opinions, and/or findings contained in this article/presentation are those of the author(s)/presenter(s) and should not be interpreted as representing the official views or policies of the Department of Defense or the U.S. Government.}
+
+\end{titlepage}
+
+\maketitle
+\tableofcontents{}
+
+
+\chapter {Introduction}
+\label{Chap:Intro}
+\input{intro.tex}
+
+\chapter{Components of the SLIM waveform}
+\label{Chap:MAC}
+\input{ComponentsofSLIM.tex}
+
+\chapter {Configuration}
+\label{Chap:Config}
+\input{configuration.tex}
+
+%\chapter{Comparison}
+%\label{Chap:Comparison}
+%\input{comparison.tex}
+
+\chapter{Support}
+\label{Chap:Support}
+\input{support.tex}
+
+
+%%%%Commment below section to include API document as appendix
+
+%\clearpage
+%\begin{titlepage}\centering
+%\vspace*{\fill}
+%\Huge{Appendices: API References}  
+%\vspace*{\fill}
+%\end{titlepage}\newpage
+
+%\appendix
+%\appendixname{API Documentation}
+%\label{Chap:APIDoc}
+%\subimport{../APIDoc/DoxyOutput/latex/}{myrefman.tex}
+
+\bibliographystyle{unsrt}
+\bibliography{TuscBib}
+
+
+\end{document}

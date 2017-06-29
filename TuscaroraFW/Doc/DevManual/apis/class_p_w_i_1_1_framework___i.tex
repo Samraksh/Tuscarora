@@ -1,0 +1,369 @@
+\hypertarget{class_p_w_i_1_1_framework___i}{}\section{P\+WI\+:\+:Framework\+\_\+I Class Reference}
+\label{class_p_w_i_1_1_framework___i}\index{P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}}
+
+
+Defines the generic interations between the Pattern and the Framework.  
+
+
+
+
+{\ttfamily \#include $<$Framework\+\_\+\+I.\+h$>$}
+
+
+
+Inheritance diagram for P\+WI\+:\+:Framework\+\_\+I\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=202pt]{class_p_w_i_1_1_framework___i__inherit__graph}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \hyperlink{class_p_w_i_1_1_framework___i_abe350ffa7efc7fe687215e980e6d1d3c}{Send\+Data} (Pattern\+Id\+\_\+t pid, Node\+Id\+\_\+t dest\+Array\mbox{[}M\+A\+X\+\_\+\+D\+E\+ST\mbox{]}, uint16\+\_\+t no\+Of\+Dest, \hyperlink{class_core_1_1_message_t}{F\+Message\+\_\+t} \&msg, uint16\+\_\+t nonce, bool no\+Dest\+Ack=false)=0
+\begin{DoxyCompactList}\small\item\em Sends message provided as parameter to the set of neighbors indicated by dest\+Array. \end{DoxyCompactList}\item 
+virtual void {\bfseries Send\+Data} (Pattern\+Id\+\_\+t pid, Node\+Id\+\_\+t dest\+Array\mbox{[}M\+A\+X\+\_\+\+D\+E\+ST\mbox{]}, uint16\+\_\+t no\+Of\+Dest, \hyperlink{namespace_p_w_i_1_1_neighborhood_a54f3d64f52739fa54193660451fd8a6f}{Link\+Comparator\+TypeE} lc\+Type, \hyperlink{class_core_1_1_message_t}{F\+Message\+\_\+t} \&msg, uint16\+\_\+t nonce, bool no\+Dest\+Ack=false)=0\hypertarget{class_p_w_i_1_1_framework___i_a7a8abb88dfb4d4ddbfb908c244fa4f61}{}\label{class_p_w_i_1_1_framework___i_a7a8abb88dfb4d4ddbfb908c244fa4f61}
+
+\item 
+virtual void \hyperlink{class_p_w_i_1_1_framework___i_ad6f5e981436d5ffa471fb5631463b85d}{Replace\+Payload\+Request} (Pattern\+Id\+\_\+t pattern\+Id, Message\+Id\+\_\+t msg\+Id, void $\ast$payload, uint16\+\_\+t size\+Of\+Payload)=0
+\begin{DoxyCompactList}\small\item\em Replaces the payload of a packet already sent to the framework. The previous payload will be discarded and destroyed. \end{DoxyCompactList}\item 
+virtual void \hyperlink{class_p_w_i_1_1_framework___i_ab960254f2b72eca6ec822129bd26c977}{Register\+Pattern\+Request} (Pattern\+Id\+\_\+t pattern\+Id, char unique\+Name\mbox{[}128\mbox{]}, \hyperlink{namespace_core_1_1_naming_ab40d44ea919ec3e3c8cc05576ba6d610}{Pattern\+TypeE} type)=0
+\begin{DoxyCompactList}\small\item\em Generates a pattern ID, based on the pattern type and an optional unique string. \end{DoxyCompactList}\item 
+virtual void \hyperlink{class_p_w_i_1_1_framework___i_aee8ff64049e3908e47ad92c5d8cd2485}{Add\+Destination\+Request} (Pattern\+Id\+\_\+t pattern\+Id, Message\+Id\+\_\+t msg\+Id, Node\+Id\+\_\+t dest\+Array\mbox{[}M\+A\+X\+\_\+\+D\+E\+ST\mbox{]}, uint16\+\_\+t no\+Of\+Nbrs)=0
+\begin{DoxyCompactList}\small\item\em Adds more destinations to a message already handed over to the framework. If the original message was sent using Broadcast\+Data method, this new request is ignored. \end{DoxyCompactList}\item 
+virtual void {\bfseries Add\+Destination\+Request} (Pattern\+Id\+\_\+t pattern\+Id, Message\+Id\+\_\+t msg\+Id, Node\+Id\+\_\+t dest\+Array\mbox{[}M\+A\+X\+\_\+\+D\+E\+ST\mbox{]}, uint16\+\_\+t no\+Of\+Nbrs, \hyperlink{namespace_p_w_i_1_1_neighborhood_a54f3d64f52739fa54193660451fd8a6f}{Link\+Comparator\+TypeE} lc\+Type)=0\hypertarget{class_p_w_i_1_1_framework___i_a887538b053128e1d10b442ee0c659a0b}{}\label{class_p_w_i_1_1_framework___i_a887538b053128e1d10b442ee0c659a0b}
+
+\item 
+virtual void \hyperlink{class_p_w_i_1_1_framework___i_a018a8d6a757ff5925f514c44e21d21d1}{Cancel\+Data\+Request} (Pattern\+Id\+\_\+t pattern\+Id, Message\+Id\+\_\+t msg\+Id, Node\+Id\+\_\+t dest\+Array\mbox{[}M\+A\+X\+\_\+\+D\+E\+ST\mbox{]}, uint16\+\_\+t no\+Of\+Dest)=0
+\begin{DoxyCompactList}\small\item\em Cancels the sending of a message to one or more destinations of a message previously handed over to the framework. \end{DoxyCompactList}\item 
+virtual void \hyperlink{class_p_w_i_1_1_framework___i_a06e0bc143aa0009aec23dbe3c4ba26db}{Data\+Status\+Request} (Pattern\+Id\+\_\+t pattern\+Id, Message\+Id\+\_\+t msg\+Id)=0
+\begin{DoxyCompactList}\small\item\em Request the status of a data message sent to the framework. \end{DoxyCompactList}\item 
+virtual void \hyperlink{class_p_w_i_1_1_framework___i_af785062dc2e35cf4e7e0b83d90b6a861}{Select\+Data\+Notification\+Request} (Pattern\+Id\+\_\+t pattern\+Id, uint8\+\_\+t notifier\+Mask)=0
+\begin{DoxyCompactList}\small\item\em Lets the Pattern Select which type of Data Notification Updates the Pattern wants to recieve. \end{DoxyCompactList}\item 
+virtual void \hyperlink{class_p_w_i_1_1_framework___i_a21e4ba232772b54f21590ee01f0d46e9}{Set\+Link\+Threshold\+Request} (Pattern\+Id\+\_\+t pattern\+Id, \hyperlink{struct_core_1_1_link_metrics}{Link\+Metrics} threshold)=0
+\begin{DoxyCompactList}\small\item\em Sets the link metric threshold to qualify as pattern neighbors. \end{DoxyCompactList}\item 
+virtual void \hyperlink{class_p_w_i_1_1_framework___i_a0193172e5b9d95ac97183979a0a32a0d}{Framework\+Attributes\+Request} (Pattern\+Id\+\_\+t pattern\+Id)=0
+\begin{DoxyCompactList}\small\item\em Requests the attributes of the framework. \end{DoxyCompactList}\item 
+virtual void \hyperlink{class_p_w_i_1_1_framework___i_abb057c8987930daade5b990eed829d6e}{Select\+Link\+Comparator\+Request} (Pattern\+Id\+\_\+t pattern\+Id, \hyperlink{namespace_p_w_i_1_1_neighborhood_a54f3d64f52739fa54193660451fd8a6f}{Link\+Comparator\+TypeE} lc\+Type)=0
+\begin{DoxyCompactList}\small\item\em Selects the link comparator to use while comparing link qualities. Methods lets patterns to specify a link comparator from a list of existing library of comparators. \end{DoxyCompactList}\item 
+virtual \hyperlink{class_p_w_i_1_1_framework___i_ab16270cb3574bf7a2ef9a63144d9a2f2}{$\sim$\+Framework\+\_\+I} ()\hypertarget{class_p_w_i_1_1_framework___i_ab16270cb3574bf7a2ef9a63144d9a2f2}{}\label{class_p_w_i_1_1_framework___i_ab16270cb3574bf7a2ef9a63144d9a2f2}
+
+\begin{DoxyCompactList}\small\item\em Virtual destructor. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Defines the generic interations between the Pattern and the Framework. 
+
+Interface class that defines a asynchornous message passing interface for interactions between the Pattern and the framework. A pattern may either be built as part of same process or as seperate process on the same node. When the pattern and the framework are running as two seperate processes, a shim-\/layer should be implementation that will translate the calls between the two processes.
+
+The interactions in general consist of a command/request orginating from the Pattern to the framework and the framework responding to the commands using an Event response. There are 12 Commands that the pattern can issue to framework and 5 types of Events that the framework sends to the pattern. A command is a message in a specific format (based on a the command being invoked) sent from the pattern to the framework. Event is a message in a specific format sent from the framework to the pattern. While Commands and Events are messages, they are invoked using function syntax, just like invoking and providing functions. To send a command to the framework, a pattern uses a F\+R\+A\+M\+E\+W\+O\+RK reference provided by the shim layer and to handle a event from the framework a pattern implements 4 methods one for each type of event. The shim layer takes care of invoking the correct method when the corresponding event message arrives.
+
+The 4 event types are\+:
+
+
+\begin{DoxyEnumerate}
+\item Control Response Event (P\+T\+N\+\_\+\+Control\+Response\+Event\+\_\+t)\+: This is dispatched in response to one of the $\ast$\+Request message, with an appropriate response type, response status (sucuss/failure), any additional data and its size.
+\item Received Message Event (P\+T\+N\+\_\+\+Rcv\+Message\+Event\+\_\+t) \+: This event is dispatched whenever a message is received for the pattern, with the message as the parameter
+\item Data Notification Event (P\+T\+N\+\_\+\+Dat\+Notification\+Event\+\_\+t)\+: This is dispatched to convey the status of the Send\+Data and Broadcast\+Data calls. The event provides the cummulative status of a message. Each notification contains an array called `status\+Type\textquotesingle{} that specifies the status type corresponding to each destination and another boolen array called the `status\+Value\textquotesingle{} that specifies if that operation was a success or failure. For each destination, the status progresses in the following sequence\+: P\+D\+N\+\_\+\+F\+W\+\_\+\+R\+E\+CV (framework received the packet), P\+D\+N\+\_\+\+W\+F\+\_\+\+R\+E\+CV (waveform received the packet), P\+D\+N\+\_\+\+W\+F\+\_\+\+S\+E\+NT (waveform sent the messsage out) and finally P\+D\+N\+\_\+\+D\+S\+T\+\_\+\+R\+E\+CV (destination received the message). The sequence stops at P\+D\+N\+\_\+\+W\+F\+\_\+\+S\+E\+NT for messages sent using Broadcast\+Data api, for which destination received notification is not supported. Also if the status type has progressed to the next in sequence, the previous type is implicitly successfull. For example, for a given destination the status type is \textquotesingle{}P\+D\+N\+\_\+\+W\+F\+\_\+\+S\+E\+NT\textquotesingle{}, then it also means that P\+D\+N\+\_\+\+F\+W\+\_\+\+R\+E\+CV and P\+D\+N\+\_\+\+W\+F\+\_\+\+R\+E\+CV are true.
+\item Neighbor Update Event (P\+T\+N\+\_\+\+Neighbor\+Update\+Event\+\_\+t)\+: This event is dispatched to provide updates about the status of the nodes neighborhood. A neighbor update can either be about a new neighbor, a dead neighor or change in the quality of an existing neighbor. 
+\end{DoxyEnumerate}
+
+\subsection{Member Function Documentation}
+\index{P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}!Add\+Destination\+Request@{Add\+Destination\+Request}}
+\index{Add\+Destination\+Request@{Add\+Destination\+Request}!P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}}
+\subsubsection[{\texorpdfstring{Add\+Destination\+Request(\+Pattern\+Id\+\_\+t pattern\+Id, Message\+Id\+\_\+t msg\+Id, Node\+Id\+\_\+t dest\+Array[M\+A\+X\+\_\+\+D\+E\+ST], uint16\+\_\+t no\+Of\+Nbrs)=0}{AddDestinationRequest(PatternId_t patternId, MessageId_t msgId, NodeId_t destArray[MAX_DEST], uint16_t noOfNbrs)=0}}]{\setlength{\rightskip}{0pt plus 5cm}virtual void P\+W\+I\+::\+Framework\+\_\+\+I\+::\+Add\+Destination\+Request (
+\begin{DoxyParamCaption}
+\item[{Pattern\+Id\+\_\+t}]{pattern\+Id, }
+\item[{Message\+Id\+\_\+t}]{msg\+Id, }
+\item[{Node\+Id\+\_\+t}]{dest\+Array\mbox{[}\+M\+A\+X\+\_\+\+D\+E\+S\+T\mbox{]}, }
+\item[{uint16\+\_\+t}]{no\+Of\+Nbrs}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_p_w_i_1_1_framework___i_aee8ff64049e3908e47ad92c5d8cd2485}{}\label{class_p_w_i_1_1_framework___i_aee8ff64049e3908e47ad92c5d8cd2485}
+
+
+Adds more destinations to a message already handed over to the framework. If the original message was sent using Broadcast\+Data method, this new request is ignored. 
+
+Adds destinations to a message already sent to the framework. If the new destinations specifed using is dest\+Array parameter is split across two or more waveforms, it is possible that the request can succeed for some of the new destinations and can fail for others. A Control Response Event will be generated by the framework with the result of the operation.
+
+
+\begin{DoxyParams}{Parameters}
+{\em pattern\+Id} & Pattern\textquotesingle{}s instance ID. \\
+\hline
+{\em msg\+Id} & Unique message ID. \\
+\hline
+{\em dest\+Array} & Array of destinations to be added. \\
+\hline
+{\em no\+Of\+Nbrs} & Number of new destinations. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void. 
+\end{DoxyReturn}
+\index{P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}!Cancel\+Data\+Request@{Cancel\+Data\+Request}}
+\index{Cancel\+Data\+Request@{Cancel\+Data\+Request}!P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}}
+\subsubsection[{\texorpdfstring{Cancel\+Data\+Request(\+Pattern\+Id\+\_\+t pattern\+Id, Message\+Id\+\_\+t msg\+Id, Node\+Id\+\_\+t dest\+Array[M\+A\+X\+\_\+\+D\+E\+ST], uint16\+\_\+t no\+Of\+Dest)=0}{CancelDataRequest(PatternId_t patternId, MessageId_t msgId, NodeId_t destArray[MAX_DEST], uint16_t noOfDest)=0}}]{\setlength{\rightskip}{0pt plus 5cm}virtual void P\+W\+I\+::\+Framework\+\_\+\+I\+::\+Cancel\+Data\+Request (
+\begin{DoxyParamCaption}
+\item[{Pattern\+Id\+\_\+t}]{pattern\+Id, }
+\item[{Message\+Id\+\_\+t}]{msg\+Id, }
+\item[{Node\+Id\+\_\+t}]{dest\+Array\mbox{[}\+M\+A\+X\+\_\+\+D\+E\+S\+T\mbox{]}, }
+\item[{uint16\+\_\+t}]{no\+Of\+Dest}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_p_w_i_1_1_framework___i_a018a8d6a757ff5925f514c44e21d21d1}{}\label{class_p_w_i_1_1_framework___i_a018a8d6a757ff5925f514c44e21d21d1}
+
+
+Cancels the sending of a message to one or more destinations of a message previously handed over to the framework. 
+
+Cancels the sending of a message previously handed over to the framework. If no destination is specified or if the original message was sent using Broadcast\+Data method, entire message is cancelled and destroyed. Otherwise sending is cancelled only to the desitnations specified in the dest\+Array parameter. A Control Response Event is generated with the result of the operation.
+
+
+\begin{DoxyParams}{Parameters}
+{\em pattern\+Id} & Pattern\textquotesingle{}s instance ID. \\
+\hline
+{\em msg\+Id} & Unique message ID. \\
+\hline
+{\em dest\+Array} & Array of destinations that need to be cancelled \\
+\hline
+{\em no\+Of\+Dest} & Number of destinations to be cancelled. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void. 
+\end{DoxyReturn}
+\index{P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}!Data\+Status\+Request@{Data\+Status\+Request}}
+\index{Data\+Status\+Request@{Data\+Status\+Request}!P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}}
+\subsubsection[{\texorpdfstring{Data\+Status\+Request(\+Pattern\+Id\+\_\+t pattern\+Id, Message\+Id\+\_\+t msg\+Id)=0}{DataStatusRequest(PatternId_t patternId, MessageId_t msgId)=0}}]{\setlength{\rightskip}{0pt plus 5cm}virtual void P\+W\+I\+::\+Framework\+\_\+\+I\+::\+Data\+Status\+Request (
+\begin{DoxyParamCaption}
+\item[{Pattern\+Id\+\_\+t}]{pattern\+Id, }
+\item[{Message\+Id\+\_\+t}]{msg\+Id}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_p_w_i_1_1_framework___i_a06e0bc143aa0009aec23dbe3c4ba26db}{}\label{class_p_w_i_1_1_framework___i_a06e0bc143aa0009aec23dbe3c4ba26db}
+
+
+Request the status of a data message sent to the framework. 
+
+If for any reason a pattern has ambiguity about the status of a message that was sent to the framework, the pattern can use this method to request the status of the message. The framework will generate a Data Notification Event in response to this command, with the cummulative status of the message till that point.
+
+
+\begin{DoxyParams}{Parameters}
+{\em pattern\+Id} & Pattern\textquotesingle{}s instance ID. \\
+\hline
+{\em msg\+Id} & ID of the message for which status is being requested. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void 
+\end{DoxyReturn}
+\index{P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}!Framework\+Attributes\+Request@{Framework\+Attributes\+Request}}
+\index{Framework\+Attributes\+Request@{Framework\+Attributes\+Request}!P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}}
+\subsubsection[{\texorpdfstring{Framework\+Attributes\+Request(\+Pattern\+Id\+\_\+t pattern\+Id)=0}{FrameworkAttributesRequest(PatternId_t patternId)=0}}]{\setlength{\rightskip}{0pt plus 5cm}virtual void P\+W\+I\+::\+Framework\+\_\+\+I\+::\+Framework\+Attributes\+Request (
+\begin{DoxyParamCaption}
+\item[{Pattern\+Id\+\_\+t}]{pattern\+Id}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_p_w_i_1_1_framework___i_a0193172e5b9d95ac97183979a0a32a0d}{}\label{class_p_w_i_1_1_framework___i_a0193172e5b9d95ac97183979a0a32a0d}
+
+
+Requests the attributes of the framework. 
+
+The method is used to know the current attributes of the framework. The addritbutes are defined in the \hyperlink{struct_p_w_i_1_1_framework_attributes}{Framework\+Attributes} struct. A pattern should first querry this method to find out the attributes of the framework before starting messaging. Critical information such as Max packet size, number of waveforms in the system, their I\+Ds, etc. are returned through the \hyperlink{struct_p_w_i_1_1_framework_attributes}{Framework\+Attributes} struct. A Control Response Event is generated in response to this command, with the \hyperlink{struct_p_w_i_1_1_framework_attributes}{Framework\+Attributes} copied into the data section of the event. It is possible for the framework to generate a Control Response Event with the type set to `\+P\+T\+N\+\_\+\+Attribute\+Response\textquotesingle{}, even without a pattern requesting it, if the framework attributes changes while a pattern is active.
+
+
+\begin{DoxyParams}{Parameters}
+{\em pattern\+Id} & Pattern\textquotesingle{}s instance ID. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void. 
+\end{DoxyReturn}
+\index{P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}!Register\+Pattern\+Request@{Register\+Pattern\+Request}}
+\index{Register\+Pattern\+Request@{Register\+Pattern\+Request}!P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}}
+\subsubsection[{\texorpdfstring{Register\+Pattern\+Request(\+Pattern\+Id\+\_\+t pattern\+Id, char unique\+Name[128], Pattern\+Type\+E type)=0}{RegisterPatternRequest(PatternId_t patternId, char uniqueName[128], PatternTypeE type)=0}}]{\setlength{\rightskip}{0pt plus 5cm}virtual void P\+W\+I\+::\+Framework\+\_\+\+I\+::\+Register\+Pattern\+Request (
+\begin{DoxyParamCaption}
+\item[{Pattern\+Id\+\_\+t}]{pattern\+Id, }
+\item[{char}]{unique\+Name\mbox{[}128\mbox{]}, }
+\item[{{\bf Pattern\+TypeE}}]{type}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_p_w_i_1_1_framework___i_ab960254f2b72eca6ec822129bd26c977}{}\label{class_p_w_i_1_1_framework___i_ab960254f2b72eca6ec822129bd26c977}
+
+
+Generates a pattern ID, based on the pattern type and an optional unique string. 
+
+The method is used to get a unique pattern ID for each pattern using the framework. The ID itself is generated by a Pattern Name Service. The framework acts as an pass through for this service. The ID is return through a Control Response Event. The unique\+Name parameter can be used for fail-\/safe reasons. For example, if a pattern which was running crashes and reboot, it could get the ID for the previous instance by using the same unique\+Name of the previous instance.
+
+
+\begin{DoxyParams}{Parameters}
+{\em ptype} & Pattern type.\\
+\hline
+{\em unique\+Name} & An optional parameter using which a pattern can identify itself to the framework. The Pattern Name Service will rememeber the string the pattern provides and will generate the same ID, if both the Pattern type and the unique\+Name string match.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void.
+\end{DoxyReturn}
+virtual void New\+Pattern\+Instance\+Request(Pattern\+TypeE ptype, char unique\+Name\mbox{[}128\mbox{]} = N\+U\+LL)= 0; Registers a pattern with the framework.
+
+\hyperlink{namespace_patterns}{Patterns} can use this method to register with the framework and optionally request for a pattern ID. A pattern will need to register first to be able to access the services of the framework. A Control Response Event will be generate to notify the pattern of the result of the registration. If the pattern does not have an ID, it sets the input variable \char`\"{}pattern\+Id\char`\"{} to zero and uses Framework generates a new ID for the pattern in this case. The Control Response Event will include the new pattern ID in this case.
+
+If the pattern already has an ID either generated through an external service or obtained previously, it can use the existing pattern\+ID. In this case, the input unique\+Name is ignored by the Framework.
+
+
+\begin{DoxyParams}{Parameters}
+{\em pattern\+Id} & Unique ID of the Pattern \\
+\hline
+{\em unique\+Name} & Unique string indicating the pattern instance used in pattern id generation \\
+\hline
+{\em type} & Pattern type \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void. 
+\end{DoxyReturn}
+\index{P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}!Replace\+Payload\+Request@{Replace\+Payload\+Request}}
+\index{Replace\+Payload\+Request@{Replace\+Payload\+Request}!P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}}
+\subsubsection[{\texorpdfstring{Replace\+Payload\+Request(\+Pattern\+Id\+\_\+t pattern\+Id, Message\+Id\+\_\+t msg\+Id, void $\ast$payload, uint16\+\_\+t size\+Of\+Payload)=0}{ReplacePayloadRequest(PatternId_t patternId, MessageId_t msgId, void *payload, uint16_t sizeOfPayload)=0}}]{\setlength{\rightskip}{0pt plus 5cm}virtual void P\+W\+I\+::\+Framework\+\_\+\+I\+::\+Replace\+Payload\+Request (
+\begin{DoxyParamCaption}
+\item[{Pattern\+Id\+\_\+t}]{pattern\+Id, }
+\item[{Message\+Id\+\_\+t}]{msg\+Id, }
+\item[{void $\ast$}]{payload, }
+\item[{uint16\+\_\+t}]{size\+Of\+Payload}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_p_w_i_1_1_framework___i_ad6f5e981436d5ffa471fb5631463b85d}{}\label{class_p_w_i_1_1_framework___i_ad6f5e981436d5ffa471fb5631463b85d}
+
+
+Replaces the payload of a packet already sent to the framework. The previous payload will be discarded and destroyed. 
+
+Replaces the payload of a packet already sent to the framework. The previous payload will be discarded and destroyed. In response to this command one or more Control Response Event(s) may be generated by the framework. If the message has already been sent to the waveform, but not sent out by the waveform, the framework will issue commands to the waveform to replace the payload, however the waveform may return a failure. Hence, if the original message was sent to more than one destination, it is possible that this operation can fail for some destination and can succeed for others.
+
+
+\begin{DoxyParams}{Parameters}
+{\em pattern\+Id} & Id of the pattern sending the message. \\
+\hline
+{\em msg\+Id} & ID of the message in which the payload should be replaced \\
+\hline
+{\em payload} & Pointer to new payload. \\
+\hline
+{\em size\+Of\+Payload} & Size of the new payload. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void. 
+\end{DoxyReturn}
+\index{P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}!Select\+Data\+Notification\+Request@{Select\+Data\+Notification\+Request}}
+\index{Select\+Data\+Notification\+Request@{Select\+Data\+Notification\+Request}!P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}}
+\subsubsection[{\texorpdfstring{Select\+Data\+Notification\+Request(\+Pattern\+Id\+\_\+t pattern\+Id, uint8\+\_\+t notifier\+Mask)=0}{SelectDataNotificationRequest(PatternId_t patternId, uint8_t notifierMask)=0}}]{\setlength{\rightskip}{0pt plus 5cm}virtual void P\+W\+I\+::\+Framework\+\_\+\+I\+::\+Select\+Data\+Notification\+Request (
+\begin{DoxyParamCaption}
+\item[{Pattern\+Id\+\_\+t}]{pattern\+Id, }
+\item[{uint8\+\_\+t}]{notifier\+Mask}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_p_w_i_1_1_framework___i_af785062dc2e35cf4e7e0b83d90b6a861}{}\label{class_p_w_i_1_1_framework___i_af785062dc2e35cf4e7e0b83d90b6a861}
+
+
+Lets the Pattern Select which type of Data Notification Updates the Pattern wants to recieve. 
+
+This methods lets the pattern to customize data notifications that it wishes to receive. The customization is achived by specifying the mask of the data status types that pattern is interested in receiving. While this could decrease the number and frequency of notifications the pattern receives, the framework cannot completely eliminate the status types that the pattern is not interested in since the data notification is an cummulative.
+
+
+\begin{DoxyParams}{Parameters}
+{\em pattern\+Id} & Pattern\textquotesingle{}s instance ID. \\
+\hline
+{\em notifier\+Mask} & Mask of the notifications that are requested. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void 
+\end{DoxyReturn}
+\index{P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}!Select\+Link\+Comparator\+Request@{Select\+Link\+Comparator\+Request}}
+\index{Select\+Link\+Comparator\+Request@{Select\+Link\+Comparator\+Request}!P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}}
+\subsubsection[{\texorpdfstring{Select\+Link\+Comparator\+Request(\+Pattern\+Id\+\_\+t pattern\+Id, Link\+Comparator\+Type\+E lc\+Type)=0}{SelectLinkComparatorRequest(PatternId_t patternId, LinkComparatorTypeE lcType)=0}}]{\setlength{\rightskip}{0pt plus 5cm}virtual void P\+W\+I\+::\+Framework\+\_\+\+I\+::\+Select\+Link\+Comparator\+Request (
+\begin{DoxyParamCaption}
+\item[{Pattern\+Id\+\_\+t}]{pattern\+Id, }
+\item[{{\bf Link\+Comparator\+TypeE}}]{lc\+Type}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_p_w_i_1_1_framework___i_abb057c8987930daade5b990eed829d6e}{}\label{class_p_w_i_1_1_framework___i_abb057c8987930daade5b990eed829d6e}
+
+
+Selects the link comparator to use while comparing link qualities. Methods lets patterns to specify a link comparator from a list of existing library of comparators. 
+
+This method lets a pattern to customize the comparison of the link metrics between two links. While there are 5 standard link metrics, how to select one link as better than another can be customized using this method, by selecting one of the many pre-\/approved comparators. Please see documentation for `\+Link\+Comparator\+TypeE\textquotesingle{} for available comparators.
+
+
+\begin{DoxyParams}{Parameters}
+{\em pattern\+Id} & Pattern\textquotesingle{}s instance ID. \\
+\hline
+{\em lc\+Type} & Type of the link comparator. Enum. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void. 
+\end{DoxyReturn}
+\index{P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}!Send\+Data@{Send\+Data}}
+\index{Send\+Data@{Send\+Data}!P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}}
+\subsubsection[{\texorpdfstring{Send\+Data(\+Pattern\+Id\+\_\+t pid, Node\+Id\+\_\+t dest\+Array[M\+A\+X\+\_\+\+D\+E\+ST], uint16\+\_\+t no\+Of\+Dest, F\+Message\+\_\+t \&msg, uint16\+\_\+t nonce, bool no\+Dest\+Ack=false)=0}{SendData(PatternId_t pid, NodeId_t destArray[MAX_DEST], uint16_t noOfDest, FMessage_t &msg, uint16_t nonce, bool noDestAck=false)=0}}]{\setlength{\rightskip}{0pt plus 5cm}virtual void P\+W\+I\+::\+Framework\+\_\+\+I\+::\+Send\+Data (
+\begin{DoxyParamCaption}
+\item[{Pattern\+Id\+\_\+t}]{pid, }
+\item[{Node\+Id\+\_\+t}]{dest\+Array\mbox{[}\+M\+A\+X\+\_\+\+D\+E\+S\+T\mbox{]}, }
+\item[{uint16\+\_\+t}]{no\+Of\+Dest, }
+\item[{{\bf F\+Message\+\_\+t} \&}]{msg, }
+\item[{uint16\+\_\+t}]{nonce, }
+\item[{bool}]{no\+Dest\+Ack = {\ttfamily false}}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_p_w_i_1_1_framework___i_abe350ffa7efc7fe687215e980e6d1d3c}{}\label{class_p_w_i_1_1_framework___i_abe350ffa7efc7fe687215e980e6d1d3c}
+
+
+Sends message provided as parameter to the set of neighbors indicated by dest\+Array. 
+
+This is the primary method a pattern uses to request that a message be transmitted to its neighbors. The first two parameters are self-\/explanatory. The third parameter is an array of one or more neighbors to which the message is to be sent, each of which are identified by the neighbor’s waveform address. The Framework may use the given Message\+Id to cancel or replace the payload in future (via calls to the next two methods). The parameter no\+Dest\+Ack specifies whether a notification is requested when this message has reached its intended destination(s). A true value for this field means the Framework does not need notifications for this message. If data notifications/acknowledgements are not supported by the waveform, this parameter may be ignored.
+
+{\bfseries Data Notifications\+:} Framework returns one or more data notification events corresponding to each message sent. The Data Notifications are cummulative in nature. Each notification contains an array called `status\+Type\textquotesingle{} that specifies the status type corresponding to each destination and another boolen array called the `status\+Value\textquotesingle{} that specifies if that operation was a success or failure.
+
+{\bfseries Nonce\+:} Nonce is an unsigned integer that the pattern uses to identify the message, before the framework can return a message Id. Framework uses the nonce in the data notification and also returns a Message ID generated by the framework for the message. The nonce need not be unique for every message, but must be different for consequent messages. If two messages have the same once, then the framework assumes that the data notificaiton it sent to the pattern for the previous message is lost and hence the pattern is resending the same message with the same nonce.
+
+
+\begin{DoxyParams}{Parameters}
+{\em pid} & Id of the pattern sending the message.\\
+\hline
+{\em dest\+Array} & List of destinations.\\
+\hline
+{\em no\+Of\+Dest} & Number of destinations specified in the destination array.\\
+\hline
+{\em lc\+Type} & The link comparator type to be used to differentiate between multiple links to the same neighbor\\
+\hline
+{\em msg} & Reference of the message to be send out. Tuscarora uses `handover\textquotesingle{} semantics for parameters passed as referece. That is the Pattern S\+H\+O\+U\+LD N\+OT deallocate the message that is sent out. The shim layer will deallocate the message once it has been sent out.\\
+\hline
+{\em nonce} & An unsigned integer specified by the pattern to differentiate this message from previous message. It is used for error recovery between the pattern and the framework.\\
+\hline
+{\em no\+Dest\+Ack} & Indicates if the pattern is not requesting destination acknowledgement for this message. A true value means no destination ack is requested. Default value is false.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void 
+\end{DoxyReturn}
+\index{P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}!Set\+Link\+Threshold\+Request@{Set\+Link\+Threshold\+Request}}
+\index{Set\+Link\+Threshold\+Request@{Set\+Link\+Threshold\+Request}!P\+W\+I\+::\+Framework\+\_\+I@{P\+W\+I\+::\+Framework\+\_\+I}}
+\subsubsection[{\texorpdfstring{Set\+Link\+Threshold\+Request(\+Pattern\+Id\+\_\+t pattern\+Id, Link\+Metrics threshold)=0}{SetLinkThresholdRequest(PatternId_t patternId, LinkMetrics threshold)=0}}]{\setlength{\rightskip}{0pt plus 5cm}virtual void P\+W\+I\+::\+Framework\+\_\+\+I\+::\+Set\+Link\+Threshold\+Request (
+\begin{DoxyParamCaption}
+\item[{Pattern\+Id\+\_\+t}]{pattern\+Id, }
+\item[{{\bf Link\+Metrics}}]{threshold}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily [pure virtual]}}\hypertarget{class_p_w_i_1_1_framework___i_a21e4ba232772b54f21590ee01f0d46e9}{}\label{class_p_w_i_1_1_framework___i_a21e4ba232772b54f21590ee01f0d46e9}
+
+
+Sets the link metric threshold to qualify as pattern neighbors. 
+
+This method lets a Pattern customize its neighbor and the neighborhood updates. A pattern can specify the minimum metric that a link should meet to qualify as its neighbor. This simplifies neighbor maintanence and look up.\+Also, neighborhood updates will be sent to patterns only about neighbors who meet this threshold, hence the number of Neighbor Update Events sent to the pattern will decrease. If a pattern does not set this threshold, all neighbors know to the framework will be published to the pattern. A Control Response Event is generated in response to this command to indicate the status of the operation.
+
+
+\begin{DoxyParams}{Parameters}
+{\em pattern\+Id} & Pattern\textquotesingle{}s instance ID. \\
+\hline
+{\em threshold} & Link metric threshold to be set. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+void. 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+Tuscarora\+F\+W/\+Include/\+Interfaces/\+P\+W\+I/Framework\+\_\+\+I.\+h\end{DoxyCompactItemize}

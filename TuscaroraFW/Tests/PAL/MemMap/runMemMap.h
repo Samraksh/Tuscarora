@@ -4,8 +4,6 @@
 // Please see developer's manual for implementation notes. 
 ////////////////////////////////////////////////////////////////////////////////// 
 
-
-
 #include "Lib/PAL/PAL_Lib.h"
 
 #ifndef MEMMAPTEST_H_

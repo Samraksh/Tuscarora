@@ -1,0 +1,61 @@
+
+\TuscConcept{SLIM} waveform can be used both within Tuscarora framework simulations and with stand-alone ns-3 simulations.
+
+\section{Configuration with Tuscarora Framework}
+ 
+Standard \FilePath{runOrDebug.sh} script provides automatic configuration for the SLIM waveform using the standard waveform configuration file of the \TuscConcept{Tuscarora} framework. The waveform name to be used in the configuration file for the \TuscConcept{SLIM} waveform is ``SlimNetDevice''.
+ 
+An example configuration file for \TuscConcept{SLIM} is available in 
+\FilePath{TuscaroraFW/Config/slim-test.cnf}. 
+This file can be used as:
+\begin{quote}
+	\$ ./runOrDebug.sh Gossip -- WFConfig ~\$\{TUS\}/Config/slim-test.cnf  \\
+\end{quote}
+For further details on the usage of \FilePath{runOrDebug.sh} please refer to the TuscaroraUserManual. 
+
+ 
+ 
+\section{Configuration with ns-3 Simulations}
+ 
+In this section, a configuration example for the \TuscConcept{SLIM} waveform to be used in a stand-alone ns3 simulation is presented. The source code for the example is available in 
+ \FilePath{TuscaroraFW/ns-3.x/scratch/slim-example.cc}
+ 
+\subsection{Creation of the Nodes and the Waveform}
+
+The main function inside \FilePath{slim-example.cc} begins by creating the nodes and a node container that holds these objects. Next it creates a mobility model and attaches to the nodes. In this example, a scenario with stationary nodes are simulated and hence a \CPPClassName{ns3::ConstantPositionMobilityModel} is getting created. 
+
+Next, 
+a common \TuscConcept{TuscaroraSlimChannel} object that is shared among the nodes 
+is created and is configured with a propagation loss model and a propagation delay model of \TuscConcept{FriisPropagationLossModel} and \TuscConcept{ConstantSpeedPropagationDelayModel} respectively. 
+Any standard ns3 propagation loss and propagation delay model can be used with the \TuscConcept{SLIM} waveform. 
+
+Next, inside a ``for'' loop, individual \TuscConcept{SlimNetDevice} and \TuscConcept{TuscaroraSlimPhy} objects are created and configured for each node. The loop starts with creation of the net device to be attached to the node. Next the PHY layer, i.e. \CPPClassName{TuscaroraSlimPhy} is created and customized as follows:
+\begin{itemize}
+\item A pointer to the mobility model object is passed to the \CPPClassName{TuscaroraSlimPhy} object to be stored in the PHY. 
+
+\item A list of operation modulation and slim rates that is supported by the mode \CPPClassName{TuscaroraSlimPhy} needs to be created and specified. In the example script a \CPPVarName{txModeList} consisting of only 1 Mbps is created, and all nodes are configured using this list. 
+
+\item The channel object that the \CPPClassName{TuscaroraSlimPhy} operates on is registered. 
+
+\item The channel object defines multiple bands and the corresponding channel number to be used by the \CPPClassName{TuscaroraSlimPhy} is set. 
+
+\item The \CPPClassName{TuscaroraSlimPhy} and  \CPPClassName{SlimNetDevice} are registered with each other. 
+\end{itemize}
+
+Next, a queue that stores the outgoing packets before they are transmitted needs to be registered with the \CPPClassName{SlimNetDevice}. In this example, a drop tail queue is selected with a maximum queue size of 100 packets. 
+
+Finally, \CPPClassName{SlimNetDevice} gets attached to the node before proceeding with the next node. 
+
+In addition to the \TuscConcept{SLIM} configuration, the main function in the \FilePath{slim-example.cc} also configures the nodes, physical layout and the mobility of these nodes, internet stacks, and echo server and client applications that will generate traffic to be carried with the \CPPClassName{SlimNetDevice}.
+
+\subsection{Setting up applications}
+This scenerio simulates 20 nodes. An IPv4 stack is deployed on the nodes with IP addresses "10.1.3.x".
+
+A single echo server application is deployed on node 0 and all nodes carry echo client applications pinging the echo server once every second. The server and the client apps are set-up to start working at interval t=[2-15]s.
+
+\subsection{Data Logging}
+The logging components can be enabled or disabled as desired. Only, the logging component for the \CPPClassName{UdpEchoClientApplication}s is activated. This will create information about sent and received packets on each UdpClient. 
+
+\subsection{Dynamic Changes to the Simulation}
+
+All nodes start with the default contention window size hence access to the channel randomly with the same frequency. In this simulation, at every second one of the nodes independently change their access to the channel. 

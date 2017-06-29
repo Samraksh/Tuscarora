@@ -1,0 +1,160 @@
+
+Rather than building up applications around the idea of peer to peer communications, Tuscarora adopts the concept of using information distribution strategies provided by ASNPs. 
+As shown in \Cref{Fig:Goal}, applications are positioned on top of the ASNP's in Tuscarora system architecture. 
+Applications should use one or more of these underlying ASNPs for it information distribution and gathering needs. 
+Hence, it is critical for an application developer to develop her applications around information flows rather than P2P communication. 
+This isolates the information flow needs from the rest of the application. 
+If this need cannot be fulfilled with the existing ASNPs, the information flow can be implemented as a new ASNP. 
+
+
+
+In this chapter, we present the available ASNPs as well as envisioned ASNPs for application developers and provide examples of how applications can interact with ASNPs. 
+The Application Writters Interface (AWI) is the namespace that exposes the
+services of the patterns to the applications. 
+The core API for the patterns are defined in their respective interface definitions
+PatternX\_I. 
+For full API documentation please refer to the companion document ``Tuscaroro API documentation''.
+
+\section{Patterns Available in Tuscarora Package}
+ 
+Out of the box, Tuscarora package comes with 2 ASNPs,
+\begin{itemize}
+\item Gossip: Gossip pattern stores some common information and distributes that information by infrequent random updates in the network. Internally stored Gossip information is updated with the received information only if the received data is larger than the existing one based on a customizable comparator. For slowly changing data, the last state of the data is eventually distributed to all connected nodes.
+
+\item FWP: The Flooding with Pruning (FwP) pattern distributes a dataset generated (or aggregated) at a
+node to all nodes in some “region”. The addition of pruning ensures efficient distribution of the data by limiting retransmission on the nodes that does not improve the nodes that do not have the information.
+
+\end{itemize}
+
+
+%\begin{itemize}
+%\item Gossip: A shared data structure is gossiped in the network. For slowly changing data, the last state of the data is eventually distributed to all connected nodes. 
+%\item FWP: This pattern implements a simple network wide flooding data distribution strategy with basic suppression of broadcasting on unused nodes. 
+%\end{itemize}
+
+
+\subsection{Gossip}
+
+Gossip is a templated class that allows distribution of various data types in the network. An application writer has to specify a data type of his choice, \CPPTemplateName{GOSSIPVARIABLE}, and can optionally specify a corresponding comparator, \CPPTemplateName{GOSSIPCOMPARATOR}, which implements a \CPPFuncName{LessThan} and a \CPPFuncName{EqualTo} functions. 
+In the case of receiving updates from other nodes or from local applications, this comparator is used. Comparator specification can be skipped in which specified gossip variable's \CPPFuncName{operator==} and \CPPFuncName{operator$<$} are used. 
+
+\CPPClassName{Gossip\_I} interface defines the following:
+\begin{itemize}
+		
+	\item \CPPSingleLine{typedef Delegate<void, GOSSIPVARIABLE&> GossipVariableUpdateDelegate_t} : is a delegate storing the callback function pointer that is invoked when there is a change in the GOSSIPVARIABLE. This callback function should have void return type and should accept a single input of type \CPPTemplateName{GOSSIPVARIABLE}.
+	
+
+	
+	\item  \CPPSingleLine{void RegisterGossipVariableUpdateDelegate(GossipVariableUpdateDelegate_t* _gvu_del)} : is the method to receive the delegates sent to the Gossip pattern. Applications that desire to receive updates on the gossip variable use this method to register to the incoming information flow using this method. The Gossip pattern stores delegates it receives with this method and invokes them whenever there is an update on \CPPVarName{gossip\_variable}.
+	
+	
+	\item  \CPPSingleLine{void UpdateGossipVariable(GOSSIPVARIABLE& newgossipVariable))} : is a method used by the applications to update the underlying \CPPTemplateName{GOSSIPVARIABLE} of the pattern.
+	This method lets a application to request changing the variable being gossiped with a newVariable. 
+	The newgossipVariable is compared with the existing one. 
+	
+	\begin{itemize}
+		\item 	if the existing variable is larger(based on the comparator), no further action is taken. 
+		\item   if the new variable is larger(based on the comparator), the gossip variable is updated, and all registered delegates are invoked with the new \CPPTemplateName{GOSSIPVARIABLE}.
+	\end{itemize}
+	
+\end{itemize}
+
+
+%\lstinputlisting[label=List:GossipI.h]{../../Include/Interfaces/AWI/Gossip_I.h}
+
+\subsection{Flooding with Pruning}
+
+The interface for FWP pattern is defined by \CPPClassName{Fwp\_I}, which declares the following:
+
+\begin{itemize}
+
+	\item \CPPSingleLine{typedef Delegate<void, void* , uint16_t> AppRecvMessageDelegate_t} : is a delegate storing the callback function pointer that is invoked when data is received. This callback function should have  \CPPSingleLine{void} return type and 2 inputs, namely a \CPPSingleLine{void*} pointer and a  \CPPSingleLine{uint16_t} type specifying the size of the data.
+	
+	\item \CPPSingleLine{void RegisterAppReceiveDelegate(AppId_t _app_id, AppRecvMessageDelegate_t* _gvu_del)} : 
+	is the method to get the delegates for the \CPPClassName{FWP} pattern. The delegate is stored by the pattern and is invoked with the incoming data from the network. 
+	
+	\item \CPPSingleLine{void Send (void *data, uint16_t size)} : is a method used by the applications to start a network-wide flood with the data specified by the pointer \CPPVarName{data} and \CPPVarName{size}.
+	
+	
+
+\end{itemize}
+
+%\lstinputlisting[label=List:FwpI.h]{../../Include/Interfaces/AWI/Fwp_I.h}
+
+\section{Patterns Envisioned}
+
+The following ASNP's are envisioned and formally defined by Samraksh however, they are not yet available in this release. Here we present short descriptions. For details, please refer to the Framework Rationale document. 
+
+\begin{itemize}
+\item COP: COP pattern is designed to provide a common operating picture of the entire network by distributing and collecting information about all the nodes in the network such as their location. In order to satisfy scalability, Samraksh envisions this pattern to maintain faster updates for nearby nodes and slower updates for farther away nodes. 
+
+\item Census: The objective of Census is to collect information about resources of some type
+deployed in the network, or to aggregate sensor values, by querying each node in the network,
+ideally without missing out on any node and without double counting any response. The pattern
+is designed to work even when the underlying network topology is dynamic and may also be
+subject to temporary partitioning. Census examples in a military mobile ad-hoc network include
+counting the available artillery units, ammunition, food, fuel, etc. A Census query can be sent into the network from any node in the network, to collect some
+aggregate statistic (such as count, max, sum) of the network nodes.
+
+\item Exfiltration: Exfiltration patterns maintain a spanning tree across the network, which can be traversed
+to the root in order to accomplish exfiltration. When a link-state changes, the spanning tree is
+updated quickly and ideally with minimal traffic. Samraksh proposes Inverse-Wave Based Exfiltration (IWBE) over tree based techniques due to the dynamics of maintaining the spanning wave in the presence
+of link state changes are significantly better.
+
+
+\end{itemize}
+
+\section{Application Example}
+
+In this section we will work through an example of creating and
+testing an application to be used with existing Patterns in the Tuscarora system. 
+Our example, \TuscConcept{BasicGossipApp}, is an application that distributes and maintains a common gossip variable throughout the network. 
+The variable is incremented on the root network of the network at periodic intervals and through the use of Gossip pattern the variable updates are distributed to the network. 
+
+For the sake of generality, we want to keep the Gossip variable to be templated. The source file for this application is available at \FilePath{TuscaroraFW/Apps/Gossip/BasicGossipApp.h}.
+
+\subsubsection{Initialization}
+The constructor 
+\begin{itemize}
+	\item initializes \CPPVarName{gossip\_variable} 
+	\lstinputlisting[style=boralargefileNoNumbers,linerange={38-39}]{../../Apps/Gossip/BasicGossipApp.h}
+	\item creates a one-shot timer that is set to start execution when triggered,
+	\lstinputlisting[style=boralargefileNoNumbers,linerange={41-43}]{../../Apps/Gossip/BasicGossipApp.h}
+	\item if the node is the root node, creates a periodic timer that is set to call \CPPFuncName{IncrementGossipVariable} function when triggered,
+	\lstinputlisting[style=boralargefileNoNumbers,linerange={44-47}]{../../Apps/Gossip/BasicGossipApp.h}
+	\item gets a pointer to the gossip interface
+	\lstinputlisting[style=boralargefileNoNumbers,linerange={48-49}]{../../Apps/Gossip/BasicGossipApp.h}	
+	\item creates the delegate that is used to receive updates from the Gossip Pattern
+	\lstinputlisting[style=boralargefileNoNumbers,linerange={50-51}]{../../Apps/Gossip/BasicGossipApp.h}	
+\end{itemize}
+
+\subsubsection{Starting}
+
+The application gets the start signal when its \CPPFuncName{Execute} function is called. This method starts the timer that triggers application's initiation.  
+
+\lstinputlisting[style=boralargefileNoNumbers,linerange={72-77}]{../../Apps/Gossip/BasicGossipApp.h}
+
+\subsubsection{Initiation}
+
+The application initiates its operation by registering its reception delegate. The root node also starts its timer that triggers updating the \CPPVarName{gossip\_variable}. 
+
+\lstinputlisting[style=boralargefileNoNumbers,linerange={57-63}]{../../Apps/Gossip/BasicGossipApp.h}
+
+\subsubsection{Updating Gossip Variable by the Root Node}
+
+Updating the gossip variable is simply done by incrementing the \CPPVarName{gossip\_variable} and sending this update to the pattern. 
+
+\lstinputlisting[style=boralargefileNoNumbers,linerange={64-67}]{../../Apps/Gossip/BasicGossipApp.h}
+
+\subsubsection{Receiving Updated Gossip Variable}
+
+The application simply stores the received \CPPVarName{gossip\_variable}. 
+
+\lstinputlisting[style=boralargefileNoNumbers,linerange={68-71}]{../../Apps/Gossip/BasicGossipApp.h}
+
+%\lstinputlisting[style=boralargefileNoNumbers]{../../Apps/Gossip/BasicGossipApp.h}
+
+
+
+
+

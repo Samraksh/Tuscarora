@@ -4,8 +4,6 @@
 // Please see developer's manual for implementation notes. 
 ////////////////////////////////////////////////////////////////////////////////// 
 
-
-
 //#ifndef WF_ASYNC_EVENT_SPECIAL_H_
 //#define WF_ASYNC_EVENT_SPECIAL_H_
 

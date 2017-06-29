@@ -1,0 +1,195 @@
+\section{Link Metrics}
+\label{Sec:Metrics}
+
+A \emph{Link Metric} is a measure of the performance or other property
+of a link that is sufficiently generic that it may be used by
+patterns to compare links over potentially
+different waveforms.  \textbf{Please note} that while this is expected to be
+standardized, it is not yet finalized, and could change between
+versions of the framework.
+The current set of link metrics are:
+\begin{description}
+	\item [Quality:] Abstract quality metric expressed as a real number between [0,1]
+	\item [Data rate:] Link data rate expressed as $log_2$ (bps)
+
+%  XXXXX "average" should be avoided unless you can say exactly what
+%  it is the average over.  How about "typical" or "likely"?
+%  Suggestion: "Delay between foo and bar,  averaged over the last K
+%  packets".  Or "Exponentially-weighted moving average (alpha = 0.2) of the time
+%  between foo and bar."
+
+	\item [Average Latency:] Average latency in sending a packet
+          to the destination, expressed as $log_2$ (seconds)
+
+	\item [Energy:] Average energy to transmit a packet expressed
+          as $log_2$ (picojoules) 
+% XXXXX "abstract average cost" is meaningless and should be removed
+% if it hasn't already.  No WF designer will have a clue how to
+% implement this in a manner consistent with other WFs.
+	\item [Cost:] Abstract average cost of sending a byte
+% XXXXX what's the difference between transmit latency and just latency?
+	\item[Expected Transmit Latency:] Expected delay to start transmitting the packet (Need not be implemented by waveform)
+\end{description}
+
+
+
+% XXXXXXXX I don't think this is up-to-date, in particular the
+% fixed-point types don't exist (I [klc] think).
+\begin{lstlisting}[style=boralargefile][label=Listing:Metrics][caption=Link Metric Structures]
+ ///Structure to be used by Waveforms to provide link metrics to the framework
+ struct WF_LinkMetrics {
+ ///A quality metric expressed as a real number between [0,1]
+ UFixed_7_8_t quality;
+ ///Datarate expressed as log_2(bps)
+ UFixed_2_8_t dataRate; 
+ ///Average latency expressed as log_2(seconds)
+ Fixed_2_8_t avgLatency;
+ ///Average energy to transmit a packet expressed as log_2(pica-joules)
+ UFixed_2_8_t energy;
+ };
+ 
+ ///Structure used by the framwork to expose link metrics to the pattern
+ struct LinkMetrics: public WF_LinkMetrics {
+ ///Average cost of sending a packet
+ UFixed_7_8_t cost;
+ ///Tuscarora's estimate of the latency for the next transmit
+ U64NanoTime expLatencyToXmit;
+ };
+ 
+ struct LinkId {
+ NodeId_t nodeId;
+ WaveformId_t waveformId;
+ };
+ 
+ 
+ ///Structure to store information about a link in the framework and pattern layers including its metrics
+ struct Link {
+ LinkId linkId;
+ //WaveformId_t waveformId;
+ LinkTypeE type;
+ LinkMetrics metrics;
+ };
+\end{lstlisting}
+\label{Listing:Metrics}
+
+Listing \cref{Listing:Metrics} shows the structures that define the Link Metrics.
+
+
+\section{Link Estimation}
+
+Tuscarora supports three types of link estimation protocols, one of which can be chosen at run time.  The link estimation protocols currently support only the quality metric, other metrics are not supported in the current version of the framework . Each of the estimation protocols assigns a quality metric to each of the neighbors in a slightly different way. The requirements for the quality metric are:
+
+\begin{itemize}
+	\item Its value is real number between 0 and 1.
+	\item It should reflect the stability, as well as the gross availability of a particular link
+	\item Its evaluation should be independent of the beaconing frequency or information exchange rate.
+\end{itemize} 
+
+The three link estimation protocols differ mainly in how they
+interpret whether or not a particular estimation is received
+correctly.  They all use the same `beaconing' mechanism.
+(Beaconing is a term usually used to indicate a periodic local broadcast messaging
+mechanism.)
+
+\begin{description}
+  \item[Periodic:] A basic protocol that beacons periodically using a
+    pseudo-random schedule at a given rate and has no knowledge of its
+    neighbors' beaconing schedules. Links are removed after a period
+    of time (called the Inactivity Period) goes by without receiving a
+    beacon.  This parameter is specified by a positive integer $> 0$, which
+    is interpreted as a multiple of the beaconing period; the
+    default value is 3. 
+  \item[Schedule-Aware:] This protocol beacons periodically and maintains a record of neighbor's beaconing schedules. Links are removed when a beacon should have been received, but has not been.
+  \item[Conflict-Aware:] This protocol also beacons periodically and
+    maintains a record of neighbor's beaconing schedules. In addition it
+    considers potential conflicts in the beaconing schedules of its
+    neighbors. Links are removed when a) an expected beacon is not
+    received, and b) there is no conflict with the schedules for the
+    other nodes in the Neighbor Table  % XXXX  and Potential Neighbor
+                                Table.
+    If there is a potential conflict, the link is not removed, but
+    link quality does go down.
+\end{description}
+
+The default Link Estimation is the Periodic estimation protocol with
+message beaconing frequency of 5hz (200 ms period). To set the estimation
+period, the parameter LinkEstimationPeriod (specified in microseconds)
+should be set when running Tuscarora in the simulator. The Link
+Estimation protocol is chosen by setting the LinkEstimationType
+parameter.
+
+\subsection{Updating the quality of the links}
+
+Link quality estimates are updated at intervals roughly corresponding
+to the beaconing frequency---either when a beacon is received or when
+it was expected but was not received. The quality updating
+method is the same, regardless of the beaconing protocol used. The
+quality of a link reflects its behavior over a certain time interval in the
+past called the `Estimation Window'. This window is divided into
+'Activity Periods' when a link was alive or dead. Each such period
+gets a certain number of points and the quality is the normalized average
+of points for the Estimation Window. When a link is dead it gets 0
+points. When a link is alive its received points based on the number of
+consecutive estimation beacons it has received. The first time it
+% XXXX message -> beacon here???
+receives a message it gets one point. When the second message is
+received, the points for the period is updated to 1 + 1.5. The points
+at the end of $x^{th}$ consecutive message is given by:\\ 
+
+\begin{equation}
+Points (x) = \sum_{0}^{x} 1.5^y,\ where\ y = max(x,5)
+\end{equation}
+
+% XXXXX the following does not make sense.  "estimation window" is not
+% precisely defined.  The number of points possible in an Activity
+% Period is dependent on the number of beacons in the interval, not
+% the absolute time length.
+The number of points in each Activity Period is multiplied by the size
+(time) of the Activity Period and added up, and then normalized by the
+maximum possible points for the Estimation Window to arrive at a value
+between 0 and 1.
+
+\section{Network Discovery}
+The Network Discovery protocol is chosen by setting the DiscoveryType
+parameter when running Tuscarora. There are three Network Discovery
+protocols, identified by the following values for the DiscoveryType parameter: 
+\begin{description}
+\item[Global:] This protocol adds all nodes in the network to the
+  Potential Neighbor Table at the beginning of the simulation.
+\item[Oracle-2hop:] This protocol adds and removes neighbors from the
+  Potential Neighbor Table on a periodic basis currently set to
+  1Hz. It uses the exact and current positions of all nodes to
+  determine the contents of the Potential Neighbor Table. The contents
+  of the Potential Neighbor Table are all nodes within 2 communication
+  range. 
+\item[Long Link:] This protocol adds and removes neighbors from the
+  Potential Neighbor Table on a period defined by the parameter
+  LongLinkPeriod. The contents of the Potential Neighbor table are all
+  nodes within LongLinkHops communication ranges. 
+\end{description}
+
+% XXXXXX CHECK if the following is accurate. (I don't think so; there
+% is no such parameter as LongLinkHops.) 
+% There is, however, a DiscoveryType "longlink2hop".
+Long Link Network Discovery has two extra parameters, LongLinkPeriod and LongLinkHops. LongLinkPeriod is measured in microseconds between Long Link Beacons. LongLinkPeriod must be greater than $(Size + Size/25) \times 1000$. LongLinkHops defines the diameter of the Potential Neighbor Region, a circle with a radius of $LongLinkHops \times Range$
+
+\section{Examples}
+
+Using Periodic Link Estimation with a dead neighbor period of 2 seconds and a Link Estimation Period of 1Hz using Global Network Discovery.
+
+\begin{quote}
+	\$ ./runOrDebug.sh FI - - LinkEstimationType periodic LinkEstimationPeriod 1000000 DeadNeighborPeriod 2 DiscoveryType global\\
+\end{quote}
+
+Using Schedule Aware Periodic Link Estimation with a Link Estimation Period of 10Hz and 2 hop Long Link Network Discovery.
+
+\begin{quote}
+%	\$ ./runOrDebug.sh FI - - LinkEstimationType
+%	scheduleAwarePeriodic LinkEstimationPeriod 100000 LinkLinkHops
+%	2 NetworkDiscovery longlink\\
+%  XXXX KLC changed this because running the above did not work.  The
+%  below did work.  (Same change in install.tex.)
+       \$ ./runOrDebug.sh FI -\mbox{}- LinkEstimationType
+scheduleAwarePeriodic LinkEstimationPeriod 100000 DiscoveryType longlink2hop
+\end{quote}
+

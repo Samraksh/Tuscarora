@@ -504,15 +504,17 @@ TuscaroraSlimPhy::StartReceivePacket (Ptr<Packet> packet,
               if (packet->PeekPacketTag (ampduTag) && m_mpdusNum == 0)
                 {
                   //received the first MPDU in an MPDU
-                  m_mpdusNum = ampduTag.GetNoOfMpdus()-1;
+                  //m_mpdusNum = ampduTag.GetRemainingNbOfMpdus()-1;
+            	  m_mpdusNum = ampduTag.GetRemainingNbOfMpdus()-1;
+
                 }
               else if (packet->PeekPacketTag (ampduTag) && m_mpdusNum > 0)
                 {
                   //received the other MPDUs that are part of the A-MPDU
-                  if (ampduTag.GetNoOfMpdus() < m_mpdusNum)
+                  if (ampduTag.GetRemainingNbOfMpdus() < m_mpdusNum)
                     {
-                      NS_LOG_DEBUG ("Missing MPDU from the A-MPDU " << m_mpdusNum - ampduTag.GetNoOfMpdus());
-                      m_mpdusNum = ampduTag.GetNoOfMpdus();
+                      NS_LOG_DEBUG ("Missing MPDU from the A-MPDU " << m_mpdusNum - ampduTag.GetRemainingNbOfMpdus());
+                      m_mpdusNum = ampduTag.GetRemainingNbOfMpdus();
                     }
                   else
                       m_mpdusNum--;

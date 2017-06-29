@@ -4,8 +4,6 @@
 // Please see developer's manual for implementation notes. 
 ////////////////////////////////////////////////////////////////////////////////// 
 
-
-
 #ifndef ScheduleI_h
 #define ScheduleI_h
 
