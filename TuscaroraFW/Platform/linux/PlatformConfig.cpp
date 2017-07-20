@@ -1,9 +1,9 @@
 
 #include <Framework/PWI/FrameworkBase.h>
 
-if FW_UPPER_SHIM==SOCKET_SHIM
+#if FW_UPPER_SHIM==SOCKET_SHIM
 #include "../Shims/LinuxSocket/Framework/PatternEventDispatch.h"
-else
+#else
 #include "../Shims/DirectBinding/Framework/PatternEventDispatch.h"
 #endif
 

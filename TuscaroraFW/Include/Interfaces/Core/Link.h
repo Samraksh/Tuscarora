@@ -47,11 +47,11 @@ namespace Core {
 	 * Its maximum value is 63.75 and minimum value is 0.  This corresponds to data rates from 1 bps  to 15.5 Pb, with a representational accuracy of 
 	 * plus or minus 25%. 
 	 * 
-	 * Latency.  Let τ be defined as the latency in seconds.  Then the latency is defined to be log_2(τ).Latency has type UFixed_8_2_t, which contains a sign 
+	 * Latency.  Let \tau be defined as the latency in seconds.  Then the latency is defined to be log_2(\tau).Latency has type UFixed_8_2_t, which contains a sign 
 	 * bit, 5 bits before the decimal point, and 2 after.  This can represent a number from 230 ps to 136 years to accuracies of plus or minus 25%. 
 	 * 
-	 * Energy.  Let ε be the average network-wide number of pico-joules (e.g., combined energy of the transmitter and the receiver) per byte.  
-	 * Then the energy is defined as log_2(ε).Energy  has  type  UFixed_8_2_t,  which  defines  an  unsigned  number  with  6  bits  before  the decimal and 
+	 * Energy.  Let \eta be the average network-wide number of pico-joules (e.g., combined energy of the transmitter and the receiver) per byte.  
+	 * Then the energy is defined as log_2(\eta).Energy  has  type  UFixed_8_2_t,  which  defines  an  unsigned  number  with  6  bits  before  the decimal and 
 	 * 2 after.  This would correspond to levels from 1 pJ/Byte to 15 MJ/Byte. 
 	 *
 	 * cost. The cost sending one packet using the waveform.

@@ -11,8 +11,8 @@
 
 #ifdef PLATFORM_DCE
 #include "Platform/dce/ExternalServices/NS3WaveformSpec.h"
-using namespace ExternalServices;
 #endif
+
 
 #ifndef PLATFORM_EMOTE
 #include "../PAL/Logs/MemMap.h"

@@ -23,7 +23,7 @@ extern RuntimeOpts* RUNTIME_OPTS;
 
 using namespace PAL;
 using namespace PWI;
-using namespace ExternalServices;
+
 
 namespace Core {
 namespace Discovery {
@@ -55,26 +55,34 @@ void OracleLongLink::UpdateNeighborList(uint32_t event) {
 			double dx = x2-x;
 			double dy = y2-y;
 
-#ifdef PLATFORM_DCE
+
 			if(dx*dx+dy*dy < (header->range * 2) * (header->range * 2)) {
 				//Add a potential neighbor since it is in the 200 meter radius
 				LinkId link; link.nodeId = id;
 				for(int w = 2; w < MAX_WAVEFORMS; w++) {
 					link.waveformId = w;
-					if(pNbrs.GetNode(link) == 0 && NS3WaveformSpec::HasWaveform(w, id)){ AddLink(id, w, header, dx, dy);}
+					if(pNbrs.GetNode(link) == 0)
+						#ifdef PLATFORM_DCE
+						if( NS3WaveformSpec::HasWaveform(w, id))
+						#endif
+							{ AddLink(id, w, header, dx, dy);}
 				}
 			} else {
 				//Remove a potential neighbor since it is no longer within range
 				LinkId link; link.nodeId = id; link.waveformId = 0;
 				for(int w = 2; w < MAX_WAVEFORMS; w++) {
 					link.waveformId = 0;
-					if(pNbrs.GetNode(link) != 0 && NS3WaveformSpec::HasWaveform(w, id)){ RemoveLink(id, w);}
+					if(pNbrs.GetNode(link) != 0 )
+						#ifdef PLATFORM_DCE
+						if( NS3WaveformSpec::HasWaveform(w, id))
+						#endif
+							{ RemoveLink(id, w);}
 				}
 			}
 		}
 		id++;
 	}
-#endif
+
 	map.closeForRead();
 }
 

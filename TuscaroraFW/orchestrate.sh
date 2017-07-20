@@ -77,7 +77,7 @@ options:
     -h --help        Display this message. If a pattern is specified, 
                      the arguments that the pattern expects are given.
     --arch|-p|--platform    Compile and run on specified platform
-                     Options: dce or x86_64 or arm
+                     Options: dce, native, arm, rpi, emote)
     -s --silent      Run silently.
     -v --verbose     Run verbosely. Useful for debugging this script.
     -c --clean       Clean before making.
@@ -157,10 +157,10 @@ MAKE() {
     #else
     #	echo "Same target architecture detected. Reusing cmake cache."
     #fi
-    if [[ "$platform" == "x86_64" ]]; then
+    if [[ "$platform" == "native" ]]; then
 			#rm CMakeCache.txt
 			#rm -r CMakeFiles
-			cmakeoptions="-DARCH=x86_64 -DPLATFORM=linux ${cmakeoptions}"
+			cmakeoptions="-Darch=x86_64 -DPLATFORM=linux ${cmakeoptions}"
 			echo "cmake ${cmakeoptions}"
  			cmake ${cmakeoptions}; 	make -j4
 			#make -f Makefile.mp -j${cores} USER_DEFINES="${USER_DEFINES}" "$@"
@@ -207,7 +207,7 @@ function GetOpts() { # Get commandline options.
    # perl -pe 'print "Perl Perl\n"'
     branch=""
     #platform="dce"
-    platform="x86_64"
+    #platform="x86_64"
     valgrind=""
     debug=""
     debugddd=""
@@ -858,9 +858,9 @@ for ns3_test in "${ns3_tests[@]}"; do
 	elif [[ "$platform" == "arm" ]]; then
 		runArm "${dce_test}" "Test ${dce_test} ${ns3_args}" "$simname"
 		echo "Created test files to run on ARM with ${dce_test}, arguments ${ns3_args}. Run the test manually on device."
-	elif [[ "$platform" == "x86_64" ]]; then
+	elif [[ "$platform" == "native" ]]; then
 		runLinux "${dce_test}" "${ns3_args}" "$simname"
-		echo "Ran x86_64 Test with ${dce_test}, arguments ${ns3_args}"
+		echo "Ran native Test with ${dce_test}, arguments ${ns3_args}"
 	else 
 		echo "Not running  the test. Created test binary. Initiate run seperately with ${dce_test} Binary on the target, wth arguments ${ns3_args}"
 	fi
