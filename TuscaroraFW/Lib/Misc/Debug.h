@@ -7,18 +7,17 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-#include <stdio.h>
-#include <iostream>
-#include <time.h>
-#include <sys/time.h>
+#include <inttypes.h>
 #include <Base/BasicTypes.h>
 
-//#include "Lib/Misc/ElapsedTime.h"
-
+#define LU "PRIu64"
+#define MU "PRIu32"
+#define SU "PRIu16"
 
 /// DBG_* flags are functions defined elsewhere. If the definition of
 /// a DBG_* flag changes, we don't need to recompile every file that
 /// includes this header file (Debug.h).
+namespace Lib{
 
 bool DBG_SIMULATION(); // returns true if this is running in a simulation.
 bool DBG_TRUE();
@@ -43,16 +42,16 @@ bool DBG_WF_EVENT();
 bool DBG_SHIM();
 bool DBG_TIMESYNC();
 
-namespace Lib{
+
   struct Debug {
-    static bool showTextOutput;
+    static bool ShowTextOutput;
     static void PrintSeconds();
     static void PrintTime();
     static void PrintTimeMilli();
     static void PrintTimeMicro();
     //static uint64_t GetTimeMicro();
     static void TurnOnDebugging(char *mod);
-    inline static void SetTextOutput(bool enable) { showTextOutput = enable; }
+    inline static void SetTextOutput(bool enable) { ShowTextOutput = enable; }
   }; 
 }
 
@@ -61,24 +60,27 @@ namespace Lib{
 		assert ((condition)); \
 	} while(false)
 
-#define Debug_Error(...) {Lib::Debug::PrintTimeMicro(); printf(__VA_ARGS__); printf("ERROR: Going to quit in 100 msec");fflush(stdout);usleep(100000);fflush(stdout); exit(1);}
-#define Debug_Warning(...) {Lib::Debug::PrintTimeMicro(); printf("DBG_WARNING: "); printf(__VA_ARGS__); fflush(stdout);}
 
-#define PrintWithTime(...) {Lib::Debug::PrintTimeMicro(); printf(__VA_ARGS__);}
+void PRINTF(int x, ...);
+//void PRINTF_FORMAT(char *format,...);
+void Debug_Error(char *format,...);
+void FileLogPrintf(char *filename, char *header, char *format,...);
+void Debug_Warning(char *format,...);
+void PrintWithTime(char *format,...);
 
-#define Debug_Printf(mod,  ...) if(mod () && Lib::Debug::showTextOutput){ Lib::Debug::PrintTimeMicro(); printf("%s:", #mod); if (DBG_SHOW_LOCATION ()) printf("%s:%d:", __FILE__, __LINE__); printf(" "); printf(__VA_ARGS__); fflush(stdout);}
+#define Debug_Printf(mod,  ...) if(mod () && Lib::Debug::ShowTextOutput){ Lib::Debug::PrintTimeMicro(); printf("%s:", #mod); if (DBG_SHOW_LOCATION ()) printf("%s:%d:", __FILE__, __LINE__); printf(" "); PRINTF(0,__VA_ARGS__); fflush(stdout);}
 
 // Don't print a newline. Continue with Debug_Printf_Cont.
-#define Debug_Printf_Start(mod,  ...) if(mod () && Lib::Debug::showTextOutput){if (DBG_SIMULATION()) Lib::Debug::PrintSeconds(); else Lib::Debug::PrintTimeMicro(); printf("%s:", #mod); if (DBG_SHOW_LOCATION ()) printf("%s:%d:", __FILE__, __LINE__); printf(" "); printf(__VA_ARGS__); fflush(stdout);}
+#define Debug_Printf_Start(mod,  ...) if(mod () && Lib::Debug::ShowTextOutput){if (DBG_SIMULATION()) Lib::Debug::PrintSeconds(); else Lib::Debug::PrintTimeMicro(); printf("%s:", #mod); if (DBG_SHOW_LOCATION ()) printf("%s:%d:", __FILE__, __LINE__); printf(" "); printf(__VA_ARGS__); fflush(stdout);}
 
 // Don't print a newline or a prefix.
-#define Debug_Printf_Cont(mod,  ...) if(mod () && Lib::Debug::showTextOutput){printf(__VA_ARGS__); fflush(stdout);}
+#define Debug_Printf_Cont(mod,  ...) if(mod () && Lib::Debug::ShowTextOutput){printf(__VA_ARGS__); fflush(stdout);}
 
 // Don't print the time.
-#define DebugNoTime_Printf(mod,  ...) if(mod () && Lib::Debug::showTextOutput){printf("%s: in file %s line %d: ", #mod, __FILE__, __LINE__);printf(__VA_ARGS__);}
+#define DebugNoTime_Printf(mod,  ...) if(mod () && Lib::Debug::ShowTextOutput){printf("%s: in file %s line %d: ", #mod, __FILE__, __LINE__);printf(__VA_ARGS__);}
 
 // Don't print the time.
-#define DebugNoTimeNoMod_Printf(mod,  ...) if(mod () && Lib::Debug::showTextOutput){printf(__VA_ARGS__);}
+#define DebugNoTimeNoMod_Printf(mod,  ...) if(mod () && Lib::Debug::ShowTextOutput){printf(__VA_ARGS__);}
 
 
 #endif //DEBUG_H

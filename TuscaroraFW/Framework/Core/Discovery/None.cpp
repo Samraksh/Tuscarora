@@ -9,7 +9,7 @@
 extern NodeId_t MY_NODE_ID;
 
 using namespace PAL;
-using namespace PWI;
+//using namespace PWI;
 
 namespace Core {
 namespace Discovery {

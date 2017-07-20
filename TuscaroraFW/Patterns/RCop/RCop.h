@@ -15,7 +15,7 @@
 
 #include <cassert> // assert
 
-#include "Lib/Logs/logPacket.h" // PacketLogger  (XXXXX)
+#include "../../Platform/linux/PAL/Logs/logPacket.h" // PacketLogger  (XXXXX)
 
 using namespace PWI;
 using namespace PAL;
@@ -65,7 +65,7 @@ private:
 		NodeId_t id;                   // redundant/paranoia
 		/* invariant:  !owesAck => (pendingMsgId == 0 && sentMsgNonce == 0) */
 		bool owesAck;        // owes us an ack
-		MessageId_t pendingMsgId;
+		FMessageId_t pendingMsgId;
 		uint16_t sentMsgNonce;
 	NeighborInfo(): lastSentTo(0), lastHeardFrom(0),
 	lastAcked(0), id(0), owesAck(false), pendingMsgId(0),

@@ -9,8 +9,8 @@
 
 
 #include "Lib/PAL/PAL_Lib.h"
-#include "Patterns/Gossip/Test/GossipTest.h"
 #include <Sys/Run.h>
+#include "Test/GossipTest.h"
 
 
 int main(int argc, char* argv[]) {

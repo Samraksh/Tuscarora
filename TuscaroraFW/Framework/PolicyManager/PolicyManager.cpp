@@ -66,6 +66,11 @@ bool PolicyManager::IsPiggyBackingEnabled()
 	return PiggyBackingEnabled;
 }
 
+uint16_t PolicyManager::GetMaxFWPacketPayloadSize(){
+
+	return fwMaxPacketSizePolicy;
+}
+
 
 bool PolicyManager::IsValidPiggyBackee(PB_TypeE type, Waveform::WF_AddressTypeE addressType, uint8_t dataSize, const string &authString){
 

@@ -12,7 +12,7 @@
 #include "Framework/Core/DataFlow/PacketHandler.h"
 #include <Lib/DS/ListT.h>
 
-#ifdef PLATFORM_LINUX
+#ifdef FW_LOWER_SHIM_SOCKET
 #include "Platform/linux/Framework/WF_ControllerShim.h"
 #endif
 
@@ -41,7 +41,7 @@ namespace WFControl {
     RequestId_t current_rId;
     BSTMapT<RequestId_t, WaveformId_t> reqTowfid;
 
-#ifdef PLATFORM_LINUX
+#ifdef FW_LOWER_SHIM_SOCKET
     WF_ControllerShim *shim;
 #endif
 
@@ -50,15 +50,15 @@ namespace WFControl {
     WF_Controller(FrameworkBase *_fwBase, WaveformMap_t *_wfMap, PacketHandler *ph); //I need to call method in packethandller
     
     //DataPlane
-    void SendData (WaveformId_t wid, WF_MessageT<uint64_t>& _msg, uint16_t _payloadSize, uint64_t *_destArray, uint16_t _noOfDest, MessageId_t _msgId, bool _noAck=false);
-    void BroadcastData (WaveformId_t wid, WF_MessageT<uint64_t>& _msg, uint16_t _payloadSize, MessageId_t _msgId);
+    void SendData (WaveformId_t wid, WF_MessageT<uint64_t>& _msg, uint16_t _payloadSize, uint64_t *_destArray, uint16_t _noOfDest, WF_MessageId_t  _msgId, bool _noAck=false);
+    void BroadcastData (WaveformId_t wid, WF_MessageT<uint64_t>& _msg, uint16_t _payloadSize, WF_MessageId_t  _msgId);
   
     
     //Control plane 
-    void Send_ReplacePayloadRequest (WaveformId_t wid, RequestId_t rId, MessageId_t msgId, uint8_t *payload, uint16_t payloadSize);
+    void Send_ReplacePayloadRequest (WaveformId_t wid, RequestId_t rId, WF_MessageId_t  msgId, uint8_t *payload, uint16_t payloadSize);
     void Send_AttributesRequest (WaveformId_t wid, RequestId_t rId);
     void Send_ControlStatusRequest (WaveformId_t wid, RequestId_t rId);
-    void Send_DataStatusRequest (WaveformId_t wid, RequestId_t rId, MessageId_t mId);
+    void Send_DataStatusRequest (WaveformId_t wid, RequestId_t rId, WF_MessageId_t  mId);
     void Send_SetScheduleRequest (WaveformId_t wid, RequestId_t rId, NodeId_t nodeId, WF_ScheduleTypeE type, ScheduleBaseI &schedule, uint16_t scheduleSize) ;
     void Send_ScheduleRequest (WaveformId_t wid, RequestId_t rId, NodeId_t nodeid, WF_ScheduleTypeE type);
     
@@ -118,8 +118,8 @@ namespace WFControl {
     void AttributeTimer_Handler(uint32_t flag);
 
     //Masahiro adding below as it was missing from WF_Controller.
-    void Send_CancelDataRequest(WaveformId_t wid, RequestId_t rId, MessageId_t msgId,  uint64_t* _destArray, uint16_t _noOfDestinations);
-    void Send_AddDestinationRequest(WaveformId_t wid, RequestId_t rId, MessageId_t mId, uint64_t* destArray, uint16_t noOfDest);
+    void Send_CancelDataRequest(WaveformId_t wid, RequestId_t rId, WF_MessageId_t  msgId,  uint64_t* _destArray, uint16_t _noOfDestinations);
+    void Send_AddDestinationRequest(WaveformId_t wid, RequestId_t rId, WF_MessageId_t  mId, uint64_t* destArray, uint16_t noOfDest);
   };
    
   

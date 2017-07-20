@@ -1,0 +1,25 @@
+Instructions to setup compilation for MicroFramework environment under Windows:
+
+This file uses a stm32-arm target platform as example that Samraksh supports, but the instruction can be adapted for other targets
+
+1. Install CMake for Windows from https://cmake.org/download/
+
+2. Install Visual Studio and associated NETMF SDK.
+	- Note:  Make sure you install the version of NETMF SDK that your target supports. In general CMake should be able to work
+	with most versions of Visual Studio
+	
+3. Download a gcc cross compilation toolchain for your target, say from  the target vendor.
+	- Note: Support for C++11 is needed
+	
+4. Create a CMake Toolchain file under TuscaroraFW/Platforms/. See for example Toolchain-Emote-STM32-ARM.cmake file.
+
+5. Generate the Visual studio build files using CMake; CMake will also attempt to build for you.
+
+6. Start CMake-gui
+	- Select the TuscaroraFW directory as the source directory
+	- Create a 'build' directory under TuscaroraFW and set it as the build directory in cmake
+	- Setup the Generator to the version of Visual Studio you installed
+	- No need to setup cross compilation: use -Darch="stm32" option and toolchain will be setup for you
+	- Run Configure and then Generate
+	- Go in the build directory, open Tuscarora.sln in visual studio and build
+		- Alterntely use msbuild.exe to build just the appropriate *.vcxproj file.

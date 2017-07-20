@@ -4,13 +4,8 @@
 // Please see developer's manual for implementation notes. 
 ////////////////////////////////////////////////////////////////////////////////// 
 
-
-
-
 #ifndef InfoLogger_H_
 #define InfoLogger_H_
-
-
 
 class FileLogElement{
 public:
@@ -61,26 +56,6 @@ public:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#include "../../Lib/PAL/FileLoggerImpl.h"
+//#include "../../Lib/PAL/FileLoggerImpl.h"
 
 #endif //InfoLogger_H_

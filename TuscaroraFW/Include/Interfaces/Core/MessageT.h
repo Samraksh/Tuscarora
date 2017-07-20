@@ -9,7 +9,7 @@
 
 #include <Base/FrameworkTypes.h>
 #include <Base/Delegate.h>
-#include <Lib/DS/GenericMessages.h>
+//#include <Lib/DS/GenericMessages.h>
 
 using namespace Types;
 using namespace PAL;
@@ -69,7 +69,7 @@ public:
   inline void SetInstance(uint16_t _inst){
     patternInst= _inst;
   }*/
-  inline MessageTypeE GetType(){
+  MessageTypeE GetType(){
     return type;
   }
   inline void SetType(MessageTypeE _type){
@@ -88,32 +88,15 @@ public:
     payload = _payload;
   }
 
-  inline void* Serialize(GenericMsgPayloadSize_t& serial_msg_size){
-      GenericSerializer<MessageTypeE, WaveformId_t, NodeId_t, GenericMsgPayloadSize_t, void* >
-        gs(type, wfid, src, (GenericMsgPayloadSize_t)(payloadSize*sizeof(uint8_t)), (void*)payload);
+  };
 
-      //Copy serialized message since it will be destructed by GenericSerializer
-      serial_msg_size = gs.Get_Generic_VarSized_Msg_Ptr()->GetPayloadSize();
-      void* serial_msg =  malloc(serial_msg_size);
-      memcpy( (void*)serial_msg, gs.Get_Generic_VarSized_Msg_Ptr()->GetPayload(), serial_msg_size);
 
-      return static_cast<void*>(serial_msg);
-  }
-  void DeSerialize(const GenericMsgPayloadSize_t& serial_msg_size,  void * serial_msg){
-      Generic_VarSized_Msg gen_msg(serial_msg_size, static_cast<uint8_t*>(serial_msg)); //This consumes serial_msg, the destructor will destruct serial_msg
+typedef MessageT<NodeId_t> FMessage_t;
 
-      GenericMsgPayloadSize_t v_payload_size;
-      void* v_payload = NULL;
-      GenericDeSerializer<MessageTypeE, WaveformId_t, NodeId_t, GenericMsgPayloadSize_t, void* >
-        gs(&gen_msg, type, wfid, src, v_payload_size, v_payload); //This copies serial_msg contents to the variables. For the case of pointers, it copies contents to the location pointed by the pointer. If the pointer is NULL, then malloc is called to allocate memory,
 
-      payloadSize = v_payload_size;
-      payload = static_cast<uint8_t*>(v_payload);
 
-  }
-};
 
- typedef MessageT<NodeId_t> FMessage_t;
+
  //typedef MessageT<uint64_t> Message_n64_t;
  
  //typedef AckDelegateParam<uint64_t> MessageAckParam_n64_t;

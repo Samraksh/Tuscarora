@@ -15,10 +15,10 @@
 template <class Element, class KEY, class KEYCOMPARATOR = SimpleGenericComparator<KEY> >
 class MapElementComparator{
 public:
-	static bool LessThan (Element& A, Element& B) {
+	static bool LessThan (const Element& A, const Element& B) {
 		return (KEYCOMPARATOR::LessThan(A.key,B.key));
 	}
-	static bool EqualTo (Element& A, Element& B) {
+	static bool EqualTo (const Element& A, const Element& B) {
 		return (KEYCOMPARATOR::EqualTo(A.key,B.key));
 	}
 };

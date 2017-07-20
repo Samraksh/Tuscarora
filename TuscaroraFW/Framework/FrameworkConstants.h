@@ -11,6 +11,7 @@ namespace Core {
 
 const uint16_t MAX_WAVEFORMS=16;
 const uint16_t MAX_DEST=16; 
+const uint16_t MAX_FRAMEWORK_PACKET_SIZE=2000;
 #define  LONG_LINK_WID 1
 
   

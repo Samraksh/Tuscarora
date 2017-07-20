@@ -159,7 +159,7 @@ public:
 		return false;
 	};
 
-	AVLBSTElement<T>* Search(const T &_data) const{
+	AVLBSTElement<T>* Search(const T& _data) const{
 		return Search (root, _data);
 	};
 
@@ -535,7 +535,7 @@ private:
 
 	void InsertAtRightPlace(AVLBSTElement<T> *& refNode, AVLBSTElement<T> * newNode){ //Return refNode's depth
 		//compare the reference node data with new data
-		if(Compare::LessThan(refNode->data, newNode->data )){ //New node should be on the left of refNode
+		if(Compare::LessThan(refNode->GetData(), newNode->GetData() )){ //New node should be on the left of refNode
 			//printf("Inserting on the left side of refNode\n"); fflush(stdout);
 			if(refNode->left == NULL) {//Insert below reference node
 				refNode->left = newNode;
@@ -561,7 +561,7 @@ private:
 		}
 	};
 
-	AVLBSTElement<T>* Search(AVLBSTElement<T> *branch_root, T _data)const{
+	AVLBSTElement<T>* Search(AVLBSTElement<T> *branch_root, const T& _data)const{
 		if(!branch_root) {
 			//printf("AVLBST::Search: Something wrong: Your branch_root is not valid\n");fflush(stdout);
 			return NULL;

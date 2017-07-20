@@ -21,6 +21,9 @@ SET (CMAKE_CXX_COMPILER ${PiToolsDir}/bin/${CompPrefix}g++)
 SET (CMAKE_AR ${PiToolsDir}/bin/${CompPrefix}ar)
 SET (ARCH_CMAKE_AR ${PiToolsDir}/bin/${CompPrefix}ar)
 
+
+include_directories(Platform/linux)
+
 # where is the target environment
 SET (CMAKE_FIND_ROOT_PATH ${PiToolsDir})
 

@@ -54,12 +54,12 @@ namespace PWI {
     bool ackRecvDestNotifier;
     bool ackFWRecvNotifier;
     uint16_t nonce;  
-    MessageId_t msgId;
+    FMessageId_t  msgId;
     //PatternId_t pid;
     bool readyToReceive;
     bool softwareBroadcast;
     //create structure holds per message information.
-    //BSTMapT< MessageId_t , perMessageInfo* > perMessageInfoMap; 
+    //BSTMapT< FMessageId_t  , perMessageInfo* > perMessageInfoMap; 
   public:
     PatternClient(){
       responseSeqNo=0;

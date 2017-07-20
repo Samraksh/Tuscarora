@@ -116,22 +116,22 @@ namespace Waveform {
   };
   //CancelDataRequest
   struct WF_CancelDataResponse_Param{
-      MessageId_t msgId; // Stores message Id
+      WF_MessageId_t  msgId; // Stores message Id
       bool        status;  //Set to true when cancel was successful for all destinations
-      NodeId_t    destArray[16]; //Copy of destination array passed from Pattern
+      uint64_t    destArray[16]; //Copy of destination array passed from Pattern
       bool        cancel_status[16];// cancel_status[i] is set to true if destArray[i] is canceled successfully.
       uint16_t noOfDest;
   };
   //CancelDataRequest
   struct WF_ReplacePayloadResponse_Param{
-      MessageId_t msgId; // Stores message Id
+      WF_MessageId_t  msgId; // Stores message Id
       bool        status;  //Set to true when cancel was successful for all destinations
-      NodeId_t    destArray[16]; //Copy of destination array passed from Pattern
+      uint64_t    destArray[16]; //Copy of destination array passed from Pattern
       bool        replace_status[16];// cancel_status[i] is set to true if destArray[i] is canceled successfully.
       uint16_t noOfDest;
   };
   struct WF_AddDestinationResponse_Param{
-        MessageId_t msgId; // Stores message Id
+        WF_MessageId_t  msgId; // Stores message Id
         bool        status;  //Set to true when cancel was successful for all destinations
         uint64_t    destArray[MAX_DEST]; //Copy of destination array passed from Pattern
         bool        add_status[MAX_DEST];// cancel_status[i] is set to true if destArray[i] is canceled successfully.

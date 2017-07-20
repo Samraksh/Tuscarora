@@ -5,9 +5,13 @@
 ////////////////////////////////////////////////////////////////////////////////// 
 
 #include "EstBase.h"
+
 #include "Framework/PWI/FrameworkBase.h"
 #include "Framework/External/Location.h"
 
+#ifndef PLATFORM_EMOTE
+#include "../../../Platform/linux/Framework/EstimationLogging.h"
+#endif
 
 extern NodeId_t MY_NODE_ID;
 
@@ -28,12 +32,25 @@ Hence the PRR is biased towards quick estimation of existing neighbor.
 
 #define SCWF(x) static_cast <Waveform::WF_Message_n64_t *>(x)
 
+//Global Static location
+
+LinkEstimationTable_n64_t estTable;
+
+//#ifndef PLATFORM_EMOTE
+//EstimationLogging estBaseLog;
+//#endif
+
 EstBase::EstBase(EstimatorCallback_I< uint64_t >& callback)
 {
 	callbackI = &callback;
 	id=(uint32_t) MY_NODE_ID;
-	leDel = new WF_LinkChangeDelegate_n64_t(this, &EstBase::NodeExpired);
-	estimationTable = new LinkEstimationTable_n64_t();
+	//leDel = new WF_LinkChangeDelegate_n64_t(this, &EstBase::NodeExpired);
+	leDel.AddCallback(this, &EstBase::NodeExpired);
+	estimationTable = &estTable;
+#ifndef PLATFORM_EMOTE
+	//logger = &estBaseLog;
+	logger = new EstimationLogging();
+#endif
 }
 
 
@@ -101,7 +118,7 @@ void EstBase::NodeExpired(WF_LinkEstimationParam_n64_t _param) {
 
 void EstBase::CleanUp(uint32_t event) {
 	//Debug_Printf(DBG_CORE_ESTIMATION, "EstBase::CleanUp: \n"); fflush(stdout);
-	estimationTable->CheckExpiration(*leDel);
+	estimationTable->CheckExpiration(leDel);
 	
 }
 
@@ -125,7 +142,9 @@ void EstBase::SendHB(EventInfoU64& event) {
 	//sendDel->operator()(param);
 	//SC(fi)->SendToWF(wid, true, Types::LE_Type,0, 0, *msg);
 	//fi->BroadcastData(0, *msg, wid);
-	logger.LogEvent(PAL::LINK_SENT, leSeqno);
+#ifndef PLATFORM_EMOTE
+	logger->LogEvent(Estimation::LINK_SENT, leSeqno);
+#endif
 	leSeqno++;
 	DecrementPRR();
 	Debug_Printf(DBG_CORE_ESTIMATION,"EstBase::SendHB: Checking framework delegate value: %p, my ptr is %p, period is %d \n", fworkNbrDel, this, period);fflush(stdout);
@@ -147,12 +166,12 @@ double EstBase::PacketReceptionRate(LinkAddress_t linkAddress)
 double EstBase::StabilityQuality(LinkAddress_t _linkAddress) {
 	double c=1.5;
 	double max=5;
-	uint w=windowPeriod; //windows size in seconds
+	uint32_t w=windowPeriod; //windows size in seconds
 	double maxValue=pow(c, max)*w + 1;
 	double value=1;
 	//uint64_t curtime;
 	
-	uint totalUnits=1000000;
+	uint32_t totalUnits=1000000;
 	uint64_t timeUnitToSec = 1000000;
 	
 	
@@ -219,7 +238,7 @@ void EstBase::IncrementOrSetPRR(LinkAddress_t _linkAddress, float value)
 		
 		if(value >= 0){
 			it->Second()=value;
-			printf("Setting PRR for link %lu: to %f \n", _linkAddress, it->Second());
+			printf("EstBase::IncrementOrSetPRR: Setting PRR for link %lu: to %2.8f, %2.8f \n", _linkAddress, it->Second(), value);
 		}else {
 			float prev = it->Second();
 			//it->Second() = prev*(1-weight)+weight;
@@ -272,7 +291,7 @@ LinkMetrics* EstBase::ProcessMessage(Waveform::WF_MessageBase *rcvMsg, TimeStamp
 	//if(coreNbrTable->GetNeighborLink(nbrWfAddress) == 0) {
 	if(!estimationTable->GetEstimationInfo(nbrWfAddress, wfid)) {
 		//receiveCountOverWindow[nbrWfAddress]=1;
-		IncrementOrSetPRR(nbrWfAddress, float(1/windowPeriod));
+		IncrementOrSetPRR(nbrWfAddress, float(1.0/windowPeriod));
 		
 		LogQualityEvent(nbrWfAddress, curtime);
 		EstimationInfo<LinkAddress_t>* info = estimationTable->AddNeighbor(nbrWfAddress, wfid);
@@ -333,10 +352,10 @@ LinkMetrics* EstBase::ProcessMessage(Waveform::WF_MessageBase *rcvMsg, TimeStamp
 
 EstBase::~EstBase() {
 
-	delete(estimationTable);
+	//delete(estimationTable);
 	delete(sendHb);
 	delete(state_);
-	delete(leDel);
+	//delete(leDel);
 	beaconSchedule->Suspend();
 	delete(beaconSchedule);
 	cleaner->Suspend();

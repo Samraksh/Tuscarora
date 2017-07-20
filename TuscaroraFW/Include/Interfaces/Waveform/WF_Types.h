@@ -130,7 +130,7 @@ namespace Waveform {
 
   template <typename WF_AddressType>
   struct WF_RecvMsgParam{
-    MessageId_t wrn; //Waveform Receive Nonce
+    FMessageId_t  wrn; //Waveform Receive Nonce
     WF_MessageT<WF_AddressType> *msg;
   }__attribute__((packed, aligned(1)));
 

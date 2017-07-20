@@ -22,10 +22,10 @@
 #include <stdio.h>
 #include <vector>
 
-#ifdef PLATFORM_DCE
-#include <Platform/dce/Pattern/Gossip2AppShim.h>
-#elif PLATFORM_LINUX
-#include <Platform/linux/Pattern/Gossip2AppShim.h>
+#if PTN_UPPER_SHIM==DIRECT_BIND_SHIM
+#include <Platform/Shims/DirectBinding/Pattern/Gossip2AppShim.h>
+#elif PTN_UPPER_SHIM==SOCKET_SHIM
+#include <Platform/Shims/LinuxSocket/Pattern/Gossip2AppShim.h>
 #endif
 
 
@@ -187,8 +187,7 @@ void Gossip<GOSSIPVARIABLE, GOSSIPCOMPARATOR>::ControlResponseEvent(ControlRespo
 {
 	Debug_Printf(DBG_PATTERN, "Gossip:: Got a control response of type %d\n", response.type);
 	switch (patternState){
-	case NO_PID:
-	case GOT_PID:
+	case UNREGISTERED:
 		if(response.type == PWI::PTN_RegisterResponse){
 			--n_ExpectedFrameworkResponses;
 			Handle_RegisterResponse(response);

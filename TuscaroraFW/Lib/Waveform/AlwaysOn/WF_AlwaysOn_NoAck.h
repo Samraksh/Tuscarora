@@ -14,16 +14,20 @@
 #include <PAL/PseudoRandom/UniformRandomInt.h>
 
 #include <PAL/Timer.h>
+
 #include "net/if.h"
 #include "Lib/DS/BSTMapT.h"
 #include "Lib/DS/ListT.h"
-#include "Lib/Misc/MemMap.h"
 #include "Interfaces/Core/LinkEstimatorI.h"
 
 #include "Lib/KernalSignals/IO_Signals.h"
 
+#if WF_UPPER_SHIM==SOCKET_SHIM
+#include "Platform/Shims/LinuxSocket/Waveform/WaveformFasade.h"
+#endif
+
 #ifdef PLATFORM_LINUX
-#include "Platform/linux/Waveform/WaveformFasade.h"
+#include "Platform/linux/PAL/Logs/MemMap.h"
 #endif
 
 #include "Lib/Waveform/AlwaysOn/WFTestStats.h"
@@ -116,7 +120,7 @@ protected:
 	uint16_t destination_index;
 	WF_MessageStatusE msgStat; 
 
-#ifdef PLATFORM_LINUX
+#if WF_UPPER_SHIM==SOCKET_SHIM
 	WaveformFasade *fasade;
 #endif
 

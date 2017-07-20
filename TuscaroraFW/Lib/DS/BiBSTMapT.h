@@ -9,11 +9,13 @@
 #ifndef BiBST_MAP2T_H_
 #define BiBST_MAP2T_H_
 
-
 #include "AVLBinarySearchTreeT.h"
+#include <stdlib.h>
 #include <assert.h>
 
-
+#ifdef PLATFORM_EMOTE
+#define abort() exit(3)
+#endif
 
 template <class Element, class KEY, class KEYCOMPARATOR = SimpleGenericComparator<KEY> >
 class MapElementComparator_KEY{
@@ -29,10 +31,10 @@ public:
 template <class Element, class DATA, class DATACOMPARATOR = SimpleGenericComparator<DATA> >
 class MapElementComparator_DATA{
 public:
-	static bool LessThan (Element& A, Element& B) {
+	static bool LessThan (const Element& A, const Element& B) {
 		return (DATACOMPARATOR::LessThan(A->GetData(),B->GetData()));
 	}
-	static bool EqualTo (Element& A, Element& B) {
+	static bool EqualTo (const Element& A, const Element& B) {
 		return (DATACOMPARATOR::EqualTo(A->GetData(),B->GetData()));
 	}
 };

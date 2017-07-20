@@ -7,7 +7,7 @@
 #include "BCop.h"   // gets Cop.h
 #include <cstdio> // printf
 #include "Lib/Misc/datastructs.h" // map_t, vector_t
-#include "Lib/Misc/logString.h"
+//#include "Lib/Misc/logString.h"
 #include "Lib/Misc/ElapsedTime.h"
 #include <cassert> // assert
 #include <cstring> // std::memcpy
@@ -67,7 +67,7 @@ BCop::BCop (char* name):
   
 BCop::~BCop ()
 {
-	if ((this->patternState >= GOT_PID) && !this->stopped)  // started...
+	if ((this->patternState >= UNREGISTERED) && !this->stopped)  // started...
 	this->Stop();
 
 	// free the items in the cop table
@@ -513,7 +513,7 @@ void BCop::ProcessCopMessage (CopMessage& inMsg)
 		"BCop: Processed incoming message. sawmine=%d, stale=%d, current=%d, fresh=%d.\n\n",
 		sawmine, stale, current, fresh);
 	
-	logPrintf ( "packetEffectiveness.log",
+	FileLogPrintf ( "packetEffectiveness.log",
 		"seconds stale current fresh",
 		"%.06lf %u %u %u\n",
 		ElapsedTime::seconds(), stale, current, fresh );

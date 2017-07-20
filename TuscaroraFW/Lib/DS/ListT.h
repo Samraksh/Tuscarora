@@ -155,7 +155,7 @@ public:
 	}
 
 	void DeleteAll(){
-		for (uint i=0; i< listsize; i++){
+		for (uint32_t i=0; i< listsize; i++){
 			Delete(i);
 		}
 	}

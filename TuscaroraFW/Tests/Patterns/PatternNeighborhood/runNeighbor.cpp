@@ -230,7 +230,7 @@ void NeighborTest::LocalMsgTimer_Handler(uint32_t event)
     sendMsg->SetPayloadSize(sizeof(class RandMsg));
     //sendMsg->SetInstance(PID);
     
-    //MessageId_t mid;
+    //FMessageId_t mid;
     //U64NanoTime expectedTxTime;
     Debug_Printf(DBG_TEST,"NeighborTest:: Payload is at %p,  size if %d\n",sendMsg->GetPayload(), sendMsg->GetPayloadSize());
     Debug_Printf(DBG_TEST,"NeighborTest:: I have %d neighbor, going to send a message of size %d to the neighbor(s) in array %p a message\n", noOfnbrs, sendMsg->GetPayloadSize(), destArray );fflush(stdout);

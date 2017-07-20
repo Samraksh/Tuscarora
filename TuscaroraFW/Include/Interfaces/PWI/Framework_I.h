@@ -282,7 +282,7 @@ public:
    * @param sizeOfPayload Size of the new payload.
    * @return void.
    */
-  virtual void ReplacePayloadRequest (PatternId_t patternId, MessageId_t msgId, void *payload, uint16_t sizeOfPayload) = 0 ;
+  virtual void ReplacePayloadRequest (PatternId_t patternId, FMessageId_t  msgId, void *payload, uint16_t sizeOfPayload) = 0 ;
   
 
 
@@ -354,8 +354,8 @@ uniqueName[128], PatternTypeE type) = 0;
    * @param noOfNbrs Number of new destinations.
    * @return void.
    */
-  virtual void AddDestinationRequest (PatternId_t patternId, MessageId_t msgId, NodeId_t destArray[MAX_DEST], uint16_t noOfNbrs) = 0;
-  virtual void AddDestinationRequest (PatternId_t patternId, MessageId_t msgId, NodeId_t destArray[MAX_DEST], uint16_t noOfNbrs, LinkComparatorTypeE lcType ) = 0;
+  virtual void AddDestinationRequest (PatternId_t patternId, FMessageId_t  msgId, NodeId_t destArray[MAX_DEST], uint16_t noOfNbrs) = 0;
+  virtual void AddDestinationRequest (PatternId_t patternId, FMessageId_t  msgId, NodeId_t destArray[MAX_DEST], uint16_t noOfNbrs, LinkComparatorTypeE lcType ) = 0;
   
     
   /**
@@ -375,7 +375,7 @@ uniqueName[128], PatternTypeE type) = 0;
    * @param noOfDest Number of destinations to be cancelled.
    * @return void.
    */
-  virtual void CancelDataRequest (PatternId_t patternId, MessageId_t msgId, NodeId_t destArray[MAX_DEST], uint16_t noOfDest) = 0;
+  virtual void CancelDataRequest (PatternId_t patternId, FMessageId_t  msgId, NodeId_t destArray[MAX_DEST], uint16_t noOfDest) = 0;
 
   /**
    * @brief Request the status of a data message sent to the framework.
@@ -387,7 +387,7 @@ uniqueName[128], PatternTypeE type) = 0;
    * @param msgId ID of the message for which status is being requested.
    * @return void
    */ 
-  virtual void DataStatusRequest (PatternId_t patternId, MessageId_t msgId) = 0; 
+  virtual void DataStatusRequest (PatternId_t patternId, FMessageId_t  msgId) = 0; 
  
   /**
    * @brief Lets the Pattern Select which type of Data Notification

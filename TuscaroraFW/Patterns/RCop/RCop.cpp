@@ -7,9 +7,10 @@
 #include "RCop.h"   // gets Cop.h
 #include <cstdio> // printf
 #include "Lib/Misc/datastructs.h" // map_t, vector_t
-#include "Lib/Misc/logString.h"
 #include <cassert> // assert
 #include <cstring> // std::memcpy
+
+#include "../../Lib/Misc/LogString.cpp"
 using std::memcpy;
 
 #include "Framework/Core/Naming/StaticNaming.h"
@@ -26,7 +27,7 @@ namespace Cop {
 
   /* Note: compiler-supplied default constructor */  
 RCop::~RCop () {
-	if ((this->patternState >= GOT_PID) && !this->stopped)  // started...
+	if ((this->patternState >= UNREGISTERED) && !this->stopped)  // started...
 	this->Stop();
 
 	// free the items in the cop table

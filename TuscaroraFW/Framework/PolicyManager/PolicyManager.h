@@ -26,6 +26,7 @@ public:
     static LinkSelectionPolicyE GetLinkSelectionPolicy();
     static WaveformId_t GetPrefferedWaveform();
 	static inline bool IsPiggyBackingEnabled();
+	static uint16_t GetMaxFWPacketPayloadSize();
     static bool IsValidPiggyBackee (PB_TypeE type,  Waveform::WF_AddressTypeE addressType, uint8_t dataSize, const std::string &authString);
 };
 

@@ -7,8 +7,8 @@
 #include "ConflictAware.h"
 #include "Framework/PWI/FrameworkBase.h"
 
-//extern NodeId_t MY_NODE_ID;
-extern uint16_t NETWORK_SIZE;
+extern NodeId_t MY_NODE_ID;
+extern uint32_t NETWORK_SIZE;
 // extern bool DBG_CORE; // set in Lib/Misc/Debug.cpp
 
 namespace Core {
@@ -55,7 +55,9 @@ namespace Core {
 			struct timeval curtime;
 			gettimeofday(&curtime,NULL);
 			uint64_t curt = (uint64_t)curtime.tv_sec * 1000000 + curtime.tv_usec;
-			logger.LogEvent(PAL::LINK_SKIPPED, 0);
+#ifndef PLATFORM_EMOTE
+			logger->LogEvent(LINK_SKIPPED, 0);
+#endif
 			
 			//Go through each node's schedule, and test it for potential conflicts. If there is a potential conflict,
 			//change the node's expiry time to be the next scheduled event
@@ -70,8 +72,10 @@ namespace Core {
 							((nodeSchedule[j]->linkEstSchd->TimeOfLastEvent() > nodeSchedule[i]->linkEstSchd->TimeOfLastEvent()) && 
 							(nodeSchedule[j]->linkEstSchd->TimeOfLastEvent() - nodeSchedule[i]->linkEstSchd->TimeOfLastEvent() < 1000))) {
 							info->expiryTime = ischd->TimeOfNextEvent();
-							Debug_Printf( DBG_CORE,"ConvlidAvoidEstimation:: Conflict avoided between %lu and %lu\n", i, j);
-							logger.LogEvent(PAL::LINK_SKIPPED, i);
+							Debug_Printf( DBG_CORE,"ConvlidAvoidEstimation:: Conflict avoided between %LU and %LU\n", i, j);
+#ifndef PLATFORM_EMOTE
+							logger->LogEvent(LINK_SKIPPED, i);
+#endif
 							break;
 						}
 					}
@@ -79,7 +83,7 @@ namespace Core {
 			}
 			
 			//Then go through and remove any still expired nodes
-			estimationTable->CheckExpiration(*leDel);
+			estimationTable->CheckExpiration(leDel);
 		}
 		
 		/*
@@ -176,7 +180,7 @@ namespace Core {
 			
 			fi->BroadcastData(0, *msg, wid, 0); //Masahiro adding nonce value
 			
-			logger.LogEvent(PAL::LINK_SENT, leSeqno);
+			logger->LogEvent(PAL::LINK_SENT, leSeqno);
 			leSeqno++;
 			Debug_Printf( DBG_CORE, "Sending hb\n");
 		}

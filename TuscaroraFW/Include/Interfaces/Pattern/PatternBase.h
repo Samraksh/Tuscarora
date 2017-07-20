@@ -29,8 +29,8 @@ typedef AVLBST_T<NodeId_t> NeigborContainerType;
 
 //A enum to keep track of Pattern Framework interaction state;
 enum PatternStateE {
-	NO_PID,
-	GOT_PID,
+	UNREGISTERED,
+	//GOT_PID,
 	REGISTERED,
 	EXECUTING,
 	ERROR,

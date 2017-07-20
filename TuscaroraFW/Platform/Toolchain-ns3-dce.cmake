@@ -29,6 +29,9 @@ set (ARCH_CMAKE_AR ${COMPILER_PATH}/ar)
 #DCE_LDFLAGS = -pie -rdynamic
 #DLL_LDFLAGS = -shared
 
+
+include_directories(Platform/dce)
+
 # Set architecture specific (arm) build flags here. They will be joined
 # to GCC_COMPILE_FLAGS in ../CMakeLists.txt
 #-DAMPTASK_ARCH=ARCH_arm

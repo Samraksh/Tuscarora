@@ -37,6 +37,7 @@ enum LinkSelectionPolicyE{
 };
 
 
+
 ///Defines the interface for the policy manager  
 class PolicyManagerI {
 	
@@ -69,6 +70,9 @@ public:
 	/// Returns the status of piggy backing in the framework
 	bool IsPiggyBackingEnabled();
 	
+	/// Returns the maximum payload size that the framework accepts
+	uint16_t GetMaxFWPacketPayloadSize();
+
 	bool IsValidPiggyBackee (PB_TypeE type, Waveform::WF_AddressTypeE addressType, uint8_t dataSize, const std::string &authString);
 };
 

@@ -11,9 +11,9 @@
 #include "FWP.h"
 
 #ifdef PLATFORM_DCE
-#include <Platform/dce/Pattern/FWP2AppShim.h>
+#include <Platform/Shims/DirectBinding/Pattern/FWP2AppShim.h>
 #elif PLATFORM_LINUX
-#include <Platform/linux/Pattern/FWP2AppShim.h>
+#include <Platform/Shims/LinuxSocket/Pattern/FWP2AppShim.h>
 #endif
 
 //#include <Interfaces/Core/ConfigureFrameworkI.h>

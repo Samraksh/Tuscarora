@@ -13,8 +13,8 @@
 
 #include "runCop.h"
 #include <cassert> 
-#include "Lib/Logs/logString.h" //logString 
 #include <cstdio> // sscanf 
+#include "../../../Platform/linux/PAL/Logs/logString.h" //logString 
 
 #define DBG_WAVEFORM_ 0
 #define DBG_CORE_API_ 0

@@ -13,8 +13,13 @@
 #pragma once
 #if PLATFORM_DCE==1
 #include "Platform/dce/PlatformConfig.h"
+#define PLATFORM Platform/dce
 #elif PLATFORM_LINUX==1
 #include "Platform/linux/PlatformConfig.h"
+#define PLATFORM Platform/linux
+#elif PLATFORM_EMOTE==1
+#include "Platform/eMote/PlatformConfig.h"
+#define PLATFORM Platform/eMote
 #endif
 
 

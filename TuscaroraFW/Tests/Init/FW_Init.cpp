@@ -16,8 +16,16 @@
 #include "Lib/Waveform/AlwaysOn/WF_AlwaysOn_Ack.h"
 #include "Lib/Waveform/AlwaysOn/WF_AlwaysOn_NoAck.h"
 
-#if defined(PLATFORM_LINUX)
-#include <Platform/linux/Framework/PatternEventDispatch.h>
+#if FW_UPPER_SHIM==SOCKET_SHIM
+#include <Platform/Shims/LinuxSocket/Framework/PatternEventDispatch.h>
+#else
+#include <Platform/Shims/DirectBinding/Framework/PatternEventDispatch.h>
+#endif
+
+
+#ifdef PLATFORM_DCE
+#include <Platform/dce/ExternalServices/NS3WaveformSpec.h>
+using namespace ExternalServices;
 #endif
 
 extern NodeId_t MY_NODE_ID;
@@ -42,9 +50,13 @@ void FW_Init::InitFI(){
 	fi = new StandardFI();
 	PWI::SetFrameworkInterface(*fi);
 	Debug_Printf(DBG_TEST, "FW_Init:: Created framework instance, ptr %p\n", fi);fflush(stdout);
-#if defined(PLATFORM_LINUX)
+
+#ifndef PLATFORM_DCE
+#if FW_UPPER_SHIM==SOCKET_SHIM
 	(static_cast<PatternEventDispatch *>(fi->eventDispatcher))->ptn_controller_ptr->SetFrameworkPtr(fi);
 #endif
+#endif
+
 	Debug_Printf(DBG_TEST, "FW_Init:: Created  and initialized framework instance, ptr %p\n", fi);
 }
 
@@ -125,10 +137,10 @@ PWI::Framework_I *FW_Init::Execute(RuntimeOpts *opts)
 	//fi->SetMaxNodes( max_nodes );
 	char locallink[] = "local";
 	for(int x = 2; x < MAX_WAVEFORMS; x++) {
-		if(NetworkDiscovery::hasWaveform(x)) {
+		if(NS3WaveformSpec::HasWaveform(x)) {
 			Debug_Printf(DBG_TEST, "FW_Init:: Creating waveform %d\n",x); 
-			CreateWaveform(locallink, x, NetworkDiscovery::getWaveformType(x),  NetworkDiscovery::getWaveformEstimationType(x), 
-						   NetworkDiscovery::getWaveformCost(x),  NetworkDiscovery::getWaveformEnergy(x));
+			CreateWaveform(locallink, x, NS3WaveformSpec::GetWaveformType(x),  NS3WaveformSpec::GetWaveformEstimationType(x),
+					NS3WaveformSpec::GetWaveformCost(x), NS3WaveformSpec::GetWaveformEnergy(x));
 		}
 	}
 #endif

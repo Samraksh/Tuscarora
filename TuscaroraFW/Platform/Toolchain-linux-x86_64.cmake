@@ -23,7 +23,8 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 
 # Set architecture specific (x86_64) build flags here. They will be joined
 # to GCC_COMPILE_FLAGS in ../CMakeLists.txt
-set (ARCH_COMPILE_FLAGS "-Wall -pthread -Wl,--no-as-needed -DAMPTASK_ARCH=ARCH_x86_64")
+#set (ARCH_COMPILE_FLAGS "-Wall -pthread -Wl,--no-as-needed -DAMPTASK_ARCH=ARCH_x86_64")
+set (ARCH_COMPILE_FLAGS "-Wall -pthread -Wl,--no-as-needed")
 set (ARCHCC_COMPILE_FLAGS "-std=c++11 ${ARCH_COMPILE_FLAGS}")
 set (ARCHC_COMPILE_FLAGS "${ARCH_COMPILE_FLAGS}")
 set (ARCHCC_LIBS pthread c rt stdc++ m)

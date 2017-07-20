@@ -49,6 +49,14 @@ const uint16_t ackWFSent_Ack = 2000; // ms;
 const uint16_t ackWFRecvTimer_Ack = 5000; //ms
 const uint16_t msgCleanupTimer = 10000; //ms
 
+
+class FragmentedMessageQueueElement{
+public:
+	AVLBST_T<uint8_t> received_segment_numbers;
+	WF_MessageBase* assembledMsg;
+};
+
+
 class PacketHandler {
 	//FrameworkBase* parentFI; //Need pointer to FrameworkBase to start timer.
 	//WaveformMessageDelegate_t *linkEstimationDelegate;
@@ -58,18 +66,18 @@ class PacketHandler {
 	WF_AttributeMap_t *wfAttributeMap;
 	AddressMap *addressMap; 
 	PatternClientMap_t  *patternClients;
-	//BSTMapT<WF_MessageId_t, MessageId_t> wfMsgToFMsgMap[MAX_WAVEFORMS];
-	WFMsgIdToFmsgIdMap_t wfMsgToFMsgMap;
+	//BSTMapT<WF_MessageId_t, FMessageId_t > wfMsgToFMsgMap[MAX_WAVEFORMS];
+	WFMsgIdToFragmentListMap_t wfMsgToFMsgMap;
 	//LinkEstimationStore *LESptr;
 	FrameworkBase *fwBase;
 
 	//TODO:Check if we need this
-	//ListT<MessageId_t,false, EqualTo<MessageId_t> >* messageList;
+	//ListT <FMessageId_t ,false, EqualTo <FMessageId_t > >* messageList;
 
 	uint32_t WDN_WF_RECV_Timeout_Period[MAX_WAVEFORMS];
 	uint32_t WDN_WF_SENT_Timeout_Period[MAX_WAVEFORMS];
 	uint32_t WDN_DST_RECV_Timeout_Period[MAX_WAVEFORMS];
-	MessageId_t last_wfMsg_Seen[MAX_WAVEFORMS];
+	FMessageId_t last_wfMsg_Seen[MAX_WAVEFORMS];
 
 	uint32_t newReqnumber;
 
@@ -101,11 +109,12 @@ class PacketHandler {
 	//WaveformId_t current_wfid;
 	bool Send_Busy[MAX_WAVEFORMS]; //Maximum number of supported wavefor is 16.
 	bool ackTimer_flag[MAX_WAVEFORMS];
-	MessageId_t frameworkMsgId;
+	FMessageId_t frameworkMsgId;
 private:
 	//	void ProcessLinkEstimationMsg (WF_MessageBase& msg);
 	//	void CreateLinkEstimator(WaveformId_t wid);
 	void ProcessWFAck(WF_DataStatusParam_n64_t& ack);
+	void ProcessWFAckWithFragmentation(WF_DataStatusParam_n64_t& ack);
 	void SendSoftwareAck(WF_Message_n64_t& msg);
 	void ProcessSoftwareAck(WF_Message_n64_t& msg);
 	void ProcessPiggyBackedData(WF_MessageBase& _wfMsg);
@@ -120,37 +129,38 @@ private:
 
 public:
 	//map messageId and WF_MessageQElement*
-	BSTMapT< MessageId_t , WF_MessageQElement* > msgToQElement[MAX_WAVEFORMS];
+	BSTMapT< FMessageId_t  , WF_MessageQElement* > msgToQElement[MAX_WAVEFORMS];
 	//lookup pid with msgid
-	BSTMapT< MessageId_t , PatternId_t > msgIdToPidMap; 
+	BSTMapT< FMessageId_t  , PatternId_t > msgIdToPidMap; 
 	//lookup MessageCabinet with waveform id
 	//BSTMapT<WaveformId_t, MessageCabinet*> wfToMC;
 	MessageCabinet *mc;
+	BSTMapT<NodeId_t, FragmentedMessageQueueElement> incoming_fragmented_msg_queue;
+	PacketHandler ();
+
 	//PacketHandler (WaveformMap_t *_wfMap, WF_AttributeMap_t *_wfAtrribMap, WF_MsgAdaptorMap_t *_wfMsgAdaptorMap, PatternClientMap_t  *clients, 
+
 	//		 WaveformMessageDelegate_t *_linkEstimationDelegate, WaveformMessageDelegate_t *_discoveryDelegate, NeighborTable& _coreNbrTable, PatternEventDispatch *_eventDispatcher);
 
-	//PacketHandler (WaveformMap_t *_wfMap, WF_MsgAdaptorMap_t *_wfMsgAdaptorMap, PatternClientMap_t  *clients, 
-	//		PWI::FrameworkBase *fwBase, WaveformMessageDelegate_t *_discoveryDelegate, NeighborTable& _coreNbrTable, PatternEventDispatch *_eventDispatcher);
-
-
-
-	PacketHandler (WaveformMap_t *_wfHash, WF_AttributeMap_t *_wfAtrribMap, AddressMap *_addressMap, PatternClientMap_t  *clients, 
+	void Initialize (WaveformMap_t *_wfHash, WF_AttributeMap_t *_wfAtrribMap, AddressMap *_addressMap, PatternClientMap_t  *clients,
 			FrameworkBase *fwBase, NeighborTable& _coreNbrTable, bool* attribute_request_pending, PatternEventDispatch_I *_eventDispatcher, PiggyBacker<uint64_t> *_pb);
 
 	uint32_t GetRemainingPacket(WaveformId_t wfId);
 	void Recv_DN_Handler_For_WF(WF_DataStatusParam_n64_t& ack);
 	void RecvControlResponse_From_WF(WF_ControlResponseParam param);
 	//void Recv_Handler_For_WF(Message_n64_t& msg);
-	void Recv_Handler_For_WF(WF_MessageBase& msg, MessageId_t wrn);
+	void Recv_Handler_For_WF_MSG_FRAGMENT(WF_MessageBase& msg, FMessageId_t  wrn);
 	void ProcessRcvdPatternMsg (PatternId_t _pid, FMessage_t& msg);
-	MessageId_t EnqueueToMC(PatternId_t pid, FMessage_t *msg, NodeId_t *nodeArray, Link **linkPtrArray, uint16_t noOfDest, bool broadcast,  WaveformId_t wfid, MessageId_t newFWMsgId, uint16_t nonce, bool softwarebroadcast);
+	void Recv_Handler_For_WF(WF_MessageBase& msg, FMessageId_t  wrn);
+
+	FMessageId_t EnqueueToMC(PatternId_t pid, FMessage_t *msg, NodeId_t *nodeArray, Link **linkPtrArray, uint16_t noOfDest, bool broadcast,  WaveformId_t wfid, FMessageId_t  newFWMsgId, uint16_t nonce, bool softwarebroadcast);
 	uint16_t ProcessOutgoingMessages (WaveformId_t waveformId);
-	//void GenerateNotification (PatternId_t pid,  FMessage_t& msg, MessageId_t fmid, Core::Dataflow::DataStatusTypeE ackType, bool status, NodeId_t *destArray, uint16_t noOfDest); 
-	bool PrepareAndSendDataStatusResponse(MessageId_t msgId);
+	//void GenerateNotification (PatternId_t pid,  FMessage_t& msg, FMessageId_t  fmid, Core::Dataflow::DataStatusTypeE ackType, bool status, NodeId_t *destArray, uint16_t noOfDest); 
+	bool PrepareAndSendDataStatusResponse( FMessageId_t  msgId);
 	//void ConvertU64ToEthAddress(uint64_t x, char *address);
 	bool AddOrUpdateWFAddress(WaveformId_t  wid, uint64_t wfAddress, NodeId_t srcNodeId);
 
-	MessageId_t GetNewFrameworkMsgId() {
+	FMessageId_t GetNewFrameworkMsgId() {
 		//printf("Generating next Framework pkt id: current id (ptr: %p) is %d\n",&num1, num1);
 		//printf("New Framework pkt id: current id is %d\n",num1);
 		return ++frameworkMsgId;
@@ -159,12 +169,12 @@ public:
 		return ++newReqnumber;
 	}
 
-	bool Add_Node(PatternId_t patternId, MessageId_t msgId, NodeId_t* destArray, uint16_t noOfNbrs, LinkComparatorTypeE lcType, AddDestinationResponse_Data& data );
-	bool UpdatemsgToQElem(MessageId_t msgId, WaveformId_t wfid, NodeId_t remove_node);
-	void CancelDataSendRequest(PatternId_t patternId, MessageId_t msgId, NodeId_t *destArray, uint16_t noOfDest, CancelDataResponse_Data& data );
-	void ReplacePayloadRequest(uint16_t sizeOfPayload, PatternId_t patternId, MessageId_t msgId, void* payload, ReplacePayloadResponse_Data& data);
-	void ClearMap(WaveformId_t wfid, MessageId_t msgId); //remove entry from msgToQElement.
-	void CleanUpMsg(MessageId_t msgId);
+	void Add_Node(PatternId_t patternId, FMessageId_t  msgId, NodeId_t* destArray, uint16_t noOfNbrs, LinkComparatorTypeE lcType, AddDestinationResponse_Data& data );
+	bool UpdatemsgToQElem( FMessageId_t  msgId, WaveformId_t wfid, NodeId_t remove_node);
+	void CancelDataSendRequest(PatternId_t patternId, FMessageId_t  msgId, NodeId_t *destArray, uint16_t noOfDest, CancelDataResponse_Data& data );
+	void ReplacePayloadRequest(uint16_t sizeOfPayload, PatternId_t patternId, FMessageId_t  msgId, void* payload, ReplacePayloadResponse_Data& data);
+	void ClearMap(WaveformId_t wfid, FMessageId_t  msgId); //remove entry from msgToQElement.
+	void CleanUpMsg( FMessageId_t  msgId);
 }; //End of PacketHandler class
 
 }

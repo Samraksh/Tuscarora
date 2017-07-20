@@ -45,7 +45,7 @@ LinkComparatorTypeE PI_NeighborManager::GetLinkComparator(PatternId_t pid)
 	if(it != patternTables.End()){
 		return (patternTables[pid]->GetLinkComparatorType() ); 
 	}else {
-		printf("PI_NeighborManager::SetLinkComparator: No custom pattern neighbor table found for pattern id %d\n", pid);
+		printf("PI_NeighborManager::GetLinkComparator: No custom pattern neighbor table found for pattern id %d\n", pid);
 	}
   return QUALITY_LC;
 }

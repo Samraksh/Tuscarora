@@ -8,19 +8,21 @@
 #define POTENTIAL_NEIGHBOR_REGISTRY_H
 
 #include <Interfaces/Core/PotentialNeighborRegistryI.h>
-#include "../Estimation/EstimationLogging.h"
-#include <map>
+#include <Lib/DS/BSTMapT.h>
+#include <Interfaces/Core/EstimationLogI.h>
+//#include "../../../Platform/linux-multiprocess/Framework/EstimationLogging.h"
 
 namespace Core {
   namespace Discovery {
-    typedef std::map<LinkId, PotentialNeighbor> PotentialNeighbor_t;
+    typedef BSTMapT<LinkId, PotentialNeighbor> PotentialNeighbor_t;
     
     class PotentialNeighborRegistry : public PotentialNeighborRegistryI {
     private:
       PotentialNeighbor_t nbrs;
-      EstimationLogging logger;
+      Estimation::EstimationLogI *logger;
 
     public: 
+      PotentialNeighborRegistry();
       uint16_t GetNumberOfNodes() ;
       uint16_t GetPotentialNeighbors (UFixed_7_8_t threshPotential, PotentialNeighbor *array, uint16_t sizeOfArray);
       PotentialNeighbor* AddNode(LinkId id, PotentialNeighborTypeE type, uint8_t rssi, UFixed_7_8_t potential) ;

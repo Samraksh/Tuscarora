@@ -16,7 +16,7 @@
 #include <sstream>
 #include <cassert> // assert
 
-#include "Lib/Logs/logPacket.h" // PacketLogger
+//#include "Platform/linux/PAL/Logs/logPacket.h" // PacketLogger
 
 using namespace PWI;
 using namespace PAL;

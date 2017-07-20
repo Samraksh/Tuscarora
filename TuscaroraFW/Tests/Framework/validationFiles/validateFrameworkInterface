@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# set -x # Debug script
+
+function Die()
+{
+    # Print exit message and exit shell
+    # also print the trailing file as a convenience
+    # example: Die "There was an error! Exiting." diagnosis_File
+    echo  "Dying process"
+    echo "$*"
+    [[ -f $2 ]] && echo "$2:" && cat "$2"
+    exit 1
+}
+
+echo "Executing $0"
+cd ${TUS}
+echo "Running FrameworkInterfaceTest"
+tmpdir="$(mktemp -dtp dceln/ FrameworkInterfaceTest.XXXXX)"
+echo ${tmpdir}
+
+nodes=20
+wf=2
+time=50
+
+printf "Run ack sw test normal\n"
+./runOrDebug.sh FI --isolate ${tmpdir##*/} --doNotCopy --force -- Size $nodes RunTime $time PatternArgs normal WFConfig $TUS/Tests/Framework/2noack.cnf InterferenceModel RangePropagationLossModel LinkEstimationPeriod 1000000 
+
+printf "Validating FrameworkInterfaceTest normal ... \n"
+pushd ./Tests/Framework/validationFiles/
+make
+popd
+FAILCount=`./Tests/Framework/validationFiles/TestNormal $nodes $time $wf 1  $tmpdir | grep UNITFAIL | wc -l `
+[ $FAILCount -eq 0 ] ||  Die "FAIL in normal run"
+
+printf "Run ack sw test bnormal\n"
+./runOrDebug.sh FI --isolate ${tmpdir##*/} --doNotCopy --force -- Size $nodes RunTime $time PatternArgs bnormal WFConfig $TUS/Tests/Framework/2noack.cnf InterferenceModel RangePropagationLossModel LinkEstimationPeriod 1000000 
+
+printf "Validating FrameworkInterfaceTest bnormal... \n"
+pushd ./Tests/Framework/validationFiles/
+make
+popd
+FAILCount=`./Tests/Framework/validationFiles/TestNormal $nodes $time $wf 1  $tmpdir | grep UNITFAIL | wc -l `
+[ $FAILCount -eq 0 ] ||  Die "FAIL in bnormal run"
+
+
+rm -r ${tmpdir}
+
+echo "PASS"
+
+
+
+

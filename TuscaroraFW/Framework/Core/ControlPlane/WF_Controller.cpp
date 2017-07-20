@@ -49,20 +49,20 @@ WF_Controller::WF_Controller(FrameworkBase *_fwBase,WaveformMap_t* _wfMap, Packe
  Debug_Printf(DBG_CORE_WFCONTROL, "wfMap at %p,   ph at %p\n",wfMap, ph);
  Debug_Printf(DBG_CORE_WFCONTROL, "Exiting WF_Controller constructor\n");fflush(stdout);
  
-#ifdef PLATFORM_LINUX
+#ifdef FW_LOWER_SHIM_SOCKET
  shim = new WF_ControllerShim(wfMap);
 #endif
   
 }
 
-void WF_Controller::BroadcastData(WaveformId_t wid, WF_MessageT< uint64_t >& _msg, uint16_t _payloadSize, MessageId_t _msgId)
+void WF_Controller::BroadcastData(WaveformId_t wid, WF_MessageT< uint64_t >& _msg, uint16_t _payloadSize, WF_MessageId_t  _msgId)
 {
    Debug_Printf(DBG_CORE_WFCONTROL, "Entered BroadcastData\n");fflush(stdout);
 
    Debug_Printf(DBG_CORE_WFCONTROL, "Exiting BroadcastData\n");fflush(stdout);
 }
 
-void WF_Controller::SendData(WaveformId_t wid, WF_MessageT< uint64_t >& _msg, uint16_t _payloadSize, uint64_t* _destArray, uint16_t _noOfDest, MessageId_t _msgId, bool _noAck)
+void WF_Controller::SendData(WaveformId_t wid, WF_MessageT< uint64_t >& _msg, uint16_t _payloadSize, uint64_t* _destArray, uint16_t _noOfDest, WF_MessageId_t  _msgId, bool _noAck)
 {
    Debug_Printf(DBG_CORE_WFCONTROL, "Entered SendData\n");fflush(stdout);
 
@@ -72,12 +72,12 @@ void WF_Controller::SendData(WaveformId_t wid, WF_MessageT< uint64_t >& _msg, ui
 
 //Get hold of wave form address through AlwaysOn_Dce* myWFPt[16] in Waveform namespace.  
 
-void WF_Controller::Send_ReplacePayloadRequest (WaveformId_t wid, RequestId_t rId, MessageId_t msgId, uint8_t *payload, uint16_t payloadSize){ 
+void WF_Controller::Send_ReplacePayloadRequest (WaveformId_t wid, RequestId_t rId, WF_MessageId_t  msgId, uint8_t *payload, uint16_t payloadSize){
     reqPending.InsertBack(rId); 
     wfMap->Find(wid).Second()->ReplacePayloadRequest(rId, msgId, payload, payloadSize);
 }
 
-void WF_Controller::Send_CancelDataRequest (WaveformId_t wid, RequestId_t rId, MessageId_t msgId,  uint64_t* _destArray, uint16_t _noOfDestinations){
+void WF_Controller::Send_CancelDataRequest (WaveformId_t wid, RequestId_t rId, WF_MessageId_t  msgId,  uint64_t* _destArray, uint16_t _noOfDestinations){
    Debug_Printf(DBG_CORE_WFCONTROL, "CancelDataRequest\n");fflush(stdout);
     reqPending.InsertBack(rId); 
     wfMap->Find(wid).Second()->CancelDataRequest(rId,msgId,_destArray,_noOfDestinations);
@@ -108,15 +108,15 @@ void WF_Controller::Send_ControlStatusRequest (WaveformId_t wid, RequestId_t rId
   
 }
 
-void WF_Controller::Send_AddDestinationRequest(WaveformId_t wid, RequestId_t rId, MessageId_t mId, uint64_t* destArray, uint16_t noOfDest){
+void WF_Controller::Send_AddDestinationRequest(WaveformId_t wid, RequestId_t rId, WF_MessageId_t  mId, uint64_t* destArray, uint16_t noOfDest){
    Debug_Printf(DBG_CORE_WFCONTROL, "Send_AddDestinationRequest\n");fflush(stdout);
     reqPending.InsertBack(rId);
     //Add entry in rIdMap
     //rIdMap.Insert(rId,1);
-    wfMap->Find(wid).Second()->AddDestinationRequest(rId, mId,destArray,noOfDest);
+    wfMap->Find(wid).Second()->AddDestinationRequest(rId, mId, destArray,noOfDest);
 }
 
-void WF_Controller::Send_DataStatusRequest (WaveformId_t wid, RequestId_t rId, MessageId_t mId){
+void WF_Controller::Send_DataStatusRequest (WaveformId_t wid, RequestId_t rId, WF_MessageId_t  mId){
    Debug_Printf(DBG_CORE_WFCONTROL, "Send_SetScheduleRequest\n");fflush(stdout);
     reqPending.InsertBack(rId);
     //Add entry in rIdMap

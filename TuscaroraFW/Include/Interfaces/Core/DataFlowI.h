@@ -29,7 +29,7 @@ namespace Dataflow {
   enum DataStatusTypeE{
     PDN_ERROR,
 	PDN_ERROR_PKT_TOOBIG,
-    PDN_FW_RECV,	///Acknowledgement when framework reaceived message
+	PDN_FW_RECV,	///Acknowledgement when framework reaceived message
     PDN_WF_RECV,	///Acknowlegment that Waveform received the messsage
     PDN_WF_SENT,	///Acknowlegment that Waveform sent the messsage out on channel
     PDN_DST_RECV,	///Acknowlegment that (some module on) destination received the message
@@ -37,7 +37,16 @@ namespace Dataflow {
 	PDN_BROADCAST_NOT_SUPPORTED,
   }; 
   
+  enum FragmentStatusTypeE{
+	  FRAG_DOES_NOT_EXIST = 0,
+	  FRAG_FRAG_CREATED = 1,
+	  FRAG_WF_RECV = 2,
+	  FRAG_WF_SENT = 3,
+	  FRAG_DST_RECV = 4,
+  };
+
   enum WF_DataStatusTypeE{
+//	  WDN_WF_NOTRECV,
     WDN_WF_RECV =1,	///Acknowlegment that Waveform received the messsage
     WDN_WF_SENT,	///Acknowlegment that Waveform sent the messsage out on channel
     WDN_DST_RECV,	///Acknowlegment that (some module) on destination received the message
@@ -51,7 +60,7 @@ namespace Dataflow {
     bool statusValue[MAX_DEST];//1b
     NodeId_t  destArray[MAX_DEST]; //32b
     uint8_t noOfDest; //1b
-    MessageId_t messageId;//4b
+    FMessageId_t  messageId;//4b
     bool readyToReceive; //1b
     Nonce_t nonce; //2b
     //U64NanoTime expCompTime;//8b

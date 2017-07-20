@@ -140,7 +140,7 @@ namespace Estimation {
 		
 		delete(sendHb);
 		delete(state_);
-		delete(leDel);
+		//delete(leDel);
 		beaconSchedule->Suspend();
 		delete(beaconSchedule);
 	}

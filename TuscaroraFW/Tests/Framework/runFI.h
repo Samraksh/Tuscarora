@@ -59,7 +59,7 @@ class FI_Test{
 
 
 	PatternId_t pid;
-	MessageId_t msgId;
+	FMessageId_t msgId;
 	uint16_t nonce;
 
 	Timer *msgTimer;
@@ -103,13 +103,13 @@ class FI_Test{
 	uint16_t total_replaced_dstnack;
 
 
-	BSTMapT <MessageId_t, uint16_t> dst_nack_count;
-	BSTMapT <MessageId_t, uint16_t> dst_ack_count;
-	BSTMapT <MessageId_t, uint16_t> dest_added_ack_count;
-	BSTMapT <MessageId_t, uint16_t> sendout_count;
-	BSTMapT <MessageId_t, uint16_t> ack_fw_sent;
-	BSTMapT <MessageId_t, uint16_t> ack_wf_recv;
-	BSTMapT <MessageId_t, ListT<NodeId_t,false, EqualTo<NodeId_t> > > replaced_dst;
+	BSTMapT  <FMessageId_t , uint16_t> dst_nack_count;
+	BSTMapT  <FMessageId_t , uint16_t> dst_ack_count;
+	BSTMapT  <FMessageId_t , uint16_t> dest_added_ack_count;
+	BSTMapT  <FMessageId_t , uint16_t> sendout_count;
+	BSTMapT  <FMessageId_t , uint16_t> ack_fw_sent;
+	BSTMapT  <FMessageId_t , uint16_t> ack_wf_recv;
+	BSTMapT  <FMessageId_t , ListT<NodeId_t,false, EqualTo<NodeId_t> > > replaced_dst;
 
 public:
 

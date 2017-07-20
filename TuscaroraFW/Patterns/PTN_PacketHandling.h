@@ -32,7 +32,7 @@ enum PendingMessageStatusE {
 /* structure to hold messages while waiting for acks from FW/WF/Dest. */
 struct AckPendingMsgRecord {
 	FMessage_t *msg;    // Copy of the message that was passed.
-	MessageId_t id;    // global ID assigned by FW  (Why??)
+	FMessageId_t id;    // global ID assigned by FW  (Why??)
 	mutable PatternTimestamp_t lastSubmitted;
 	uint16_t nonce;     // key for map; redundant but helpful.
 	/* All of our messages are sent to either broadcast or a single destination.
@@ -97,13 +97,13 @@ public:
 		}
 	}
 	
-	void FWAckNotice (Nonce_t nonce, MessageId_t mid) {
+	void FWAckNotice (Nonce_t nonce, FMessageId_t  mid) {
 		if(ackPendingBuffer.Find(nonce)!= ackPendingBuffer.End()){
 			ackPendingBuffer[nonce]->id = mid;
 			ackPendingBuffer[nonce]->status = FW_ACKED;
 		}
 	}
-	void WF_SentNotice (Nonce_t nonce, MessageId_t mid) {
+	void WF_SentNotice (Nonce_t nonce, FMessageId_t  mid) {
 		if(ackPendingBuffer.Find(nonce)!= ackPendingBuffer.End()){
 			ackPendingBuffer[nonce]->status = WF_SENT;
 		}

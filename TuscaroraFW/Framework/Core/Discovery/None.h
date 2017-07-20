@@ -8,16 +8,17 @@
 #ifndef NONE_H_
 #define NONE_H_
 
-#include "NetworkDiscovery.h"
+#include "Framework/Core/Discovery/NetworkDiscovery.h"
+#include <Interfaces/Core/MessageT.h>
 
 namespace Core {
 namespace Discovery {
 
 class None : public NetworkDiscovery{
  public:
-    ~None() {}
-    void Start();
-    void ProcessMessage(FMessage_t& msg) {}
+    virtual ~None() {}
+    void Start() override;
+    void ProcessMessage(FMessage_t& msg) override {}
 };
 
 }

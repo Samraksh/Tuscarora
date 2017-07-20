@@ -7,10 +7,11 @@
 #include "Cop.h"
 #include <cstdio> // sscanf
 #include "Lib/Misc/datastructs.h" // map_t, vector_t
-#include "Lib/Logs/logString.h"
 #include <cassert> // assert
 #include <string>
 #include <cstring> // std::memcpy
+
+//#include "Platform/linux/PAL/Logs/logString.h"
 using std::memcpy;
 
 #include "Framework/Core/Naming/StaticNaming.h"
@@ -122,7 +123,7 @@ void Cop::StartTimers() {
 bool Cop::Start() {
     Debug_Printf(DBG_PATTERN,"Cop::Start() called ...\n");
 
-	assert(this->patternState == NO_PID);  // XXX
+	assert(this->patternState == UNREGISTERED);  // XXX
 	this->nonce = COP_INITIAL_NONCE;
 	//this->OKToSend = true;
 	this->myInfo.source = MY_NODE_ID;

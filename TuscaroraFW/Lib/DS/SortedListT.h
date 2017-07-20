@@ -102,7 +102,7 @@ template <class Type, bool SupportDuplicates, class Compare >
 Type SortedListT<Type, SupportDuplicates, Compare>::GetItem (uint32_t index){
 	if(index >= listsize){
 		Type ret=0;
-		printf("SortedListT:: GetItem Error: Index %d is above the size of the array. check your logic. Undetminded return value.\n", index); fflush(stdout);
+		//printf("SortedListT:: GetItem Error: Index %d is above the size of the array. check your logic. Undetminded return value.\n", index); fflush(stdout);
 		return ret;
 	}else {
 		Node* ret = FindIndex(index);

@@ -6,7 +6,7 @@
 
 
 //if debug flag is set, statistics will be written into memmap.
-#define Debug_Flag 1
+
 #include <string>
 #include <math.h>
 #include <Interfaces/Waveform/WF_Types.h>
@@ -16,12 +16,6 @@
 #include "Framework/External/Location.h"
 #include "Framework/Core/Neighborhood/Nbr_Utils.h"
 #include "Lib/Framework/FrameworkStat.h"
-
-#ifdef PLATFORM_DCE
-#include <Platform/dce/Framework/PatternEventDispatch.h>
-#elif PLATFORM_LINUX
-#include <Platform/linux/Framework/PatternEventDispatch.h>
-#endif
 
 extern NodeId_t MY_NODE_ID;
 extern NodeId_t CONTROL_BASE_ID;
@@ -38,11 +32,15 @@ namespace WFControl {
 }
 }
 
-
-FrameworkStat fobj;
-NeighborStat nobj;
-locationStat lobj;
-FrameworkStatBroadcast fobjb;
+#if (DEPLOY==1)
+#define Debug_Flag 1
+FrameworkStat fstat;
+NeighborStat nstat;
+locationStat lstat;
+FrameworkStatBroadcast fstatb;
+#else
+#define Debug_Flag 0
+#endif
 
 using namespace PWI;
 using namespace Core;
@@ -54,20 +52,28 @@ void FrameworkBase::BroadcastData (PatternId_t pid, FMessage_t& msg, WaveformId_
 }
 #endif	
 
-FrameworkBase::FrameworkBase() : data("output.bin") {
+
+FrameworkBase::FrameworkBase()
+{
+#ifndef PLATFORM_EMOTE
+	data.SetFileName("output.bin");
+#endif
+
     Debug_Printf(DBG_CORE, "FrameworkBase::Constructor Starting\n");
 
+#if Debug_Flag==1
     //for validation
-    fobj.positive_frameworkAck = 0;
-    fobj.negative_frameworkAck = 0;
-    fobj.total_valid_sent = 0;
-    fobj.total_sent = 0;
-    fobj.total_invalid_destination = 0;
+    fstat.positive_frameworkAck = 0;
+    fstat.negative_frameworkAck = 0;
+    fstat.total_valid_sent = 0;
+    fstat.total_sent = 0;
+    fstat.total_invalid_destination = 0;
 
-    fobjb.data_broadcast_sent = 0;
-    fobjb.le_broadcast_sent =0;
-    fobjb.positive_fw_ack = 0;
-    fobjb.negative_fw_ack = 0;
+    fstatb.data_broadcast_sent = 0;
+    fstatb.le_broadcast_sent =0;
+    fstatb.positive_fw_ack = 0;
+    fstatb.negative_fw_ack = 0;
+#endif
 
     Debug_Printf(DBG_CORE,"FrameworkBase:: Contructor:: Creating framework base\n");
     //Debug_Printf(DBG_CORE, "(%d,%d) \n",x(), y());
@@ -75,6 +81,8 @@ FrameworkBase::FrameworkBase() : data("output.bin") {
     //frameworkMsgId=0; moved to packet handler
     //newReqnumber = 0; moved to packet handler
     patternMsgId=0;
+
+    /*Not used anymore
     //Mask is used to in the performance logging in PrintState()
     mask[0]=0x00000001;  mask[1]=0x00000002;  mask[2]=0x00000004;  mask[3]=0x00000008;  mask[4]=0x00000010;  mask[5]=0x00000020;
     mask[6]=0x00000040;  mask[7]=0x00000080;  mask[8]=0x00000100;  mask[9]=0x00000200; mask[10]=0x00000400; mask[11]=0x00000800;
@@ -82,60 +90,24 @@ FrameworkBase::FrameworkBase() : data("output.bin") {
     mask[18]=0x00040000; mask[19]=0x00080000; mask[20]=0x00100000; mask[21]=0x00200000; mask[22]=0x00400000; mask[23]=0x00800000;
     mask[24]=0x01000000; mask[25]=0x02000000; mask[26]=0x04000000; mask[27]=0x08000000; mask[28]=0x10000000; mask[29]=0x20000000;
     mask[30]=0x40000000; mask[31]=0x80000000;
+	*/
 
-    //MY_NODE_ID=atoi(getenv("NODEID"));
     numNodes = NETWORK_SIZE;//Used only in post processing
-    //Debug_Printf( DBG_CORE, "FrameworkBase:: Init:: My id is : %d, my NODE_ID is %d \n",id, MY_NODE_ID);
+
     Debug_Printf(DBG_CORE_DATAFLOW,"FrameworkBase:: Init:: my NODE_ID is %d \n", MY_NODE_ID);
     numNeighbors = 0;
     seq = 0;
     noOfWaveforms=0;
     noOfPatterns=0;
 
-    // This random number generator is used get small delays with packet Event.
-	rnd = new UniformRandomInt(400,600);
-	Debug_Printf(DBG_CORE,"FrameworkBase:: Contructor:: Created random integter with period 500 microsecs\n"); fflush(stdout);
-	
+    //Create the objects needed by framework
+    FrameworkBase::InitializeFrameworkObjects(this);
 	
     //Set the framework neighbortable as the base table for the manager
     nbrManager.SetCoreNbrTable(nbrTable);
 
-    //create delegate that can be called back by link estimation on changes
-    leDel = new WF_LinkChangeDelegate_n64_t (this, &FrameworkBase::LinkEstimatorChangeHandler);
-	//leSendDel = new SendEstimationMessageDelegate_t (this, &FrameworkBase::SendToWF2);
-    Debug_Printf(DBG_CORE,"FrameworkBase:: Contructor:: Created delegate for link updates %p\n", leDel);
-
-    //delegate to pass to packet handler for link estimation
-    LES.linkEstimationDelegate = new WaveformMessageDelegate_t(this, &FrameworkBase::ProcessLinkEstimationMsg);
-
-
-    //delegate to pass to packet handler for discovery
-    LES.discoveryDelegate = new WaveformMessageDelegate_t(this, &FrameworkBase::ProcessDiscoveryMsg);
-
-    //create object to dispatch events to patterns
-    eventDispatcher = new PatternEventDispatch ();
-
-    wfAttributeMap = new WF_AttributeMap_t();
-
-	//Generic Non-Pattern Message Handler
-	u64SendDelegate = new U64AddressSendDataDelegate_t(this, &FrameworkBase::GenericSendMessage);
-	PB = new PiggyBacker<uint64_t> (*u64SendDelegate);
-	
-    //pktHandler = new PacketHandler(&wfMap, &wfMsgAdaptorMap, &patternClientsMap, linkEstimationDelegate, discoveryDelegate, nbrTable, eventDispatcher);
-    //pktHandler = new PacketHandler(&wfMap,wfAttributeMap, &wfMsgAdaptorHash, &patternClientsMap, linkEstimationDelegate, discoveryDelegate, nbrTable);
-
-	//Add object for keep track of linkestimation accounting
-	PatternClient *obj = new PatternClient();
-    patternClientsMap.Insert(0,obj); 
-		
-    Debug_Printf(DBG_CORE,"FrameworkBase:: Contructor::Instantiating PacketHandler object\n");
-    pktHandler = new PacketHandler(&wfMap,wfAttributeMap, &addressMap, &patternClientsMap, this, nbrTable, attribute_request_pending, eventDispatcher, PB);
-
     ///Initialize naming service
     nameService = &NameService;
-
-    //Create an adpator for 64-bit waveform packet address
-    pktAdaptor64 = new PacketAdaptor<uint64_t>();
 
     //defaultPatternTable = new PatternNeighborTable (&nbrTable);F
     nbrManager.SetPatternEventDispatcher(eventDispatcher);
@@ -143,23 +115,24 @@ FrameworkBase::FrameworkBase() : data("output.bin") {
     LES.longLinkActive=false;
 
     //Find out how big of a packet can be supported from waveforms
-    maxFrameworkPacketSize=960;
+    //maxFrameworkPacketSize=960;
 
-    TimerDelegate *inqueryTimerDelegate = new TimerDelegate(this, &FrameworkBase::inqueryTimer_Handler);
-    Timer *inqueryTimer = new Timer(40000, PERIODIC, *inqueryTimerDelegate);
     inqueryTimer->Start();
-#if Debug_Flag
+
+
     uint64_t base = runTime *1000 *1000;
     base = base - 1000;
+    TimerDelegate *debugTimerDelegate = new TimerDelegate(this, &FrameworkBase::debugTimerHandler);
+    Timer *debugTimer = new Timer(1000000, PERIODIC, *debugTimerDelegate);
+    debugTimer->Start();
+
+    #if Debug_Flag
     Debug_Printf(DBG_CORE, "FrameworkBase::validation timer base is %ld\n",base);
     TimerDelegate *validationTimerDelegate = new TimerDelegate(this, &FrameworkBase::validationTimerHandler);
     //Timer *validationTimer = new Timer(99999000, ONE_SHOT, *validationTimerDelegate);
     //Timer *validationTimer = new Timer(29999000, ONE_SHOT, *validationTimerDelegate);
     Timer *validationTimer = new Timer(base, ONE_SHOT, *validationTimerDelegate);
     validationTimer->Start();
-    TimerDelegate *debugTimerDelegate = new TimerDelegate(this, &FrameworkBase::debugTimerHandler);
-    Timer *debugTimer = new Timer(1000000, PERIODIC, *debugTimerDelegate);
-    debugTimer->Start();
 #endif
     //Debug_Printf(DBG_CORE, "FrameworkBase:: Show size %ld\n", sizeof(WF_Message_n64_t));
 }
@@ -261,7 +234,7 @@ void FrameworkBase::SetNeighborInactivityPeriod(uint32_t periods_to_miss_to_coun
     deadNbrPeriod = periods_to_miss_to_count_as_dead;
 }
 
-void FrameworkBase::SetDiscoveryType(uint8_t _type) {
+void FrameworkBase::SetDiscoveryType(NetworkDiscoveryTypeE _type) {
     LES.discoveryType = _type;
 }
 
@@ -278,14 +251,14 @@ void FrameworkBase::SetLinkEstimationType(EstimatorTypeE _type) {
 
 void FrameworkBase::Start() {
     //Storing basic data about the framework's current configuration
-    MemMap<Header> headerMap("configuration.bin");
+    MemMap<DiscoveryLogHeader> headerMap("configuration.bin");
     header.nodeid = MY_NODE_ID;
     header.beaconPeriod = beaconPeriod;
     header.inactivityPeriod = deadNbrPeriod;
     header.range = communicationRange;
     header.discoveryType = LES.discoveryType;
     header.linkEstimationType = LES.linkEstimationType;
-    if(LES.discoveryType == LONG_LINK_DISCOVERY) numNodes--;
+    if(LES.discoveryType == Discovery::NetworkDiscoveryTypeE::LONG_LINK_DISCOVERY) numNodes--;
     header.numNodes = numNodes;
     header.runTime = runTime;
     header.density = density;
@@ -296,7 +269,7 @@ void FrameworkBase::Start() {
 
     if(LES.discoveryType == ORACLE_DISCOVERY) {
         Debug_Printf(DBG_CORE,"ORACLE_DISCOVERY\n");
-        discovery = static_cast<Core::Discovery::OracleLongLink*>(new Core::Discovery::OracleLongLink());
+        //discovery = static_cast<Core::Discovery::OracleLongLink*>(new Core::Discovery::OracleLongLink());
     } else if(LES.discoveryType == NULL_DISCOVERY) {
         Debug_Printf(DBG_CORE,"Null discovery\n");
         discovery = static_cast<Core::Discovery::None*>(new Core::Discovery::None());
@@ -381,7 +354,7 @@ void FrameworkBase::PotentialNeighborUpdate(PotentialNeighborDelegateParam param
     if(param.changeType == PNBR_UPDATE) {
         //PotentialNeighbor* i = potential.AddNode(nbr->nodeId, BEYOND_COMM_PNODE, 0, 1);
         if(potential.AddNode(nbr->linkId, BEYOND_COMM_PNODE, 0, 1) != 0) {
-            LES.logger.LogEvent(PAL::LINK_POTENTIAL_ADD, nbr->linkId.nodeId);
+            LES.logger->LogEvent(Estimation::LINK_POTENTIAL_ADD, nbr->linkId.nodeId);
             Debug_Printf(DBG_CORE_ESTIMATION, "Adding Potential Neighbor %d\n", nbr->linkId.nodeId);
         } else {
             Debug_Printf(DBG_CORE_ESTIMATION, "Updating Potential Neighbor %d\n", nbr->linkId.nodeId);
@@ -389,7 +362,7 @@ void FrameworkBase::PotentialNeighborUpdate(PotentialNeighborDelegateParam param
         potential.UpdateNode(nbr->linkId, *nbr);//this should remain outside of the else block
     } else if(param.changeType == PNBR_INVALID) {
         potential.RemoveNode(nbr->linkId);
-        LES.logger.LogEvent(PAL::LINK_POTENTIAL_DEL, nbr->linkId.nodeId);
+        LES.logger->LogEvent(LINK_POTENTIAL_DEL, nbr->linkId.nodeId);
     }
 
     if(wfExists[nbr->linkId.waveformId])
@@ -563,7 +536,7 @@ void FrameworkBase::SendData (PatternId_t pid, NodeId_t *destArray, uint16_t noO
 {
     //check number of outstanding packet associated with this pid.
 #if Debug_Flag
-    fobj.total_sent += noOfDest;
+    fstat.total_sent += noOfDest;
 #endif
     PatternClientMap_t :: Iterator it = patternClientsMap.Find(pid);
     if(it != patternClientsMap.End()){
@@ -584,7 +557,7 @@ void FrameworkBase::SendData (PatternId_t pid, NodeId_t *destArray, uint16_t noO
             param.nonce = nonce;
             if(noOfDest != 0){
 #if Debug_Flag
-                fobj.negative_frameworkAck += noOfDest;
+                fstat.negative_frameworkAck += noOfDest;
 #endif
                 eventDispatcher->InvokeDataStatusEvent(pid,param);
                 return;
@@ -630,7 +603,7 @@ void FrameworkBase::SendData (PatternId_t pid, NodeId_t *destArray, uint16_t noO
         return; //exit SendData
 	}
     
-    MessageId_t newMsgToken = pktHandler->GetNewFrameworkMsgId();
+    FMessageId_t  newMsgToken = pktHandler->GetNewFrameworkMsgId();
     Debug_Printf(DBG_CORE_API, "FrameworkBase::SendData:: newMsgToken %d\n",newMsgToken);
     Debug_Printf(DBG_CORE_API,"FrameworkBase::SendData, framework nonce %d, nonce send with msg %d\n",patternClientsMap[pid]->nonce,nonce);
     patternClientsMap[pid]->noOfOutstandingPkts++; //increment number of outstanding Packets;
@@ -656,8 +629,8 @@ void FrameworkBase::SendData (PatternId_t pid, NodeId_t *destArray, uint16_t noO
     param.readyToReceive = false;
     eventDispatcher->InvokeDataStatusEvent(pid,param);
 #if Debug_Flag
-    fobj.positive_frameworkAck += noOfDest;
-    Debug_Printf(DBG_CORE_API, "FrameworkBase:: HOGE!!! %d\n",fobj.positive_frameworkAck);
+    fstat.positive_frameworkAck += noOfDest;
+    Debug_Printf(DBG_CORE_API, "FrameworkBase:: HOGE!!! %d\n",fstat.positive_frameworkAck);
 #endif
     //Find out the links for the nodes listed
     Link* destLinkArray[noOfDest];
@@ -670,7 +643,7 @@ void FrameworkBase::SendData (PatternId_t pid, NodeId_t *destArray, uint16_t noO
     //add entry in msgIdToPidMap
     Debug_Printf(DBG_CORE_API, "FramewrokBBase::Add msgId(%d) ,pid (%d) pair to msgIdToPidMap\n",newMsgToken,pid);
     //just in case, check I am not trying to put same information.
-    BSTMapT< MessageId_t , PatternId_t > ::Iterator it_msg = pktHandler->msgIdToPidMap.Find(newMsgToken);
+    BSTMapT< FMessageId_t  , PatternId_t > ::Iterator it_msg = pktHandler->msgIdToPidMap.Find(newMsgToken);
     if(it_msg != pktHandler->msgIdToPidMap.End()){
         Debug_Warning("FrameworkBase: SendData: Something is wrong. msgId %d already exists in msgIdToPidMap!\n",newMsgToken);
         //abort();
@@ -779,7 +752,7 @@ void FrameworkBase::SendData (PatternId_t pid, NodeId_t *destArray, uint16_t noO
         param.nonce = nonce;
         eventDispatcher->InvokeDataStatusEvent(pid,nack);
 #if Debug_Flag
-        fobj.total_invalid_destination += nack.noOfDest;
+        fstat.total_invalid_destination += nack.noOfDest;
 #endif
     }
     if(notFound == noOfDest){
@@ -837,7 +810,9 @@ void FrameworkBase::SendData (PatternId_t pid, NodeId_t *destArray, uint16_t noO
     if(found != 0){
         pktHandler->EnqueueToMC(pid, &msg, destArray, destLinkArray, found ,false,wf,newMsgToken,nonce,false);
         Debug_Printf(DBG_CORE_API, "FrameworkBase:: Enqueued message.\n");
-        fobj.total_valid_sent += found;
+#if Debug_Flag
+        fstat.total_valid_sent += found;
+#endif
     }
 
     for(uint16_t wf = 0; wf < MAX_WAVEFORMS; wf++){
@@ -923,7 +898,7 @@ Link* FrameworkBase::GetCompBasedLinkForNeighbor(NodeId_t node_id,LinkComparator
  */
 
 void FrameworkBase::UnAddressedSend(PatternId_t pid, FMessage_t& msg, WaveformId_t wid, uint16_t nonce){
-    MessageId_t newMsgToken = pktHandler->GetNewFrameworkMsgId();
+    FMessageId_t  newMsgToken = pktHandler->GetNewFrameworkMsgId();
     //check wavefirn id is valid
     WF_AttributeMap_t::Iterator it_waveform = wfAttributeMap->Find(wid);
     if(it_waveform == wfAttributeMap->End()){
@@ -952,11 +927,11 @@ void FrameworkBase::UnAddressedSend(PatternId_t pid, FMessage_t& msg, WaveformId
             eventDispatcher->InvokeDataStatusEvent(pid,param);
             return;
         }else {
-            //MessageId_t newMsgToken = pktHandler->GetNewFrameworkMsgId();
+            //FMessageId_t newMsgToken = pktHandler->GetNewFrameworkMsgId();
             Debug_Printf(DBG_CORE_API, "FramewrokBase::Assign new message Id:%d\n",newMsgToken);
             //
 #if Debug_Flag
-            fobjb.le_broadcast_sent++;
+            fstatb.le_broadcast_sent++;
 #endif
             //pktHandler->msgIdToPidMap.Insert(newMsgToken,pid);
 
@@ -997,7 +972,7 @@ void FrameworkBase::UnAddressedSend(PatternId_t pid, FMessage_t& msg, WaveformId
                 param.nonce = nonce;
                 param.readyToReceive = false;
 #if Debug_Flag
-                fobjb.negative_fw_ack++;
+                fstatb.negative_fw_ack++;
 #endif
                 eventDispatcher->InvokeDataStatusEvent(pid,param);
                 return;
@@ -1019,13 +994,13 @@ void FrameworkBase::UnAddressedSend(PatternId_t pid, FMessage_t& msg, WaveformId
             param.nonce = nonce;
             eventDispatcher->InvokeDataStatusEvent(pid,param);
 #if Debug_Flag
-            fobjb.negative_fw_ack++;
+            fstatb.negative_fw_ack++;
 #endif
             return; //exit SendData
         }
         //Nonce value is different.
         Debug_Printf(DBG_CORE_API,"FrameworkBase::Broadcast, framework nonce %d, nonce send with msg %d\n",patternClientsMap[pid]->nonce,nonce);
-        // MessageId_t newMsgToken = pktHandler->GetNewFrameworkMsgId();
+        // FMessageId_t  newMsgToken = pktHandler->GetNewFrameworkMsgId();
         Debug_Printf(DBG_CORE_API, "FrameworkBase::Broadccast:: newMsgToken %d\n",newMsgToken);
         Debug_Printf(DBG_CORE_API, "FrameworkBase::Broadcast:: Incoming packet has different nonce value %d\n",nonce);
         patternClientsMap[pid]->noOfOutstandingPkts++; //increment number of outstanding Packets;
@@ -1034,7 +1009,7 @@ void FrameworkBase::UnAddressedSend(PatternId_t pid, FMessage_t& msg, WaveformId
         patternClientsMap[pid]->msgId = newMsgToken;
         patternClientsMap[pid]->readyToReceive = false;
         //just in case, check I am not trying to put same information.
-        BSTMapT< MessageId_t , PatternId_t > ::Iterator it_msg = pktHandler->msgIdToPidMap.Find(newMsgToken);
+        BSTMapT< FMessageId_t  , PatternId_t > ::Iterator it_msg = pktHandler->msgIdToPidMap.Find(newMsgToken);
         if(it_msg != pktHandler->msgIdToPidMap.End()){
             Debug_Warning("FrameworkBase::Broadcast: Something is wrong. msgId %d already exists in msgIdToPidMap!\n",newMsgToken);
         }
@@ -1050,7 +1025,7 @@ void FrameworkBase::UnAddressedSend(PatternId_t pid, FMessage_t& msg, WaveformId
         param.readyToReceive = false;
         param.nonce = nonce;
 #if Debug_Flag
-        fobjb.positive_fw_ack++;
+        fstatb.positive_fw_ack++;
 #endif
         eventDispatcher->InvokeDataStatusEvent(pid,param);
 
@@ -1071,7 +1046,7 @@ void FrameworkBase::UnAddressedSend(PatternId_t pid, FMessage_t& msg, WaveformId
             //wid exists in wfAttributeMap. check if this wid supports broadcast or not
             if(it_waveform->Second().broadcastSupport == true){
 #if Debug_Flag
-                fobjb.data_broadcast_sent++;
+                fstatb.data_broadcast_sent++;
 #endif
                 //bool flag = false;
                 //if(flag){
@@ -1232,19 +1207,22 @@ PatternId_t FrameworkBase::NewPatternInstanceRequest(PatternTypeE ptype, const c
  *          Framewrok returns.
  */
 //TODO: The following should be implemented
-void FrameworkBase::AddDestinationRequest(PatternId_t patternId, MessageId_t msgId, NodeId_t* destArray, uint16_t noOfNbrs)
+void FrameworkBase::AddDestinationRequest(PatternId_t patternId, FMessageId_t  msgId, NodeId_t* destArray, uint16_t noOfNbrs)
 {
     LinkComparatorTypeE lcType = nbrManager.GetLinkComparator(patternId);
     AddDestinationRequest(patternId, msgId, destArray, noOfNbrs, lcType);
 }
-//void FrameworkBase::AddDestinationRequest(PatternId_t patternId, MessageId_t msgId, NodeId_t* destArray, uint16_t noOfNbrs,LinkComparatorTypeE lcType ){
+//void FrameworkBase::AddDestinationRequest(PatternId_t patternId, FMessageId_t  msgId, NodeId_t* destArray, uint16_t noOfNbrs,LinkComparatorTypeE lcType ){
 //
 //}
-void FrameworkBase::AddDestinationRequest(PatternId_t patternId, MessageId_t msgId, NodeId_t* destArray, uint16_t noOfNbrs, LinkComparatorTypeE lcType)
+void FrameworkBase::AddDestinationRequest(PatternId_t patternId, FMessageId_t  msgId, NodeId_t* destArray, uint16_t noOfNbrs, LinkComparatorTypeE lcType)
 {
     Debug_Printf(DBG_CORE, "FrameworkBase:: Entered AddDestinationRequest\n");
 
     AddDestinationResponse_Data data;
+    data.msgId = msgId;
+
+
     Debug_Printf(DBG_CORE, "FrameworkBase:: If this is broadcast reject\n");
     FMsgMap::Iterator it_fmsg1 = pktHandler->mc->framworkMsgMap->Find(msgId);
     if(it_fmsg1 != pktHandler->mc->framworkMsgMap->End()){
@@ -1253,7 +1231,6 @@ void FrameworkBase::AddDestinationRequest(PatternId_t patternId, MessageId_t msg
             data.status = false;
             data.noOfDest = 0;
             data.msgId = msgId;
-            data.status = false;
             Debug_Printf(DBG_CORE, "PacketHandler::AddDestinationRequest: Return what Framework knows to pattern\n");
             ControlResponseParam param;
             param.data = &data;
@@ -1264,32 +1241,36 @@ void FrameworkBase::AddDestinationRequest(PatternId_t patternId, MessageId_t msg
         Debug_Printf(DBG_CORE, "FrameworkBase:: FMsgMap %p msg_ptr %p  payload_ptr %p. msg type is %d \n",it_fmsg1->Second(), it_fmsg1->Second()->msg, it_fmsg1->Second()->msg->GetPayload(),it_fmsg1->Second()->msg->GetType());
     }
 
+    data.noOfDest = 0;
     pktHandler->Add_Node(patternId, msgId, destArray, noOfNbrs, lcType, data);
-    bool all_success = true;
-    for(uint16_t index =0; index < data.noOfDest ; index++){
-        if(data.add_status[index] == false){
-            all_success = false;
-            break;
+    if(data.noOfDest > 0){
+        bool all_success = true;
+        for(uint16_t index =0; index < data.noOfDest ; index++){
+            if(data.add_status[index] == false){
+                all_success = false;
+                break;
+            }
         }
+        data.status = all_success;
+        Debug_Printf(DBG_CORE, "PacketHandler::AddDestinationRequest: Return what Framework knows to pattern\n");
+        ControlResponseParam param;
+        param.data = &data;
+        param.type =  PTN_AddDestinationResponse;
+        eventDispatcher->InvokeControlEvent(patternId, param);
     }
-    data.status = all_success;
-    Debug_Printf(DBG_CORE, "PacketHandler::AddDestinationRequest: Return what Framework knows to pattern\n");
-    ControlResponseParam param;
-    param.data = &data;
-    param.type =  PTN_AddDestinationResponse;
-    eventDispatcher->InvokeControlEvent(patternId, param);
+
 
     //Debugging
     FMsgMap::Iterator it_fmsg = pktHandler->mc->framworkMsgMap->Find(msgId);
     if(it_fmsg != pktHandler->mc->framworkMsgMap->End()){
         Debug_Printf(DBG_CORE, "FrameworkBase:: No of dest is %d\n", it_fmsg->Second()->noOfDest);
         for(uint16_t wf_index = 1; wf_index < MAX_WAVEFORMS; wf_index++){
-            if(it_fmsg->Second()->wfQElement[wf_index] != NULL){
-                Debug_Printf(DBG_CORE, "FrameworkBase:: Heap:: No of dest is %d\n", it_fmsg->Second()->wfQElement[wf_index]->noOfDest);
+            if(it_fmsg->Second()->wfQElement[wf_index].Size() != 0){
+                Debug_Printf(DBG_CORE, "FrameworkBase:: Heap:: No of dest is %d\n", it_fmsg->Second()->wfQElement[wf_index].Begin()->GetData()->noOfDest);
 
-                for(uint16_t index =0; index < it_fmsg->Second()->wfQElement[wf_index]->noOfDest; index++){
+                for(uint16_t index =0; index < it_fmsg->Second()->wfQElement[wf_index].Begin()->GetData()->noOfDest; index++){
                     Debug_Printf(DBG_CORE, "FrameworkBase:: dest[%d] is %d\n", index, it_fmsg->Second()->linkArray[index]->linkId.nodeId);
-                    Debug_Printf(DBG_CORE, "FrameworkBase:: Heap:: dest[%d] is %ld\n",index, it_fmsg->Second()->wfQElement[wf_index]->destArray[index]);
+                    Debug_Printf(DBG_CORE, "FrameworkBase:: Heap:: dest[%d] is %ld\n",index, it_fmsg->Second()->wfQElement[wf_index].Begin()->GetData()->noOfDest);
                 }
             }
         }
@@ -1303,10 +1284,10 @@ void FrameworkBase::AddDestinationRequest(PatternId_t patternId, MessageId_t msg
              pattern should not access destArray if noOfDest is 0.
  */
 
-void FrameworkBase::ReplacePayloadRequest(PatternId_t patternId, MessageId_t msgId, void* payload, uint16_t sizeOfPayload)
+void FrameworkBase::ReplacePayloadRequest(PatternId_t patternId, FMessageId_t  msgId, void* payload, uint16_t sizeOfPayload)
 {/*
    Debug_Printf(DBG_CORE, "FrameworkBase:: Check if msgId %d exists or not. \n",msgId);
-	BSTMapT< MessageId_t, FMessageQElement* > ::Iterator it_fmsg2 = pktHandler->mc->framworkMsgMap->Find(msgId);
+	BSTMapT< FMessageId_t , FMessageQElement* > ::Iterator it_fmsg2 = pktHandler->mc->framworkMsgMap->Find(msgId);
 	if(it_fmsg2 != pktHandler->mc->framworkMsgMap->End()){
 		uint8_t* addr = it_fmsg2->Second()->msg->GetPayload();
     	for(uint16_t index =0; index < it_fmsg2->Second()->msg->GetPayloadSize(); index++){
@@ -1336,7 +1317,7 @@ void FrameworkBase::ReplacePayloadRequest(PatternId_t patternId, MessageId_t msg
     eventDispatcher->InvokeControlEvent(patternId, param);
     /*
 	//debugging
-	BSTMapT< MessageId_t, FMessageQElement* > ::Iterator it_fmsg = pktHandler->mc->framworkMsgMap->Find(msgId);
+	BSTMapT< FMessageId_t , FMessageQElement* > ::Iterator it_fmsg = pktHandler->mc->framworkMsgMap->Find(msgId);
 	if(it_fmsg != pktHandler->mc->framworkMsgMap->End()){
 	   	for(uint16_t index =0; index < it_fmsg->Second()->noOfDest; index++){
 	   		Debug_Printf(DBG_CORE, "FrameworkBase:: dest[%d] payload is %p \n", index, it_fmsg->Second()->msg->GetPayload());
@@ -1350,7 +1331,7 @@ void FrameworkBase::ReplacePayloadRequest(PatternId_t patternId, MessageId_t msg
      */
 }
 /*framework: framework returns either true or false for each destination given. */
-void FrameworkBase::CancelDataRequest(PatternId_t patternId, MessageId_t msgId, NodeId_t* destArray, uint16_t noOfDest)
+void FrameworkBase::CancelDataRequest(PatternId_t patternId, FMessageId_t  msgId, NodeId_t* destArray, uint16_t noOfDest)
 {
 
     //declare return variable
@@ -1366,14 +1347,20 @@ void FrameworkBase::CancelDataRequest(PatternId_t patternId, MessageId_t msgId, 
             break;
         }
     }
-    Debug_Printf(DBG_CORE, "FrameworkBase:: Send response to Pattern\n");
-    data.status = all_success;
-    ControlResponseParam param;
-    param.data = &data;
-    param.type =   PTN_CancelDataResponse;
-    eventDispatcher->InvokeControlEvent(patternId, param);
+    if(noOfDest >0 && data.noOfDest == 0){ //If there are destinations for  this message bit we have no knowledge of any of them
+    	return;
+    }
+    else{
+        Debug_Printf(DBG_CORE, "FrameworkBase:: Send response to Pattern\n");
+        data.status = all_success;
+        ControlResponseParam param;
+        param.data = &data;
+        param.type =   PTN_CancelDataResponse;
+        eventDispatcher->InvokeControlEvent(patternId, param);
+    }
+
     /*
-    BSTMapT< MessageId_t, FMessageQElement* > ::Iterator it_fmsg = pktHandler->mc->framworkMsgMap->Find(msgId);
+    BSTMapT< FMessageId_t , FMessageQElement* > ::Iterator it_fmsg = pktHandler->mc->framworkMsgMap->Find(msgId);
     if(it_fmsg != pktHandler->mc->framworkMsgMap->End()){
     	Debug_Printf(DBG_CORE, "some destination is removed.\n");
     	Debug_Printf(DBG_CORE, "No of dest is %d\n", it_fmsg->Second()->noOfDest);
@@ -1386,7 +1373,7 @@ void FrameworkBase::CancelDataRequest(PatternId_t patternId, MessageId_t msgId, 
 }
 
 
-void FrameworkBase::DataStatusRequest(PatternId_t patternId, MessageId_t msgId)
+void FrameworkBase::DataStatusRequest(PatternId_t patternId, FMessageId_t  msgId)
 {
     Debug_Printf(DBG_CORE, "Received DataStatusRequest from pattern %d, msgId %d\n",patternId, msgId);
     //DataStatusResponse_Data* data = new DataStatusResponse_Data;
@@ -1394,35 +1381,61 @@ void FrameworkBase::DataStatusRequest(PatternId_t patternId, MessageId_t msgId)
 } 
 
 
-void FrameworkBase::RefreshFrameworkAttribute(FrameworkAttributes &attr)
+void FrameworkBase::RefreshFrameworkAttribute()
 {
 	//struct FrameworkAttributes attr;
     int wf_count = 0;
     for(int index = 0; index < MAX_WAVEFORMS; index++){
         if(wfExists[index] == true){
             Debug_Printf(DBG_CORE, "FramewrokBase::waveform %d exits\n", index);
-            attr.waveformIds[wf_count] = index;
+            fwAttribute.waveformIds[wf_count] = index;
             wf_count++;
         }
     }
+
+
     Debug_Printf(DBG_CORE, "FramewrokBase::Show wfAttributeMap size: %d\n",(*wfAttributeMap).Size());
-    attr.numberOfWaveforms = wf_count;
-    WF_AttributeMap_t::Iterator it;
-    it = (*wfAttributeMap).Begin();
-    if(it== wfAttributeMap->End()){
-        printf("FramewrokBase:: Something seriously wrong. I have no waveforms.\n");
-    }else {
-        attr.maxFrameworkPacketSize = it->Second().maxPayloadSize;
-        Debug_Printf(DBG_CORE, "FramewrokBase::wf %d has maxFrameworkPacketSize of %d\n", it->First() , attr.maxFrameworkPacketSize);
-        ++it;
-        for(;it != (*wfAttributeMap).End(); ++it){
+    fwAttribute.numberOfWaveforms = wf_count;
+
+    if(PolicyManager::GetMaxFWPacketPayloadSize() != 0){
+    	fwAttribute.maxFrameworkPacketSize = PolicyManager::GetMaxFWPacketPayloadSize();
+    }
+    else{
+    	fwAttribute.maxFrameworkPacketSize = 0;
+        for(WF_AttributeMap_t::Iterator it = (*wfAttributeMap).Begin();it != (*wfAttributeMap).End(); ++it){
             Debug_Printf(DBG_CORE, "FramewrokBase::wf %d has maxFrameworkPacketSize of %d\n",it->Second().wfId,it->Second().maxPayloadSize);
-            if((maxFrameworkPacketSize != 0) && (maxFrameworkPacketSize < it->Second().maxPayloadSize)){
-                Debug_Printf(DBG_CORE, "FramewrokBase::Current smallest maxFrameworkPacketSize is %d, updating it to %d",attr.maxFrameworkPacketSize,it->Second().maxPayloadSize);
-                attr.maxFrameworkPacketSize = it->Second().maxPayloadSize;
-            }
+        	if( fwAttribute.maxFrameworkPacketSize > it->Second().maxPayloadSize){
+                Debug_Printf(DBG_CORE, "FramewrokBase::Current smallest maxFrameworkPacketSize is %d, updating it to %d",fwAttribute.maxFrameworkPacketSize,it->Second().maxPayloadSize);
+                fwAttribute.maxFrameworkPacketSize = it->Second().maxPayloadSize;
+        	}
         }
     }
+
+//    Debug_Printf(DBG_CORE, "FramewrokBase::Show wfAttributeMap size: %d\n",(*wfAttributeMap).Size());
+//    attr.numberOfWaveforms = wf_count;
+//    WF_AttributeMap_t::Iterator it;
+//    it = (*wfAttributeMap).Begin();
+//    if(it== wfAttributeMap->End()){
+//        printf("FramewrokBase:: Something seriously wrong. I have no waveforms.\n");
+//    }
+//    else {
+//        if(PolicyManager::GetFrameworkMaxPacketPayloadSize() != 0){
+//        	attr.maxFrameworkPacketSize = PolicyManager::GetFrameworkMaxPacketPayloadSize();
+//        }
+//        else{
+//            attr.maxFrameworkPacketSize = it->Second().maxPayloadSize;
+//            Debug_Printf(DBG_CORE, "FramewrokBase::wf %d has maxFrameworkPacketSize of %d\n", it->First() , attr.maxFrameworkPacketSize);
+//            ++it;
+//            for(;it != (*wfAttributeMap).End(); ++it){
+//                Debug_Printf(DBG_CORE, "FramewrokBase::wf %d has maxFrameworkPacketSize of %d\n",it->Second().wfId,it->Second().maxPayloadSize);
+//                if((maxFrameworkPacketSize != 0) && (maxFrameworkPacketSize < it->Second().maxPayloadSize)){
+//                    Debug_Printf(DBG_CORE, "FramewrokBase::Current smallest maxFrameworkPacketSize is %d, updating it to %d",attr.maxFrameworkPacketSize,it->Second().maxPayloadSize);
+//                    attr.maxFrameworkPacketSize = it->Second().maxPayloadSize;
+//                }
+//            }
+//
+//        }
+//    }
    
 }
 
@@ -1432,7 +1445,7 @@ void FrameworkBase::FrameworkAttributesRequest(PatternId_t pid)
 {
     Debug_Printf(DBG_CORE, "FramewrokBase::Got FrameworkAttribugtesRequest\n");
     
-	RefreshFrameworkAttribute(fwAttribute);
+	RefreshFrameworkAttribute();
 	
     struct ControlResponseParam param;
     //param.sequenceNo;
@@ -1477,7 +1490,7 @@ void FrameworkBase::SetLinkThresholdRequest(PatternId_t patternId, LinkMetrics t
 
 }
 
-void FrameworkBase::SoftwareBroadCast(PatternId_t pid, FMessage_t& msg, WaveformId_t wid, uint16_t nonce, MessageId_t newMsgToken){
+void FrameworkBase::SoftwareBroadCast(PatternId_t pid, FMessage_t& msg, WaveformId_t wid, uint16_t nonce, FMessageId_t  newMsgToken){
 
     Debug_Printf(DBG_CORE_DATAFLOW,"FramewrokBase::Convert broadcast to multiple destination unicast\n");
     //First get size of neighbor table. This table contains neighbors for all waveform.
@@ -1586,7 +1599,7 @@ void FrameworkBase::MinimalWaveformSpray(PatternId_t pid, FMessage_t& msg, Wavef
             param.nonce = nonce;
             param.readyToReceive = false;
 #if Debug_Flag
-            fobjb.negative_fw_ack++;
+            fstatb.negative_fw_ack++;
 #endif
             eventDispatcher->InvokeDataStatusEvent(pid,param);
             return;
@@ -1608,13 +1621,13 @@ void FrameworkBase::MinimalWaveformSpray(PatternId_t pid, FMessage_t& msg, Wavef
         param.nonce = nonce;
         eventDispatcher->InvokeDataStatusEvent(pid,param);
 #if Debug_Flag
-        fobjb.negative_fw_ack++;
+        fstatb.negative_fw_ack++;
 #endif
         return; //exit SendData
     }
     //Nonce value is different.
     Debug_Printf(DBG_CORE_DATAFLOW,"FrameworkBase::Broadcast, framework nonce %d, nonce send with msg %d\n",patternClientsMap[pid]->nonce,nonce);
-    MessageId_t newMsgToken = pktHandler->GetNewFrameworkMsgId();
+    FMessageId_t  newMsgToken = pktHandler->GetNewFrameworkMsgId();
     Debug_Printf(DBG_CORE_DATAFLOW, "FrameworkBase::Broadcast: newMsgToken %d",newMsgToken);
     Debug_Printf(DBG_CORE, "FrameworkBase::Broadcast:: Incoming packet has different nonce value %d\n",nonce);
     patternClientsMap[pid]->noOfOutstandingPkts++; //increment number of outstanding Packets;
@@ -1623,7 +1636,7 @@ void FrameworkBase::MinimalWaveformSpray(PatternId_t pid, FMessage_t& msg, Wavef
     patternClientsMap[pid]->msgId = newMsgToken;
     patternClientsMap[pid]->readyToReceive = false;
     //just in case, check I am not trying to put same information.
-    BSTMapT< MessageId_t , PatternId_t > ::Iterator it_msg = pktHandler->msgIdToPidMap.Find(newMsgToken);
+    BSTMapT< FMessageId_t  , PatternId_t > ::Iterator it_msg = pktHandler->msgIdToPidMap.Find(newMsgToken);
     if(it_msg != pktHandler->msgIdToPidMap.End()){
         Debug_Printf(DBG_CORE_DATAFLOW, "Something is wrong. msgId %d already exists in msgIdToPidMap!\n",newMsgToken);
         abort();
@@ -1640,7 +1653,7 @@ void FrameworkBase::MinimalWaveformSpray(PatternId_t pid, FMessage_t& msg, Wavef
     param.readyToReceive = false;
     param.nonce = nonce;
 #if Debug_Flag
-    fobjb.positive_fw_ack++;
+    fstatb.positive_fw_ack++;
 #endif
     eventDispatcher->InvokeDataStatusEvent(pid,param);
 
@@ -1668,41 +1681,45 @@ void FrameworkBase::MinimalWaveformSpray(PatternId_t pid, FMessage_t& msg, Wavef
 }
 void FrameworkBase::validationTimerHandler(uint32_t flag){
     //for validation
+#if Debug_Flag
     MemMap<FrameworkStat> FrameworkAcknowledgement("framework.bin");
-    FrameworkAcknowledgement.addRecord(fobj);
-    Debug_Printf(DBG_CORE, "FrameworkBase::  writing to memmap %d %d \n",fobj.positive_frameworkAck , fobj.negative_frameworkAck);
+    FrameworkAcknowledgement.addRecord(fstat);
+    Debug_Printf(DBG_CORE, "FrameworkBase::  writing to memmap %d %d \n",fstat.positive_frameworkAck , fstat.negative_frameworkAck);
     MemMap<FrameworkStatBroadcast> broadcast_summary("broadcast.bin");
-    broadcast_summary.addRecord(fobjb);
-    Debug_Printf(DBG_CORE, "FrameworkBase::  writing to memmap %d %d %d %d\n",fobjb.data_broadcast_sent, fobjb.le_broadcast_sent,fobjb.negative_fw_ack, fobjb.positive_fw_ack);
+    broadcast_summary.addRecord(fstatb);
+    Debug_Printf(DBG_CORE, "FrameworkBase::  writing to memmap %d %d %d %d\n",fstatb.data_broadcast_sent, fstatb.le_broadcast_sent,fstatb.negative_fw_ack, fstatb.positive_fw_ack);
+#endif
 }
 void FrameworkBase::debugTimerHandler(uint32_t flag){
 	//for validation
+#if Debug_Flag
 	MemMap<NeighborStat> neighbor("neighbor.bin");
-	nobj.neighbor_size = this->nbrTable.Size();
+	nstat.neighbor_size = this->nbrTable.Size();
 
-	neighbor.addRecord(nobj);
+	neighbor.addRecord(nstat);
 	MemMap<locationStat> location("locationi.bin");
 	Location2D loc= LocationService::GetLocation();
-	lobj.x = loc.x;
-	lobj.y = loc.y;
-	location.addRecord(lobj);
-	
+	lstat.x = loc.x;
+	lstat.y = loc.y;
+	location.addRecord(lstat);
+#endif
 	if(DBG_FW_REPORT()){
+		uint32_t nbrSize= nbrTable.Size();
 		printf("\n\n");
 		Debug::PrintTimeMicro();
-		printf("::Framework:: Nbr Table Report: Size is %d \n", nobj.neighbor_size);
+		printf("::Framework:: Nbr Table Report: Size is %d \n", nbrSize);
 		//NodeId_t ids[nbrTable.Size()];
-		Link* linkSet[nbrTable.Size()];
+		Link* linkSet[nbrSize];
 		//nbrTable.GetNeighborsIds(ids);
 		nbrTable.GetNeighborLinkSet(linkSet);
-		for (int i=0;i< nobj.neighbor_size; i++){
+		for (int i=0;i< nbrSize; i++){
 			//Link *lnk= nbrTable.GetNeighborLink(ids[i]);
 			Link *lnk = linkSet[i];
 			printf(" \t Nbr ID: %d,\t Wf Id: %d, \t WF Address: %s,\t Quality: %0.2f Delay: %0.2f\n", lnk->linkId.nodeId, lnk->linkId.waveformId, addressMap.LookUpWfAddress(lnk->linkId).c_str(), lnk->metrics.quality, lnk->metrics.avgLatency);
 		}
 		printf("\n");
 	}
-    
+
 }
 
 bool FrameworkBase::GenericSendMessage (WaveformId_t wfId, uint64_t wfdest, MessageTypeE msgType, FMessage_t &msg, bool unaddressed){

@@ -21,9 +21,11 @@ using namespace Core;
 
 namespace Waveform {
 
+
 enum WF_MessageFlagsE {
 	WF_FLG_PIGGYBACKING = 0x01, 
     WF_FLG_TIMESTAMP = 0x02, 
+	WF_FLG_FRAGMENTED = 0x04,
   };
 	
   enum WF_MessageStatusE {
@@ -43,13 +45,23 @@ struct PacketMetadata{
   uint8_t rss;			///Receiver Signal Strength
   uint8_t sinr;			///Signal to noise and interference ratio
   U64NanoTime recvTimeStamp;	///Receive time stamp of the packet in local clock time
+  bool IsOverHeard;
 }__attribute__((packed, aligned(1)));
  
+
+
+struct FragmentationHeader{
+uint8_t frag_number;
+uint16_t total_payload_size;
+};
+
+
+
 /// Base class for all waveform messages  
 class WF_MessageBase {
 private:
 	//uint8_t startMarker[8];
-	//MessageId_t fmID;
+	//FMessageId_t fmID;
 	WF_MessageId_t wmID;
 public:
 	//U64NanoTime expiryTime; ///System time when the packet will expire in nanoseconds
@@ -95,7 +107,7 @@ public:
 	}
 
 	//inline uint32_t GetFrameworkMessageID() {return fmID;}
-	//inline void SetFrameworkMessageID(MessageId_t _id){fmID=_id;}
+	//inline void SetFrameworkMessageIDFMessageId_t  _id){fmID=_id;}
 
 	inline WF_MessageId_t GetWaveformMessageID() {return wmID;}
 	inline void SetWaveformMessageID(WF_MessageId_t _id){wmID=_id;}
@@ -141,6 +153,9 @@ public:
 		flags = flags | _flag;
 	}
 
+	void ClearFlag(WF_MessageFlagsE _flag){
+		flags &= ~(_flag);
+	}
 	
 	void SetWaveform(WaveformId_t wfId){
 		waveformId = wfId;
@@ -222,7 +237,7 @@ template <class NodeIDType>
 class WF_MessageT : public WF_MessageBase{
 	NodeIDType src;
 	uint8_t numberOfDest;
-	NodeIDType *destArray;
+	//NodeIDType *destArray;
 	//uint8_t endMarker[8];
 	
 public:
@@ -237,7 +252,7 @@ public:
 		//payload = new uint8_t[MAX_CAL_PACKET_SIZE-CAL_HEADER_SIZE];
 		//size = MAX_CAL_PACKET_SIZE-CAL_HEADER_SIZE;
 		src=0;
-		destArray=0;
+//		destArray=0;
 		//memset(endMarker, 0xEE, 8);
 	};
 	WF_MessageT (uint16_t _payloadSize) : WF_MessageBase(_payloadSize)
@@ -246,7 +261,7 @@ public:
 		//size = MAX_CAL_PACKET_SIZE-CAL_HEADER_SIZE;
 		payloadSize = _payloadSize;
 		src=0;
-		destArray=0;
+//		destArray=0;
 		//memset(endMarker, 0xEE, 8);
 	};
 
@@ -294,6 +309,72 @@ public:
 		//dest = (NodeIDType)_msg.dest;
 	}
 
+	void CopyIthSegmentFrom(FMessage_t &_msg, uint8_t segment_number, uint16_t max_segment_size){
+		//printf("Copying from %lu to %lu, %d bytes \n",(uint64_t)_msg.payload, (uint64_t)payload, payloadSize ); fflush (stdout);
+		//memcpy(payload, _msg.payload, _msg.payloadSize);
+		type =_msg.GetType();
+
+		Debug_Printf(DBG_CORE_DATAFLOW,"Message ptr is %p, Setting message type to %d msg->type is %d ",&_msg,type, _msg.GetType());
+		//inst = _msg.GetInstance();
+
+		//		payloadSize = _msg.GetPayloadSize();
+		//		payload = _msg.GetPayload();
+
+//		if(segment_number < 1) {
+//			Debug_Printf(DBG_CORE_DATAFLOW,"Asking for incorrect segment number ",&_msg,type, _msg.GetType());
+//		}
+//		if(segment_number == 0){
+//			if(_msg.GetPayloadSize() < max_segment_size) payloadSize = _msg.GetPayloadSize();
+//			else payloadSize = max_segment_size;
+//
+//			payload = _msg.GetPayload();
+//		}
+//		else{
+
+		uint16_t previously_embedded_payload_size = (segment_number)*max_segment_size;
+		if(_msg.GetPayloadSize() - previously_embedded_payload_size < max_segment_size) payloadSize = _msg.GetPayloadSize() - previously_embedded_payload_size;
+		else payloadSize = max_segment_size;
+		payloadSize = payloadSize + sizeof(FragmentationHeader);
+
+		payload = new uint8_t[payloadSize];
+
+
+		FragmentationHeader* frag_pointer = reinterpret_cast<FragmentationHeader*>(payload);
+		frag_pointer->frag_number = segment_number;
+		frag_pointer->total_payload_size = _msg.GetPayloadSize();
+
+		uint8_t* real_payload = payload + sizeof(FragmentationHeader);
+		uint16_t real_payload_size = payloadSize - sizeof(FragmentationHeader);
+		memcpy(real_payload, _msg.GetPayload() + previously_embedded_payload_size, real_payload_size);
+
+//			payload = _msg.GetPayload() + previously_embedded_payload_size;
+
+
+//		}
+
+		//expiryTime=_msg.G expiryTime;
+		//src = (NodeIDType)_msg.GetSource();
+		//dest = (NodeIDType)_msg.dest;
+	}
+
+//		FragmentationHeader* frag_header_ptr =  payload;
+//	bool CheckSegment(FMessage_t &_msg){
+//		if(!Types::IsFragmented(_msg.GetType())){
+//			Debug_Printf(DBG_CORE_DATAFLOW, "WF_MessageT::CopyIthSegmentTo Trying to copy a segment into an unsegmented FMessage_t");
+//			return false;
+//		}
+//		if(frag_header_ptr->total_payload_size != _msg.GetPayloadSize()){
+//			Debug_Printf(DBG_CORE_DATAFLOW, "WF_MessageT::CopyIthSegmentTo Total size does not match the total FMessageSize");
+//			return false;
+//		}
+//		if(src != _msg.GetSource()){
+//			Debug_Printf(DBG_CORE_DATAFLOW, "WF_MessageT::Src ID does not match");
+//			return false;
+//		}
+//		return true;
+//
+//	}
+
 	void CopyTo(FMessage_t &_msg){
 		//printf("Copying from %lu to %lu, %d bytes \n",(uint64_t)_msg.payload, (uint64_t)payload, payloadSize ); fflush (stdout);
 		//memcpy(payload, _msg.payload, _msg.payloadSize);
@@ -305,6 +386,7 @@ public:
 		//_msg.SetSource(src);
 		//dest = (NodeIDType)_msg.dest;
 	}
+
 
 }__attribute__((packed, aligned(1)));
   
@@ -340,7 +422,7 @@ struct WF_DataStatusParam{
 	WF_MessageStatusE statusValue[MAX_DEST]; //bool status;
 	WF_AddressType destArray[MAX_DEST];    
 
-	WF_DataStatusParam (MessageId_t _msgId, WaveformId_t _wfId){
+	WF_DataStatusParam ( FMessageId_t  _msgId, WaveformId_t _wfId){
 		readyToReceive = true;
 		//status = _status;
 		wfMsgId= _msgId;

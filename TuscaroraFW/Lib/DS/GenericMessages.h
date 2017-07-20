@@ -19,11 +19,11 @@
 #include <sys/socket.h>
 #include <Sys/SocketShim.h>
 #include <unistd.h>
-
 #include <sys/ioctl.h>
 
+
 #define DBG_GEN_MSG 0
-typedef std::size_t GenericMsgPayloadSize_t;
+typedef uint8_t GenericMsgPayloadSize_t;
 
 template< class T >
 struct TypeIsInt
@@ -437,6 +437,7 @@ GenericSerializer(const T1& i1, const T2& i2, const TNs&... ins){
     this->AddVariable(i1, i2, ins...);
 
 };
+
 /*GenericSerializer(T1& i1){
         payloadSize = 0;
         this->CalculateSize(i1);
@@ -447,6 +448,7 @@ GenericSerializer(const T1& i1, const T2& i2, const TNs&... ins){
         msg = NULL;
         payloadSize = 0;
     };*/
+
 Generic_VarSized_Msg* Get_Generic_VarSized_Msg_Ptr(){
     return msg;
 };
@@ -962,31 +964,32 @@ class SocketSerializer{
     }
 
 public:
-SocketSerializer( int32_t _socketID){
-	socketID = _socketID;
-}
+	SocketSerializer( int32_t _socketID){
+		socketID = _socketID;
+	}
 
-template<typename T1,typename T2=void*, typename... TNs>
-bool Write(const T1& i1, const T2& i2, const TNs&... ins){
-	 bool rv = false;
-	 printf("SocketSerializer writing on %d : ", socketID); fflush(stdout);
+	template<typename T1,typename T2=void*, typename... TNs>
+	bool Write(const T1& i1, const T2& i2, const TNs&... ins){
+		 bool rv = false;
+		 printf("SocketSerializer writing on %d : ", socketID); fflush(stdout);
 
-	 if(this->AddVariable(i1, true))
-	 	 rv =  this->AddVariable(i1, i2, ins...);
-	 printf("\n SocketSerializer END OF writing on %d : rv = %d ", socketID, rv); fflush(stdout);
-	 return rv;
+		 if(this->AddVariable(i1, true))
+			 rv =  this->AddVariable(i1, i2, ins...);
+		 printf("\n SocketSerializer END OF writing on %d : rv = %d ", socketID, rv); fflush(stdout);
+		 return rv;
+	};
+
+	template<typename T1>
+	bool Write(T1& i1){
+		bool rv = false;
+		printf("SocketSerializer writing on %d : ", socketID); fflush(stdout);
+
+		rv  = this->AddVariable(i1);
+		printf("\n SocketSerializer END OF writing on %d : rv = %d", socketID, rv); fflush(stdout);
+		return rv;
+	};
+
 };
 
-template<typename T1>
-bool Write(T1& i1){
-	bool rv = false;
-	printf("SocketSerializer writing on %d : ", socketID); fflush(stdout);
-
-    rv  = this->AddVariable(i1);
-    printf("\n SocketSerializer END OF writing on %d : rv = %d", socketID, rv); fflush(stdout);
-    return rv;
-};
-
-};
 
 #endif // GENERIC_MESSAGE_H

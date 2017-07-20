@@ -32,7 +32,7 @@ namespace Estimation {
 	protected:
 		RandomSchedule<UniformRandomInt, UniformRNGState,uint64_t,  uint64_t> *shouldReceive;
 		Delegate<void, EventInfoU64& > *scheduleNextClean;
-		uint numNodes;
+		uint32_t numNodes;
 		NodeSchedule* nodeSchedule[Core::Discovery::MAX_NBR];
 		Timer *clean[10];
 		int idx;

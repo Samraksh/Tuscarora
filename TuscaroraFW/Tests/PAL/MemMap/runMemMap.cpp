@@ -7,8 +7,8 @@
 
 
 #include "runMemMap.h"
-#include "Lib/Misc/MemMap.h"
 #include <Sys/Run.h>
+#include "../../../Lib/Logs/MemMap.h"
 
 
 int main(int argc, char* argv[]) {

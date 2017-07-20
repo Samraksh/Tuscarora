@@ -7,11 +7,10 @@
 
 
 #include "FanOutFWP.h"
-
-#ifdef PLATFORM_DCE
-#include "Platform/dce/App/App2FWPShim.h"
-#else
-#include "../../Platform/linux-multiprocess/App/App2FWPShim.h"
+#if PTN_UPPER_SHIM==DIRECT_BINDING_SHIM
+#include <Platform/Shims/DirectBinding/App/App2FWPShim.h>
+#elif PTN_UPPER_SHIM==SOCKET_SHIM
+#include <Platform/Shims/LinuxSocket/App/App2FWPShim.h>
 #endif
 
 #define TESTDATASIZE 2000

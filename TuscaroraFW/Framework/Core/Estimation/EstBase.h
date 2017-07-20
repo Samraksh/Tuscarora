@@ -12,12 +12,12 @@
 #include <Interfaces/PWI/Framework_I.h>
 #include <Interfaces/Waveform/WF_Types.h>
 #include "Lib/PAL/PAL_Lib.h"
-#include "EstimationLogging.h"
 #include "LinkEstimationTable.h"
 //#include <map>
 //#include <vector>
 #include <cmath>
 #include <Lib/DS/ListT.h>
+#include "../../../Include/Interfaces/Core/EstimationLogI.h"
 
 using namespace PAL;
 using namespace PWI;
@@ -49,9 +49,11 @@ class EstBase : public LinkEstimatorI<LinkAddress_t> {
 	uint32_t id;
 	uint32_t leSeqno;
 	WF_LinkChangeDelegate_n64_t *fworkNbrDel;
-	LinkEstimationTable_n64_t *estimationTable;
+	LinkEstimationTable_n64_t* estimationTable;
 	//LinkEstimationTable_NodeId_t *estimationTable;
-	EstimationLogging logger;
+#ifndef PLATFORM_EMOTE
+	EstimationLogI *logger;
+#endif
 	//Waveform::WF_Message_n64_t LeMsg;
 	//FMessage_t LeMsg;
 	int period;
@@ -65,7 +67,7 @@ class EstBase : public LinkEstimatorI<LinkAddress_t> {
 	//BSTMapT< LinkAddress_t, uint16_t > receiveCountOverWindow;
 	BSTMapT< LinkAddress_t, float > packetReceptionRateMap;
 	
-	WF_LinkChangeDelegate_n64_t *leDel;
+	WF_LinkChangeDelegate_n64_t leDel;
 
 	//methods
 	void SendHB(EventInfoU64& event);

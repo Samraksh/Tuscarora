@@ -5,10 +5,11 @@
 ////////////////////////////////////////////////////////////////////////////////// 
 
 #include <Interfaces/Pattern/PatternBase.h>
-#ifdef PLATFORM_DCE
-#include "Platform/dce/Pattern/PatternShim.h"
-#else
-#include "Platform/linux/Pattern/PatternShim.h"
+
+#if PTN_LOWER_SHIM==DIRECT_BINDING_SHIM
+#include "Platform/Shims/DirectBinding/Pattern/PatternShim.h"
+#elif PTN_LOWER_SHIM==SOCKET_SHIM
+#include "Platform/Shims/LinuxSocker/Pattern/PatternShim.h"
 #endif 
 
 using namespace PWI;
@@ -22,7 +23,7 @@ PatternBase::PatternBase(PatternTypeE _type, char _uniqueName[128]){
 	FRAMEWORK = &GetPatternShim();
 	requestState=NONE_PENDING;
 
-	patternState=NO_PID;
+	patternState=UNREGISTERED;
 	PID = 0;
 	randInt = new UniformRandomInt(0,256);
 
@@ -42,7 +43,7 @@ void PatternBase::RegisterPatternDelegates(PatternId_t pid, PatternTypeE _type)
 	dataflowDelegate = new DataflowDelegate_t(this, &PatternBase::DataStatusEvent);
 	controlDelegate = new ControlResponseDelegate_t (this, &PatternBase::ControlResponseEvent);
 	static_cast<PatternShim*>(FRAMEWORK)->RegisterDelegates(pid, recvDelegate, nbrDelegate, dataflowDelegate, controlDelegate );
-	}
+}
 
 /*void PatternBase::Handle_PatternIDResponse(ControlResponseParam response)
 {
@@ -63,14 +64,14 @@ void PatternBase::Handle_RegisterResponse(ControlResponseParam response)
 	RegistrationResponse_Data *res = (RegistrationResponse_Data*) response.data;
 
 	if(res->status){
-		if (patternState == NO_PID) {
+		if (patternState == UNREGISTERED) {
 			PID = res->patternId;
-			patternState = GOT_PID;
+			//patternState = GOT_PID;
 		}
-	patternState = REGISTERED;
-	Debug_Printf(DBG_PATTERN, "PatternBase::Handle_RegisterResponse: Cool. I Registered with framework. I am good to go.\n");
+		patternState = REGISTERED;
+		Debug_Printf(DBG_PATTERN, "PatternBase::Handle_RegisterResponse: Cool. I Registered with framework. I am good to go.\n");
 	}else {
-	Debug_Printf(DBG_PATTERN, "PatternBase::Handle_RegisterResponse: I am doomed. I count register. Why?????\n");
+		Debug_Printf(DBG_PATTERN, "PatternBase::Handle_RegisterResponse: I am doomed. I count register. Why?????\n");
 	}
 }
 
@@ -124,6 +125,7 @@ bool PatternBase::RandomlySelectNeighbor(NeigborContainerType& selectedNeighborL
 	uint16_t nbrCount = ptnNbrTable.GetNumberOfNeighbors();
 	if(nbrCount == 0 || nbrCount - selectedNeighborList.Size() == 0 ) return false;
 
+
 	uint64_t pickrandom=0;
 	if(_rand == NULL){
 	/*	UniformIntDistParameter dist;
@@ -136,20 +138,21 @@ bool PatternBase::RandomlySelectNeighbor(NeigborContainerType& selectedNeighborL
 	else {
 		pickrandom = _rand->GetNext();
 	}
-	pickrandom = pickrandom % nbrCount;
-	PatternNeighborIterator it = ptnNbrTable.Begin();
-
-	while(it != ptnNbrTable.End() && selectedNeighborList.Search(it->linkId.nodeId) != NULL) ++it;
-	while(pickrandom > 0 && it != ptnNbrTable.End()){
-		--pickrandom;
-		while(it != ptnNbrTable.End() && selectedNeighborList.Search(it->linkId.nodeId) != NULL) ++it;
+	pickrandom = pickrandom % (nbrCount - selectedNeighborList.Size() );
+	PatternNeighborIterator it = ptnNbrTable.Begin(); //Get the first node
+	while(it != ++ptnNbrTable.End() && selectedNeighborList.Search(it->linkId.nodeId) != NULL) ++it; //Jump over any already selected ones
+	while(pickrandom > 0 && it != ++ptnNbrTable.End()){
+		--pickrandom; //Jump over one of the non-selected ones, decrement one
+		++it;
+		while(it != ++ptnNbrTable.End() && selectedNeighborList.Search(it->linkId.nodeId) != NULL) ++it;
 	}
-	if(it != ptnNbrTable.End()){
+	if(selectedNeighborList.Search(it->linkId.nodeId) == NULL){ //The next one should be a new node that does not exist already in the list
 		return selectedNeighborList.Insert(it->linkId.nodeId);
 	}
 	else{
 		return false;
 	}
+
 }
 
 void PatternBase::Send2SelectedNeighbors( PatternId_t pid, NeigborContainerType& selectedNeighborList, FMessage_t& msg,  uint16_t nonce){

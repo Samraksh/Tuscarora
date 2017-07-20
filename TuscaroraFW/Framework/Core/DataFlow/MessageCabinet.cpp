@@ -18,8 +18,11 @@ namespace Core {
 namespace Dataflow {
 
 
+void CreateFMessageQElementArray(FMessageQElement* ar_ptr, std::size_t ar_size, FMessage_t *_msg, MsgPriorityMetric *_metric, FMessageId_t  _id, Link **_linkArray, uint16_t _noOfDest,bool _broadcast, uint16_t _nonce){
 
-FMessageQElement::FMessageQElement(FMessage_t *_msg, MsgPriorityMetric *_metric, MessageId_t _id, Link **_linkArray, uint16_t _noOfDest,bool _broadcast, uint16_t _nonce){
+}
+
+FMessageQElement::FMessageQElement(FMessage_t *_msg, MsgPriorityMetric *_metric, FMessageId_t  _id, Link **_linkArray, uint16_t _noOfDest,bool _broadcast, uint16_t _nonce){
   dnFromDest_remaining = _noOfDest;
   dnSentByWF_remaining = _noOfDest;
   dnRecvByWF_remaining = _noOfDest;
@@ -37,11 +40,17 @@ FMessageQElement::FMessageQElement(FMessage_t *_msg, MsgPriorityMetric *_metric,
   messageId=_id;
   noOfDest = _noOfDest;
   wfCount=0;
-  broadcast = _broadcast; 
+  broadcast = _broadcast;
+
+  replace_payload_ptr = NULL;
+  n_pending_replace_payload_requests = 0;
+  replace_payload_ptr_size = 0;
+
   //old_payload_ptr = NULL;
   //memcpy(destArray, _nodeArray, noOfDest*sizeof(NodeId_t));
   memcpy(linkArray, _linkArray, noOfDest*sizeof(Link*));
 }
+
 FMessageQElement::~FMessageQElement(){
 	//destructor
     //delete(old_payload_ptr);
@@ -49,7 +58,7 @@ FMessageQElement::~FMessageQElement(){
     //delete(msg); //delete copy of message
 }
 
-MessageCabinet::MessageCabinet(WF_AttributeMap_t *_wfAttributes, WFMsgIdToFmsgIdMap_t *_wfMsgToFMsgMap, AddressMap *_addressMap) {
+MessageCabinet::MessageCabinet(WF_AttributeMap_t *_wfAttributes, WFMsgIdToFragmentListMap_t *_wfMsgToFMsgMap, AddressMap *_addressMap) {
 	wfAttributes= _wfAttributes;
 	wfMsgToFMsgMap = _wfMsgToFMsgMap;
 	addressMap = _addressMap;
@@ -70,34 +79,161 @@ MessageCabinet::~MessageCabinet() {
 }
 
 ///TODO::This is a dummy function to make code compile, remove this latter
-bool MessageCabinet::RemoveFrameworkMessage(MessageId_t msgId)
+bool MessageCabinet::RemoveFrameworkMessage( FMessageId_t  msgId)
 {
 
   return false;
 }
 
 ///TODO::This is a dummy function to make code compile, remove this latter.
-/*MessageId_t MessageCabinet::AddNewFrameworkMessage(FMessage_t *msg){
+/*FMessageId_t MessageCabinet::AddNewFrameworkMessage(FMessage_t *msg){
 
   return false;
 }
 */
 
-bool MessageCabinet::RemoveMessageDestination(MessageId_t msgId, NodeId_t *destArray, uint16_t noOfDest){
+bool MessageCabinet::RemoveMessageDestination( FMessageId_t  msgId, NodeId_t *destArray, uint16_t noOfDest){
 
   return false;
 }
 
 ///Implement this.
-bool MessageCabinet::AddMessageDestination(MessageId_t msgId, NodeId_t* nodeArray, Link **linkArray,  uint16_t noOfDest)
+bool MessageCabinet::AddMessageDestination( FMessageId_t  msgId, NodeId_t* nodeArray, Link **linkArray,  uint16_t noOfDest)
 {
 
   return false;
 }
 
 
+bool MessageCabinet::AddWaveformMessage(FMessageQElement *fmsgelementptr, WaveformId_t _wfid, bool broadcast, uint64_t* destArray, uint16_t noOfDest, PatternId_t pid){
 
-MessageId_t MessageCabinet::AddNewFrameworkMessage(PatternId_t pid, FMessage_t *msg, NodeId_t *nodeArray, Link** linkArray, uint16_t noOfDest, bool broadcast, WaveformId_t wfid, MessageId_t newFMsgId, uint16_t _nonce, bool softwarebroadcast)
+//	FMsgMap::Iterator it_fmsg = framworkMsgMap->Find(fmsgelementptr->messageId);
+
+
+//#if ENABLE_FRAGMENTATION == 1
+
+	WF_AttributeMap_t::Iterator it = wfAttributes->Find(_wfid);
+	if(it == wfAttributes->End()){
+		return false;
+	}
+	uint16_t numberOfMsgSegmentsRequired = 1;
+	uint16_t max_segment_size = it->Second().maxPayloadSize ;
+	if(fmsgelementptr->msg->GetPayloadSize() > it->Second().maxPayloadSize){ //Fragmentation is required
+		max_segment_size = max_segment_size - sizeof(FragmentationHeader);
+		numberOfMsgSegmentsRequired = fmsgelementptr->msg->GetPayloadSize() / max_segment_size;
+		if(fmsgelementptr->msg->GetPayloadSize() % max_segment_size > 0 ) ++numberOfMsgSegmentsRequired;
+	}
+
+	FragmentList* fragmentlist_ptr = new FragmentList;
+	fragmentlist_ptr->frameworkMsgID = fmsgelementptr->messageId;
+
+	for(uint16_t segment =0 ; segment < numberOfMsgSegmentsRequired; ++segment){
+		WF_MessageId_t wMsgId = GetNewWaveformMsgId();
+		WF_Message_n64_t *wfMsg = new WF_Message_n64_t();
+
+		if(noOfDest == 0){
+			fragmentlist_ptr->fragmentmap[wMsgId].Insert(destArray[0], FRAG_FRAG_CREATED);
+		}
+		else{
+			for(uint16_t i = 0; i < noOfDest; ++i){
+				fragmentlist_ptr->fragmentmap[wMsgId].Insert(destArray[i],FRAG_FRAG_CREATED);
+			}
+		}
+
+//		fragmentstatusptr->fragmentStatus.Insert(wMsgId,FRAG_FRAG_CREATED);
+
+		wfMsgToFMsgMap->Insert(wMsgId,fragmentlist_ptr);
+
+//
+//		auto fragmentstatusptr = wfMsgToFMsgMap->Find()
+//		if(wfMsgToFMsgMap->)
+//
+//		if(segment == 0) { //For first segment
+//			auto tempFragmentationIDListPtr = new WF_Message_FragmentIdList_t();
+//			tempFragmentationIDListPtr->Insert(wMsgId, PDN_FW_RECV);
+//			wfMsgToFMsgMap->Insert(tempFragmentationIDListPtr,PDN_FW_RECV);
+//		}
+//		else{
+//			wfMsgToFMsgMap->
+//		}
+//		wfMsgToFMsgMap->Insert()
+//
+//		if(segment == numberOfMsgSegmentsRequired-1) {
+//			if(wfMsgToFMsgMap->Insert(wMsgId, fmsgelementptr->messageId)){
+//				Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet: AddWaveformMessage: Adding wfmsg id: %lu, fmMsg id: %u, to wfMsgToFMsgMap\n", wMsgId, fmsgelementptr->messageId);
+//			}else {
+//				Debug_Warning("MessageCabinet: AddNewFrameworkMessage: Grave Error: Map insert failed! wfMsgToFMsgMap\n");
+//			}
+//		}
+
+
+		if(numberOfMsgSegmentsRequired > 1){
+
+
+			wfMsg->CopyIthSegmentFrom(*(fmsgelementptr->msg), segment, max_segment_size); //This is an actual copy //TODO: Must check the destruction
+			wfMsg->SetFlag(WF_FLG_FRAGMENTED);
+		}
+		else{
+			wfMsg->CopyFrom(*(fmsgelementptr->msg));
+			//Clear flag
+			wfMsg->ClearFlag(WF_FLG_FRAGMENTED);
+		}
+
+		wfMsg->SetWaveform(_wfid);
+		wfMsg->SetSource(MY_NODE_ID);
+		wfMsg->SetNumberOfDest(noOfDest);
+		wfMsg->SetWaveformMessageID(wMsgId); //This Id shold be assigned when WF recieved message//Mukundan: Not true;
+		//wfMsg->SetType(msg->GetType()); it seems this is done in CopyFrom method
+		wfMsg->SetInstance(pid);
+
+
+		//Debug_Printf(DBG_CORE, "Adding new wf %d to wfList\n",wf);
+		if(!fmsgelementptr->broadcast && fmsgelementptr->msg->GetType()==Types::PATTERN_MSG){
+			if((*wfAttributes)[_wfid].destReceiveAckSupport == false){
+				//if(1){
+				Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::AddNewFrameworkMessage: This waveform %d does not support acknowledgment. Changing waveform packet type to ask for acknowledgement\n",_wfid)
+				wfMsg->SetType(Types::ACK_REQUEST_MSG);
+
+			}
+		}
+		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: AddNewFrameworkMessage: message type via qelement is %d\n",wfMsg->GetType());
+		WF_MessageQElement *element = new WF_MessageQElement(wfMsg, fmsgelementptr->metric, wMsgId, fmsgelementptr->messageId, destArray, noOfDest, broadcast);
+		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::WF_MessageQElement has mssage at %p, payload at %p\n",wfMsg,wfMsg->GetPayload());
+
+		//Need to set wfQElement pointer array. This pointer is used to get waveform message in Heap.
+		fmsgelementptr->wfQElement[_wfid].Insert(element);
+//		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::Adding WF_MessageQElement ptr %p for fmid %d to wfQElement[%d]\n",it_fmsg->Second()->wfQElement[_wfid],newFMsgId, _wfid);
+		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::Adding WF_MessageQElement ptr %p for fmid %d to wfQElement[%d]\n",element, fmsgelementptr->messageId, _wfid);
+		//FMessageQElement* temp_ptr;
+		//temp_ptr = (*framworkMsgMap)[newFMsgId];
+		//Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: 4message type via qelement is %d\n",element->msg->GetType());
+		//Debug_Printf(DBG_CORE_DATAFLOW, "Address of FMessageQElement is %p\n", temp_ptr);
+		//Debug_Printf(DBG_CORE_DATAFLOW,"Going to inserted a qelement: Waveform %d heaps current size is: %d \n", _wfid, wfMsgHeap[ii->First()].Size());fflush(stdout);
+		wfMsgHeap[_wfid].Insert(element);
+
+		//Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: 5message type via qelement is %d\n",element->msg->GetType());
+		//wfMsgBST[_wfid].Insert(element);
+		//Debug_Printf(DBG_CORE_DATAFLOW,"Inserted a qelement(ptr %p), %d elements in heap of waveform %d \n", element, wfMsgHeap[ii->First()].Size(), _wfid);fflush(stdout);
+
+		//debugging
+		if(element->msg->GetType() == Types::ACK_REQUEST_MSG){
+			SoftwareAcknowledgement* swack1 = (SoftwareAcknowledgement*) element->msg->GetPayload();
+			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::AddNewFrameworkMessage: Show payload %d %d %lu\n",swack1->src, swack1->wfId, swack1->wfMsgId);
+			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::AddNewFrameworkMessage: Show payload ptr %p\n", swack1);
+		}
+
+	}
+
+	return true;
+//#else
+//
+//	return false;
+//#endif
+}
+
+
+
+FMessageId_t MessageCabinet::AddNewFrameworkMessage( PatternId_t pid, FMessage_t *msg, NodeId_t *nodeArray, Link** linkArray, uint16_t noOfDest, bool broadcast, WaveformId_t wfid, FMessageId_t newFMsgId, uint16_t _nonce, bool softwarebroadcast )
 {
 	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:Address of linkArray is %p\n",linkArray);
 	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:Address of FMessage is %p,  payload is %p\n",msg, msg->GetPayload());
@@ -110,25 +246,15 @@ MessageId_t MessageCabinet::AddNewFrameworkMessage(PatternId_t pid, FMessage_t *
 	MsgPriorityMetric *_metric = new MsgPriorityMetric();
 	_metric->submitTimeMicro = SysTime::GetEpochTimeInMicroSec();
 	_metric->priority = PolicyManager::GetAsnpPriority(pid);
-	//MessageId_t newFMsgId = 0;// This is generated in FrameworkBase. Masahiro GetNewFrameworkMsgId();
+	//FMessageId_t newFMsgId = 0;// This is generated in FrameworkBase. Masahiro GetNewFrameworkMsgId();
 
 	//Debug_Printf(DBG_CORE_DATAFLOW,"Show addresss of payload %p\n",msg->GetPayload());
 
 	Debug_Printf(DBG_CORE_DATAFLOW,"MessageCabinet::Inserting message %d, message Type %d,  with priority %u \n",newFMsgId,msg->GetType(), _metric->priority);fflush(stdout);
 	//FMessageQElement *element = new FMessageQElement(msg, _metric, newFMsgId, nodeArray, linkArray, noOfDest, broadcast);
-	if(softwarebroadcast)
-	{
-		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:This is softwareBroadcast. temprarily set broadcast falg\n");
-		broadcast = true;
-	}
+
+	FMessageQElement *element = new FMessageQElement(msg, _metric, newFMsgId, linkArray, noOfDest, broadcast || softwarebroadcast,_nonce);
 	
-	FMessageQElement *element = new FMessageQElement(msg, _metric, newFMsgId, linkArray, noOfDest, broadcast,_nonce);
-	
-	if(softwarebroadcast)
-	{
-		Debug_Printf(DBG_CORE_DATAFLOW, "This is softwareBroadcast. clear broadcast falg\n");
-		broadcast = false;
-	}
 
 	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::Debug: It seems FMessageQElement broadcast value is not correctly set. Read value now to check. %d",element->broadcast);
 
@@ -223,67 +349,15 @@ MessageId_t MessageCabinet::AddNewFrameworkMessage(PatternId_t pid, FMessage_t *
 			}
 			continue;
 		}
-		WF_MessageId_t wMsgId = GetNewWaveformMsgId();
-		//WF_MessageBase wfMsg = wfMsgAdaptorHash->operator[](_wfid)->Convert_FM_to_WM(*msg,true);
-		WF_Message_n64_t *wfMsg = new WF_Message_n64_t();
-		if(wfMsgToFMsgMap->Insert(wMsgId, newFMsgId)){
-			//printf("MessageCabinet: AddNewFrameworkMessage: Adding wfmsg id: %lu, fmMsg id: %u, to wfMsgToFMsgMap\n", wMsgId, newFMsgId);
-		}else {
-			Debug_Warning("MessageCabinet: AddNewFrameworkMessage: Grave Error: Map insert failed! wfMsgToFMsgMap\n");
+		//TODO: BK: Create waveform messages and Insert into the map
+
+		if(AddWaveformMessage(element, _wfid,  broadcast, ii->Second().destArray, ii->Second().noOfDest, pid)){
+			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: AddWaveformMessage added all segments successfully.");
 		}
-		wfMsg->CopyFrom(*msg);
-		wfMsg->SetWaveform(_wfid);
-		wfMsg->SetSource(MY_NODE_ID);
-		wfMsg->SetNumberOfDest(ii->Second().noOfDest);
-		wfMsg->SetWaveformMessageID(wMsgId); //This Id shold be assigned when WF recieved message//Mukundan: Not true;
-		//wfMsg->SetType(msg->GetType()); it seems this is done in CopyFrom method
-		wfMsg->SetInstance(pid);
-		//Debug_Printf(DBG_CORE, "Adding new wf %d to wfList\n",wf);
-		if(!softwarebroadcast && !element->broadcast && msg->GetType()==Types::PATTERN_MSG){
-			if((*wfAttributes)[_wfid].destReceiveAckSupport == false){
-			//if(1){
-			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::AddNewFrameworkMessage: This waveform %d does not support acknowledgment\n",_wfid)
-			msg->SetType(Types::ACK_REQUEST_MSG);
-			wfMsg->SetType(Types::ACK_REQUEST_MSG);
-			//Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Show msg type %d set in fmessage\n",framworkMsgMap->operator [](newFMsgId)->msg->GetType());
-			//Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: 1message type via qelement is %d\n",wfMsg->GetType());
-			}else{
-			msg->SetType(Types::PATTERN_MSG);
-			}
+		else{
+			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: AddWaveformMessage ERROR! Some segments have failed to be added to queue. Why?");
 		}
-		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: AddNewFrameworkMessage: message type via qelement is %d\n",wfMsg->GetType());
-		//uint64_t _tempDestArray[ii.Second().noOfDest];
-		//Debug_Printf(DBG_CORE_DATAFLOW,"Waveform %d has %d destinations, dest array prt is %p \n", _wfid, ii.Second().noOfDest, ii.Second().destArray);fflush(stdout);
-		//memcpy(_tempDestArray, ii.Second().destArray, ii.Second().noOfDest*sizeof(uint64_t));
-		//for (int i=0; i< ii.Second().noOfDest; i++){
-			//Debug_Printf(DBG_CORE_DATAFLOW, "Destination %d is %lu, %lu, array ptr (%p) \n",i, _tempDestArray[i], msgWfMap[ii->First()].destArray[i],  msgWfMap[ii->First()].destArray); fflush(stdout);      
-		//}
-		WF_MessageQElement *element = new WF_MessageQElement(wfMsg, _metric, wMsgId, newFMsgId, ii->Second().destArray, ii.Second().noOfDest, broadcast);
-		//WF_MessageQElement *element = new WF_MessageQElement(wfMsg, _metric, 0, newFMsgId, ii->Second().destArray, ii.Second().noOfDest, broadcast); //Masahirio. wfMsgId is assigned by wf.//Mukundan: This is not true
-		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::WF_MessageQElement has mssage at %p, payload at %p\n",wfMsg,wfMsg->GetPayload());
 
-		//Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: 3message type via qelement is %d\n",element->msg->GetType());
-
-
-		//Need to set wfQElement pointer array. This pointer is used to get waveform message in Heap. 
-		it_fmsg->Second()->wfQElement[_wfid] = element;
-		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::Adding WF_MessageQElement ptr %p for fmid %d to wfQElement[%d]\n",it_fmsg->Second()->wfQElement[_wfid],newFMsgId, _wfid);
-		//FMessageQElement* temp_ptr;
-		//temp_ptr = (*framworkMsgMap)[newFMsgId];
-		//Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: 4message type via qelement is %d\n",element->msg->GetType());
-		//Debug_Printf(DBG_CORE_DATAFLOW, "Address of FMessageQElement is %p\n", temp_ptr);
-		//Debug_Printf(DBG_CORE_DATAFLOW,"Going to inserted a qelement: Waveform %d heaps current size is: %d \n", _wfid, wfMsgHeap[ii->First()].Size());fflush(stdout);
-		wfMsgHeap[_wfid].Insert(element);
-		//Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: 5message type via qelement is %d\n",element->msg->GetType());
-		//wfMsgBST[_wfid].Insert(element);
-		//Debug_Printf(DBG_CORE_DATAFLOW,"Inserted a qelement(ptr %p), %d elements in heap of waveform %d \n", element, wfMsgHeap[ii->First()].Size(), _wfid);fflush(stdout);
-
-		//debugging
-		if(element->msg->GetType() == Types::ACK_REQUEST_MSG){
-			SoftwareAcknowledgement* swack1 = (SoftwareAcknowledgement*) element->msg->GetPayload();
-			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::AddNewFrameworkMessage: Show payload %d %d %lu\n",swack1->src, swack1->wfId, swack1->wfMsgId);
-			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::AddNewFrameworkMessage: Show payload ptr %p\n", swack1);
-		}
 	}
 	
 	/*if(element->msg->GetType() == Types::ACK_REPLY_MSG){
@@ -331,7 +405,7 @@ WF_MessageQElement* MessageCabinet::GetNextMessage(uint16_t waveformId){
   return NULL;
 }
 
-FMessageQElement* MessageCabinet::LookUpFrameworkMessage(MessageId_t _msgId)
+FMessageQElement* MessageCabinet::LookUpFrameworkMessage( FMessageId_t  _msgId)
 {
 	//FMessageQElement* ret =framworkMsgMap->operator[](_msgId);
 	FMsgMap::Iterator itfmsg = framworkMsgMap->Find(_msgId);
@@ -341,7 +415,7 @@ FMessageQElement* MessageCabinet::LookUpFrameworkMessage(MessageId_t _msgId)
 	return 0;
 }
 
-/*WF_MessageQElement* MessageCabinet::LookUpWaveformMessage(MessageId_t _wfMsgId, WaveformId_t wid)
+/*WF_MessageQElement* MessageCabinet::LookUpWaveformMessage( FMessageId_t  _wfMsgId, WaveformId_t wid)
 {
   WF_MessageQElement* ret=0;
   //wfMsgHeap[wid].Search(_wfMsgId);
@@ -384,7 +458,7 @@ uint32_t MessageCabinet::GetNumberWaveformOfMessages(WaveformId_t wfId) {
   return ret;
 }
 
-void MessageCabinet::CleanUp(MessageId_t mid)
+void MessageCabinet::CleanUp( FMessageId_t  mid)
 {
   framworkMsgMap->Erase(mid);
 }
@@ -394,6 +468,152 @@ void MessageCabinet::CleanUp(MessageId_t mid)
   return noOfMessages;
 }
 */
+
+FragmentStatusTypeE MessageCabinet::GetHighestFragmentStatusofFmessageDest(FMessageQElement* fmsg_ptr, const Link* link ){
+	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::GetHighestFragmentStatusofFmessage.\n");
+	WaveformId_t wfid = link->linkId.waveformId;
+
+//		Case 1: at least one of the fragments  FRAG_DST_RECV
+//		Case 2: None of the fragments are FRAG_DST_RECV
+//			 Case 2-1: at least one of the fragments  FRAG_WF_SENT
+//			 Case 2-2: none of the fragments FRAG_WF_SENT
+//				Case 2-2-1: at least one of the fragments FRAG_WF_RECV
+//				CaSe 2-2-2: none of the fragments for none of the destinations FRAG_WF_RECV
+//	if not found
+
+	if(fmsg_ptr){
+		//Find the waveformMessageQElements corresponding to this destination
+		auto wfMsgToFMsgMap_itt = wfMsgToFMsgMap->Find(fmsg_ptr->wfQElement[wfid].Begin()->GetData()->wfmsgId);
+		if(wfMsgToFMsgMap_itt != wfMsgToFMsgMap->End()){
+			FragmentList* fragmentlist_ptr = wfMsgToFMsgMap_itt->Second();
+			bool isCase2_1 = false;
+			bool isCase2_2_1 = false;
+			for(auto fragmentmap_itt = fragmentlist_ptr->fragmentmap.RBegin(); fragmentmap_itt != fragmentlist_ptr->fragmentmap.REnd(); ++fragmentmap_itt){ //BK: Traverse fragment list
+				string wfAddress = addressMap->LookUpWfAddress(link->linkId);
+				auto fragmentdelstatus_it = fragmentmap_itt->Second().Find( NbrUtils::ConvertEthAddressToU64(wfAddress) );
+				if(fragmentdelstatus_it == fragmentmap_itt->Second().End()){
+					return FRAG_DOES_NOT_EXIST;
+				}
+				else{
+					if(fragmentdelstatus_it->Second() >= FRAG_DST_RECV){
+						return FRAG_DST_RECV;
+					}
+					else if(fragmentdelstatus_it->Second() >= FRAG_WF_SENT){
+						isCase2_1 = true;
+					}
+					else if(fragmentdelstatus_it->Second() >= FRAG_WF_RECV){
+						isCase2_2_1 = true;
+					}
+				}
+			}
+
+			if(isCase2_1) return FRAG_WF_SENT;
+			else if(isCase2_2_1) return FRAG_WF_RECV;
+			else return FRAG_FRAG_CREATED;
+		}
+		else{
+			Debug_Error("MessageCabinet::GetFragmentStatusofFMessage ERROR! Cannot find the fragmentation list");
+			return FRAG_DOES_NOT_EXIST;
+		}
+	}
+	else{
+		return FRAG_DOES_NOT_EXIST;
+	}
+
+}
+
+FragmentStatusTypeE MessageCabinet::GetHighestFragmentStatusofFmessageonWaveform(FMessageQElement* fmsg_ptr, WaveformId_t wfid){
+	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::GetHighestFragmentStatusofFmessage.\n");
+	FragmentStatusTypeE rs = FRAG_DOES_NOT_EXIST;
+	if(fmsg_ptr){
+
+		for(uint16_t index = 0; index < fmsg_ptr->noOfDest ; index++){
+			if(fmsg_ptr->waveform[index] == wfid){
+				FragmentStatusTypeE ns = GetHighestFragmentStatusofFmessageDest(fmsg_ptr, fmsg_ptr->linkArray[index]);
+				if(ns > rs) rs = ns;
+			}
+		}
+
+	}
+	return rs;
+
+}
+
+FragmentStatusTypeE MessageCabinet::GetHighestFragmentStatusofFmessage(FMessageQElement* fmsg_ptr){
+	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::GetHighestFragmentStatusofFmessage.\n");
+	FragmentStatusTypeE rs = FRAG_DOES_NOT_EXIST;
+	if(fmsg_ptr){
+		WaveformId_t processed_wfs[MAX_WAVEFORMS];
+		uint8_t num_processed_wfs = 0;
+		for(uint16_t index = 0; index < fmsg_ptr->noOfDest ; index++){
+//			NodeId_t node = fmsg_ptr->linkArray[index]->linkId.nodeId;
+			WaveformId_t wfid = fmsg_ptr->linkArray[index]->linkId.waveformId;
+			bool already_processed = false;
+			for(uint8_t i = 0; i < num_processed_wfs; ++i){
+				if(processed_wfs[i] == wfid){
+					already_processed = true;
+				}
+			}
+			if(!already_processed){
+				FragmentStatusTypeE ns = GetHighestFragmentStatusofFmessageonWaveform(fmsg_ptr, wfid );
+				if(ns > rs) rs = ns;
+			}
+		}
+	}
+	return rs;
+//
+////		Case 1: at least one of the fragments for at least one of the destinations FRAG_DST_RECV
+////		Case 2: None of the fragments are FRAG_DST_RECV
+////			 Case 2-1: at least one of the fragments for at least one of the destinations FRAG_WF_SENT
+////			 Case 2-2: none of the fragments for none of the destinations FRAG_WF_SENT
+////				Case 2-2-1: at least one of the fragments for at least one of the destinations FRAG_WF_RECV
+////				CaSe 2-2-2: none of the fragments for none of the destinations FRAG_WF_RECV
+////	if not found --> add as a new message
+//
+//	if(found){
+//		auto wfMsgToFMsgMap_itt = wfMsgToFMsgMap->Find(fmsg_ptr->wfQElement[wfid].Begin()->GetData()->wfmsgId);
+//		if(wfMsgToFMsgMap_itt != wfMsgToFMsgMap->End()){
+//			FragmentList* fragmentlist_ptr = wfMsgToFMsgMap_itt->Second();
+//			bool isCase2_1 = false;
+//			bool isCase2_2_1 = false;
+//			uint8_t n_FRAG_WF_RECV = 0;
+//			for(auto fragmentmap_itt = fragmentlist_ptr->fragmentmap.RBegin(); fragmentmap_itt != fragmentlist_ptr->fragmentmap.REnd(); ++fragmentmap_itt){ //BK: Traverse fragment list
+//				uint8_t n_SentToDest = 0;
+//				uint8_t n_WFRecv  = 0;
+//				for(auto fragmentdelstatus_it = fragmentmap_itt->Second().Begin(); fragmentdelstatus_it != fragmentmap_itt->Second().End(); ++fragmentdelstatus_it){
+//					if(fragmentdelstatus_it->Second() >= FRAG_DST_RECV){
+//						return FRAG_DST_RECV;
+//					}
+//					if(fragmentdelstatus_it->Second() >= FRAG_WF_SENT){
+//						++n_SentToDest;
+//					}
+//					if(fragmentdelstatus_it->Second() >= FRAG_WF_RECV){
+//						++n_WFRecv;
+//					}
+//					if(n_SentToDest > 0){ //Case 2_1
+//						isCase2_1 = true;
+//					}
+//					if(n_WFRecv > 0){ //Case 2_1_1
+//						isCase2_2_1 = true;
+//					}
+//				}
+//			}
+//
+//			if(isCase2_1) return FRAG_WF_SENT;
+//			else if(isCase2_2_1) return FRAG_WF_RECV;
+//			else return FRAG_FRAG_CREATED;
+//		}
+//		else{
+//			Debug_Error("MessageCabinet::GetFragmentStatusofFMessage ERROR! Cannot find the fragmentation list");
+//			return FRAG_DOES_NOT_EXIST;
+//		}
+//	}
+//	else{
+//		return FRAG_DOES_NOT_EXIST;
+//	}
+
+}
+
 DataStatusTypeE FMessageQElement::GetStatusOfNode(NodeId_t node_id){
 
   //Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet: Show address of dnFromDest map %p\n",&dnFromDest);
@@ -423,25 +643,25 @@ DataStatusTypeE FMessageQElement::GetStatusOfNode(NodeId_t node_id){
  Debug_Printf(DBG_CORE_DATAFLOW,"MessageCabinet:node_id %d is PDN_FW_RECV\n",node_id);
   return PDN_FW_RECV;
 }
-uint16_t MessageCabinet::GetdnFromDest(MessageId_t msgId){
+uint16_t MessageCabinet::GetdnFromDest( FMessageId_t  msgId){
 // return remaining number
-	BSTMapT<MessageId_t, FMessageQElement* > ::Iterator it_fmsg = framworkMsgMap->Find(msgId);
+	BSTMapT <FMessageId_t , FMessageQElement* > ::Iterator it_fmsg = framworkMsgMap->Find(msgId);
 	if(it_fmsg == framworkMsgMap->End()){
 		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::MessageId %d does not exist!\n",msgId);
 	    return 0;
 	}
 	return it_fmsg->Second()->dnFromDest_remaining;
 }
-uint16_t MessageCabinet::GetdnSentByWF(MessageId_t msgId){
-	BSTMapT<MessageId_t, FMessageQElement* > ::Iterator it_fmsg = framworkMsgMap->Find(msgId);
+uint16_t MessageCabinet::GetdnSentByWF( FMessageId_t  msgId){
+	BSTMapT <FMessageId_t , FMessageQElement* > ::Iterator it_fmsg = framworkMsgMap->Find(msgId);
 	if(it_fmsg == framworkMsgMap->End()){
 		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::MessageId %d does not exist!\n",msgId);
 	    return 0;
 	}
 	return it_fmsg->Second()->dnSentByWF_remaining;
 }
-uint16_t MessageCabinet::GetdnRecvByWF(MessageId_t msgId){
-	BSTMapT<MessageId_t, FMessageQElement* > ::Iterator it_fmsg = framworkMsgMap->Find(msgId);
+uint16_t MessageCabinet::GetdnRecvByWF( FMessageId_t  msgId){
+	BSTMapT <FMessageId_t , FMessageQElement* > ::Iterator it_fmsg = framworkMsgMap->Find(msgId);
 	if(it_fmsg == framworkMsgMap->End()){
 		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::MessageId %d does not exist!\n",msgId);
 	    return 0;
@@ -450,15 +670,15 @@ uint16_t MessageCabinet::GetdnRecvByWF(MessageId_t msgId){
 }
 
 
-bool MessageCabinet::IsmsgIdExists(MessageId_t msgId){
-	BSTMapT<MessageId_t, FMessageQElement* > ::Iterator it_fmsg = framworkMsgMap->Find(msgId);
+bool MessageCabinet::IsmsgIdExists( FMessageId_t  msgId){
+	BSTMapT <FMessageId_t , FMessageQElement* > ::Iterator it_fmsg = framworkMsgMap->Find(msgId);
 	if(it_fmsg == framworkMsgMap->End()){
 		return false;
 	}
 	return true;
 }
-bool MessageCabinet::Cancel_Data( MessageId_t msgId, NodeId_t* destArray, uint16_t noOfDest, WaveformId_t wfid){
-	BSTMapT<MessageId_t, FMessageQElement* > ::Iterator it_fmsg = framworkMsgMap->Find(msgId);
+bool MessageCabinet::Cancel_Data( FMessageId_t  msgId, NodeId_t* destArray, uint16_t noOfDest, WaveformId_t wfid){
+	BSTMapT <FMessageId_t , FMessageQElement* > ::Iterator it_fmsg = framworkMsgMap->Find(msgId);
 	if(it_fmsg == framworkMsgMap->End()){
 		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet: msgId %d not found cannot cancel\n",msgId);
 		return false;
@@ -470,7 +690,11 @@ bool MessageCabinet::Cancel_Data( MessageId_t msgId, NodeId_t* destArray, uint16
 		FMessageQElement* fmsg_ptr = it_fmsg->Second();
 		Debug_Printf(DBG_CORE_DATAFLOW,"MessageCabinet:: Erase frameworkMsgMap entry\n");
 		framworkMsgMap->Erase(msgId);
-		wfMsgHeap[wfid].Delete(fmsg_ptr->wfQElement[0]);
+//		wfMsgHeap[wfid].Delete(fmsg_ptr->wfQElement[0]);
+		for(auto it = fmsg_ptr->wfQElement[0].Begin(); it != NULL; it = fmsg_ptr->wfQElement[0].Next(it)){
+			wfMsgToFMsgMap->Erase(it->GetData()->wfmsgId);
+			wfMsgHeap[wfid].DeleteElement(it);
+		}
 		delete(fmsg_ptr);
 		return true;
 	}
@@ -496,29 +720,48 @@ bool MessageCabinet::Cancel_Data( MessageId_t msgId, NodeId_t* destArray, uint16
 		}
 		//Update number of remaining node
 		fmsg_ptr->noOfDest = current_node - noOfDest;
-		WF_MessageQElement* qelement_ptr = fmsg_ptr->wfQElement[wfid];
-		//Update Heap element.
-		qelement_ptr->noOfDest -= noOfDest;
-		for(uint16_t i =0; i < noOfDest; i++){
-			for(uint16_t j =0; j < current_node; j++){
-				if(qelement_ptr->destArray[j] == destArray[i]){
-					current_location = j;
-				}
-				for(uint16_t k =current_location; k < current_node -1 ; k++){
-					qelement_ptr->destArray[k] = qelement_ptr->destArray[k+1];
+
+		for(auto it = fmsg_ptr->wfQElement[0].Begin(); it != NULL; it = fmsg_ptr->wfQElement[0].Next(it)){
+			WF_MessageQElement* qelement_ptr = it->GetData();
+			//Update Heap element.
+			qelement_ptr->noOfDest -= noOfDest;
+			for(uint16_t i =0; i < noOfDest; i++){
+				for(uint16_t j =0; j < current_node; j++){
+					if(qelement_ptr->destArray[j] == destArray[i]){
+						current_location = j;
+					}
+					for(uint16_t k =current_location; k < current_node -1 ; k++){
+						qelement_ptr->destArray[k] = qelement_ptr->destArray[k+1];
+					}
 				}
 			}
+			for(uint16_t index=0; index < qelement_ptr->noOfDest; index++){
+				Debug_Printf(DBG_CORE_DATAFLOW,"MessageCabinet:: destArray[%d] is %ld\n",index, qelement_ptr->destArray[index]);
+			}
 		}
-		for(uint16_t index=0; index < qelement_ptr->noOfDest; index++){
-			Debug_Printf(DBG_CORE_DATAFLOW,"MessageCabinet:: destArray[%d] is %ld\n",index, qelement_ptr->destArray[index]);
-		}
+//		WF_MessageQElement* qelement_ptr = fmsg_ptr->wfQElement[wfid];
+//		//Update Heap element.
+//		qelement_ptr->noOfDest -= noOfDest;
+//		for(uint16_t i =0; i < noOfDest; i++){
+//			for(uint16_t j =0; j < current_node; j++){
+//				if(qelement_ptr->destArray[j] == destArray[i]){
+//					current_location = j;
+//				}
+//				for(uint16_t k =current_location; k < current_node -1 ; k++){
+//					qelement_ptr->destArray[k] = qelement_ptr->destArray[k+1];
+//				}
+//			}
+//		}
+//		for(uint16_t index=0; index < qelement_ptr->noOfDest; index++){
+//			Debug_Printf(DBG_CORE_DATAFLOW,"MessageCabinet:: destArray[%d] is %ld\n",index, qelement_ptr->destArray[index]);
+//		}
 		return true;
 	}
 	return false;
 }
 
 
-uint16_t MessageCabinet::ReplacePayloadRequest(uint16_t sizeOfPayload, PatternId_t patternId, MessageId_t msgId, void* payload ,WaveformId_t* wf_inquery, ReplacePayloadResponse_Data& data)
+uint16_t MessageCabinet::ReplacePayloadRequest(uint16_t sizeOfPayload, PatternId_t patternId, FMessageId_t  msgId, void* payload ,WaveformId_t* wf_inquery, ReplacePayloadResponse_Data& data)
 {
 	//Get hold of Framework Message.
 	FMsgMap::Iterator it_fmsg = framworkMsgMap->Find(msgId);
@@ -529,6 +772,7 @@ uint16_t MessageCabinet::ReplacePayloadRequest(uint16_t sizeOfPayload, PatternId
 		data.noOfDest = 0;      //no of node in destArray
 		return 0;
 	}
+
 	// Store pointer to FMessageQELement;
 	FMessageQElement* fmsg_ptr = it_fmsg->Second();
 	uint16_t wf_index = 0;
@@ -563,7 +807,7 @@ uint16_t MessageCabinet::ReplacePayloadRequest(uint16_t sizeOfPayload, PatternId
 		}
 		if(data.status)
 		{
-			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: payload was replaced. delete old payload\n");
+			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::ReplacePayloadRequest payload was replaced. delete old payload\n");
 			uint8_t* old_payload = fmsg_ptr->msg->GetPayload();
 			delete(old_payload);
 		}
@@ -571,91 +815,197 @@ uint16_t MessageCabinet::ReplacePayloadRequest(uint16_t sizeOfPayload, PatternId
 		data.noOfDest = 0;      //no of node in destArray
 		return wf_index;
 	}
-	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: This is Unicast with %d destinations\n",fmsg_ptr->noOfDest);
-	//if unicase for each Node check status
-	uint16_t count = 0;
-	//bool flag = false;
-	bool success = false;
-	bool fail = false;
-	for(uint16_t index; index < fmsg_ptr->noOfDest ; index++){
+	else{
+		data.status = true;
+		data.msgId = msgId;
+		data.noOfDest = 0; //fmsg_ptr->noOfDest;
 		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: This is Unicast with %d destinations\n",fmsg_ptr->noOfDest);
-		//Get Node id.
-		NodeId_t node = fmsg_ptr->linkArray[index]->linkId.nodeId;
-		WaveformId_t waveform = fmsg_ptr->linkArray[index]->linkId.waveformId;
-		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Find status of node %d\n",node);
-		switch(fmsg_ptr->GetStatusOfNode(node)){
-		case PDN_DST_RECV:{
-			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_DST_RECV, too late\n");
-			data.destArray[count] = node;
-			data.replace_status[count] = false;
-			count++;
-			fail = true;
-			break;
-		}
-		case PDN_WF_SENT:{
-			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_WF_SENT, too late\n");
-			data.destArray[count] = node;
-			data.replace_status[count] = false;
-			count++;
-			fail=true;
-			break;
-		}
-		case PDN_WF_RECV:{
-			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_WF_RECV, inquery wf\n");
-			wf_inquery[wf_index++] = waveform;
-			//go ahead and replay payload?
-			this->Replace_Ptr(fmsg_ptr, payload, sizeOfPayload, waveform);
 
-			/*if(wf_index == 0){ If I do this, somehow switch statement will not be executed?
-				wf_inquery[wf_index++] = waveform;
-			}else{
-				Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Check this waveform %d is in inquery list or not\n",waveform);
-				for(uint16_t index_list =0; index_list < wf_index; index_list++){
-					if(wf_inquery[index_list] == waveform){
-						Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: waveform %d is already in the list\n",waveform);
-						flag = true;
-						break;
+
+		WaveformId_t processed_wfs[MAX_WAVEFORMS];
+		uint8_t num_processed_wfs = 0;
+
+
+		for(uint16_t index = 0; index < fmsg_ptr->noOfDest ; index++){
+			NodeId_t node = fmsg_ptr->linkArray[index]->linkId.nodeId;
+			WaveformId_t wfid = fmsg_ptr->linkArray[index]->linkId.waveformId;
+			bool already_processed = false;
+			for(uint8_t i = 0; i < num_processed_wfs; ++i){
+				if(processed_wfs[i] == wfid){
+					already_processed = true;
+				}
+			}
+			if(!already_processed){
+				processed_wfs[num_processed_wfs++] = wfid;
+
+				Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::ReplacePayloadRequest Consider nodeid %d on wfid %d  \n", node, wfid);
+				auto s = GetHighestFragmentStatusofFmessageonWaveform(fmsg_ptr, wfid);
+				switch(s){
+				case FRAG_FRAG_CREATED: //Replace
+					if(this->Replace_Ptr(fmsg_ptr, payload, sizeOfPayload, wfid)){
+						for(uint16_t index2 = 0; index2 < fmsg_ptr->noOfDest ; index2++){
+							if(fmsg_ptr->waveform[index2] == wfid){
+								data.destArray[data.noOfDest] = fmsg_ptr->linkArray[index2]->linkId.nodeId;
+								data.replace_status[data.noOfDest] = true;
+								++data.noOfDest;
+							}
+						}
 					}
-				}
-				if(flag == false){
-					Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: waveform %d is now added to list\n",waveform);
-				}else{
-					flag = false;
-				}
-			}*/
-			fail = true;
-			break;
-		}
-		case PDN_FW_RECV:{
-			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_FW_RECV, successful\n");
-			// How to retreave wfid?
-			this->Replace_Ptr(fmsg_ptr, payload, sizeOfPayload, waveform);
-			data.destArray[count] = node;
-			data.replace_status[count] = true;
-			count++;
-			success = true;
-			///debugging
-			/* uint8_t* data_ptr =  fmsg_ptr->wfQElement[waveform]->msg->GetPayload();
+					else{
+						for(uint16_t index2 = 0; index2 < fmsg_ptr->noOfDest ; index2++){
+							if(fmsg_ptr->waveform[index2] == wfid){
+								data.destArray[data.noOfDest] = fmsg_ptr->linkArray[index2]->linkId.nodeId;
+								data.replace_status[data.noOfDest] = false;
+								++data.noOfDest;
+							}
+						}
+					}
+	//				return wf_index;
+					break;
+				case FRAG_WF_RECV: //TODO: BK: Ask waveform
+					wf_inquery[wf_index++] = wfid;
+					break;
+				case FRAG_DST_RECV:
+				case FRAG_WF_SENT:
 
-			for(uint16_t index =0; index < 256; index++){
-				printf("%x",data_ptr[index]);
-			}*/
+					for(uint16_t index2 = 0; index2 < fmsg_ptr->noOfDest ; index2++){
+						if(fmsg_ptr->waveform[index2] == wfid){
+							data.destArray[data.noOfDest] = fmsg_ptr->linkArray[index2]->linkId.nodeId;
+							data.replace_status[data.noOfDest] = false;
+							++data.noOfDest;
+						}
+					}
+					break;
+				case FRAG_DOES_NOT_EXIST:
+				default:
+					Debug_Error("ReplacePayloadRequest unknown fragment status of message");
 
-			break;
+
+					data.destArray[data.noOfDest] = node;
+					data.replace_status[data.noOfDest] = false;
+
+					data.status = false;
+					data.msgId = msgId;
+					++data.noOfDest;
+	//				return wf_index;
+					break;
+				}
+			}
+
 		}
-		default:
-			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Unknown status value! \n");
-		}
+//		auto s = GetHighestFragmentStatusofFmessage(fmsg_ptr);
+//		switch(s){
+//		case FRAG_DST_RECV:
+//		case FRAG_WF_SENT:
+//			for(uint16_t index = 0; index < fmsg_ptr->noOfDest ; index++){
+//				data.destArray[index] = fmsg_ptr->linkArray[index]->linkId.nodeId;
+//				data.replace_status[index] = false;
+//			}
+//			data.status = false;
+//			data.msgId = msgId;
+//			data.noOfDest = fmsg_ptr->noOfDest;
+//			return wf_index;
+//		case FRAG_WF_RECV: //Ask waveform
+//
+//		case FRAG_FRAG_CREATED: //Replace
+//			this->Replace_Ptr(fmsg_ptr, payload, sizeOfPayload, wfid);
+//			data.status = true;
+//			data.msgId = msgId;
+//			data.noOfDest = fmsg_ptr->noOfDest;
+//			return wf_index;
+//		case FRAG_DOES_NOT_EXIST:
+//		default:
+//			Debug_Error("ReplacePayloadRequest unknown fragment status of message");
+//			return 0;
+//		}
+		return wf_index;
 	}
-	if(!fail && success){
-		//uint8_t* old_payload = fmsg_ptr->msg->GetPayload();
-		//delete(old_payload);
-		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: All destination successfully replace payload.\n");
-	}
-	data.msgId = msgId;
-	data.status = false;            //indicates payload was replaced sccessfully or not
-	data.noOfDest = count;
-	return wf_index;
+
+//	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: This is Unicast with %d destinations\n",fmsg_ptr->noOfDest);
+//	//if unicase for each Node check status
+//	uint16_t count = 0;
+//	//bool flag = false;
+//	bool success = false;
+//	bool fail = false;
+//	for(uint16_t index = 0; index < fmsg_ptr->noOfDest ; index++){
+//		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: This is Unicast with %d destinations\n",fmsg_ptr->noOfDest);
+//		//Get Node id.
+//		NodeId_t node = fmsg_ptr->linkArray[index]->linkId.nodeId;
+//		WaveformId_t waveform = fmsg_ptr->linkArray[index]->linkId.waveformId;
+//		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Find status of node %d\n",node);
+//		switch(fmsg_ptr->GetStatusOfNode(node)){
+//		case PDN_DST_RECV:{
+//			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_DST_RECV, too late\n");
+//			data.destArray[count] = node;
+//			data.replace_status[count] = false;
+//			count++;
+//			fail = true;
+//			break;
+//		}
+//		case PDN_WF_SENT:{
+//			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_WF_SENT, too late\n");
+//			data.destArray[count] = node;
+//			data.replace_status[count] = false;
+//			count++;
+//			fail=true;
+//			break;
+//		}
+//		case PDN_WF_RECV:{
+//			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_WF_RECV, inquery wf\n");
+//			wf_inquery[wf_index++] = waveform;
+//			//go ahead and replay payload?
+//			this->Replace_Ptr(fmsg_ptr, payload, sizeOfPayload, waveform);
+//
+//			/*if(wf_index == 0){ If I do this, somehow switch statement will not be executed?
+//				wf_inquery[wf_index++] = waveform;
+//			}else{
+//				Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Check this waveform %d is in inquery list or not\n",waveform);
+//				for(uint16_t index_list =0; index_list < wf_index; index_list++){
+//					if(wf_inquery[index_list] == waveform){
+//						Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: waveform %d is already in the list\n",waveform);
+//						flag = true;
+//						break;
+//					}
+//				}
+//				if(flag == false){
+//					Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: waveform %d is now added to list\n",waveform);
+//				}else{
+//					flag = false;
+//				}
+//			}*/
+//			fail = true;
+//			break;
+//		}
+//		case PDN_FW_RECV:{
+//			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_FW_RECV, successful\n");
+//			// How to retreave wfid?
+//			this->Replace_Ptr(fmsg_ptr, payload, sizeOfPayload, waveform);
+//			data.destArray[count] = node;
+//			data.replace_status[count] = true;
+//			count++;
+//			success = true;
+//			///debugging
+//			/* uint8_t* data_ptr =  fmsg_ptr->wfQElement[waveform]->msg->GetPayload();
+//
+//			for(uint16_t index =0; index < 256; index++){
+//				printf("%x",data_ptr[index]);
+//			}*/
+//
+//			break;
+//		}
+//		default:
+//			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Unknown status value! \n");
+//		}
+//	}
+//	if(!fail && success){
+//		//uint8_t* old_payload = fmsg_ptr->msg->GetPayload();
+//		//delete(old_payload);
+//		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: All destination successfully replace payload.\n");
+//	}
+//	data.msgId = msgId;
+//	data.status = false;            //indicates payload was replaced sccessfully or not
+//	data.noOfDest = count;
+//	return wf_index;
 }
 
 bool MessageCabinet::Replace_Ptr(FMessageQElement * fmsg_ptr, void* payload ,uint16_t sizeOfPayload, WaveformId_t wfid){
@@ -663,13 +1013,126 @@ bool MessageCabinet::Replace_Ptr(FMessageQElement * fmsg_ptr, void* payload ,uin
 
    Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabiniet:: show fmsg_ptr %p, payload_ptr %p\n",fmsg_ptr, payload);
    // fmsg_ptr->msg->SetPayload((uint8_t*)payload);
-    fmsg_ptr->msg->SetPayloadSize(sizeOfPayload);
-    fmsg_ptr->wfQElement[wfid]->msg->SetPayload((uint8_t*)payload);
-    fmsg_ptr->wfQElement[wfid]->msg->SetPayloadSize(sizeOfPayload);
+	fmsg_ptr->msg->SetPayloadSize(sizeOfPayload);
+	fmsg_ptr->msg->SetPayload((uint8_t*)payload);
+	//TODO: BK: Replace payload in the waveform messages
+	// Consider 3 cases new payload requiring more segments, less segments, same amount of segments
+	//TODO: BK: Also consider the case in which half of the segments was sent out before replace_PTR command comes in
+
+
+	//Find wf attributes
+	WF_AttributeMap_t::Iterator it = wfAttributes->Find(wfid);
+	if(it == wfAttributes->End()){
+		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabiniet:: Replace_Ptr cannot find waveform\n");
+		return false;
+	}
+
+	//Find number of segments required
+	uint16_t max_segment_size = it->Second().maxPayloadSize;
+	uint16_t numberOfMsgSegmentsRequired = sizeOfPayload / max_segment_size;
+	if(sizeOfPayload % it->Second().maxPayloadSize > 0 ) ++numberOfMsgSegmentsRequired;
+
+
+
+//	FragmentList* fragmentlist_ptr = new FragmentList;
+//	fragmentlist_ptr->frameworkMsgID = fmsgelementptr->messageId;
+//
+//	for(uint16_t segment =0 ; segment < numberOfMsgSegmentsRequired; ++segment){
+//		WF_MessageId_t wMsgId = GetNewWaveformMsgId();
+//		WF_Message_n64_t *wfMsg = new WF_Message_n64_t();
+//
+//		for(uint16_t i = 0; i<noOfDest; ++i){
+//			fragmentlist_ptr->fragmentmap[wMsgId].Insert(destArray[i],FRAG_FRAG_CREATED);
+//		}
+////		fragmentstatusptr->fragmentStatus.Insert(wMsgId,FRAG_FRAG_CREATED);
+//
+//		wfMsgToFMsgMap->Insert(wMsgId,fragmentlist_ptr);
+//
+//	if(fmsg_ptr->wfQElement[wfid].Size() == numberOfMsgSegmentsRequired){
+//
+//	}
+//	else if(fmsg_ptr->wfQElement[wfid].Size() < numberOfMsgSegmentsRequired){
+//
+//	}
+//	else if(fmsg_ptr->wfQElement[wfid].Size() > numberOfMsgSegmentsRequired){
+//
+//	}
+//	All 3 cases above are handled by the following
+	uint16_t segment_number = 1;
+	auto itt = fmsg_ptr->wfQElement[wfid].Begin();
+	FragmentList* fragmentlist_ptr = NULL;
+	if( itt != NULL) {
+		auto t = wfMsgToFMsgMap->Find(itt->GetData()->msg->GetSrcNodeID());
+		if(t != wfMsgToFMsgMap->End()) {
+			fragmentlist_ptr = t->Second();
+		}
+	}
+
+    for ( ; itt != NULL && segment_number <= numberOfMsgSegmentsRequired; itt = fmsg_ptr->wfQElement[wfid].Next(itt), ++segment_number){
+    	//delete itt->GetData()->msg->GetPayload();//BK: Probably we need to delete. However there was no deletion before I modify this. so I am omittting this for now although I think this will result in a leak.
+		uint16_t previously_embedded_payload_size = (segment_number-1)*max_segment_size;
+		if(sizeOfPayload - previously_embedded_payload_size < max_segment_size)
+			itt->GetData()->msg->payloadSize = sizeOfPayload - previously_embedded_payload_size;
+		else itt->GetData()->msg->payloadSize = max_segment_size;
+
+
+		itt->GetData()->msg->SetPayload(fmsg_ptr->msg->GetPayload() + previously_embedded_payload_size);
+    }
+    for (; itt != NULL ; ){ //Delete unused waveform messages and elements when the new size is smaller
+    	//Delete waveform messages
+    	auto itt2 = fmsg_ptr->wfQElement[wfid].Next(itt);
+    	wfMsgToFMsgMap->Erase(itt->GetData()->wfmsgId);
+		wfMsgHeap[wfid].Delete(itt->GetData());
+		fmsg_ptr->wfQElement[wfid].DeleteElement(itt);
+		itt = itt2;
+    }
+
+    for (; segment_number <= numberOfMsgSegmentsRequired ; ++segment_number){//Create waveform messages if the new size is larger
+		WF_MessageId_t wMsgId = GetNewWaveformMsgId();
+		//WF_MessageBase wfMsg = wfMsgAdaptorHash->operator[](_wfid)->Convert_FM_to_WM(*msg,true);
+		WF_Message_n64_t *wfMsg = new WF_Message_n64_t();
+
+		if(fragmentlist_ptr == NULL) {
+			fragmentlist_ptr = new FragmentList;
+			fragmentlist_ptr->frameworkMsgID = fmsg_ptr->messageId;
+		}
+
+		for(uint16_t i = 0; i < fmsg_ptr->wfQElement[wfid].Begin()->GetData()->noOfDest; ++i){
+			fragmentlist_ptr->fragmentmap[wMsgId].Insert(fmsg_ptr->wfQElement[wfid].Begin()->GetData()->destArray[i],FRAG_FRAG_CREATED);
+		}
+
+
+		wfMsgToFMsgMap->Insert(wMsgId,fragmentlist_ptr); //Copy
+
+		wfMsg->CopyIthSegmentFrom(*(fmsg_ptr->msg), segment_number, max_segment_size);
+		wfMsg->SetWaveform(wMsgId);
+		wfMsg->SetSource(MY_NODE_ID);
+		wfMsg->SetNumberOfDest(fmsg_ptr->wfQElement[wfid].Begin()->GetData()->noOfDest); //Copy Number of destinations from the first segment
+		wfMsg->SetWaveformMessageID(wMsgId);
+		wfMsg->SetInstance(fmsg_ptr->wfQElement[wfid].Begin()->GetData()->msg->GetInstance());//Copy PID from the first segment
+
+		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: AddNewFrameworkMessage: message type via qelement is %d\n",wfMsg->GetType());
+
+
+		WF_MessageQElement *element = new WF_MessageQElement(wfMsg, fmsg_ptr->wfQElement[wfid].Begin()->GetData()->metric, wMsgId, fmsg_ptr->messageId, fmsg_ptr->wfQElement[wfid].Begin()->GetData()->destArray, fmsg_ptr->wfQElement[wfid].Begin()->GetData()->noOfDest, fmsg_ptr->wfQElement[wfid].Begin()->GetData()->broadcast);
+		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::WF_MessageQElement has mssage at %p, payload at %p\n",wfMsg,wfMsg->GetPayload());
+		fmsg_ptr->wfQElement[wfid].Insert(element);
+		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::Adding WF_MessageQElement ptr %p for fmid %d to wfQElement[%d]\n",element, fmsg_ptr->messageId, wfid);
+		wfMsgHeap[wfid].Insert(element);
+		//debugging
+		if(element->msg->GetType() == Types::ACK_REQUEST_MSG){
+			SoftwareAcknowledgement* swack1 = (SoftwareAcknowledgement*) element->msg->GetPayload();
+			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::Replace_Ptr: Show payload %d %d %lu\n",swack1->src, swack1->wfId, swack1->wfMsgId);
+			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::Replace_Ptr: Show payload ptr %p\n", swack1);
+		}
+    }
+
+
 
     return true;
 }
-uint16_t MessageCabinet::CancelDataSendRequest(PatternId_t patternId, MessageId_t msgId, NodeId_t *destArray, uint16_t noOfDest, WaveformId_t* wf_inquery, CancelDataResponse_Data& data, bool& flag ){
+
+uint16_t MessageCabinet::CancelDataSendRequest(PatternId_t patternId, FMessageId_t  msgId, NodeId_t *destArray, uint16_t noOfDest, WaveformId_t* wf_inquery, CancelDataResponse_Data& data, bool& flag ){
 	  //Get hold of Framework Message.
 		FMsgMap::Iterator it_fmsg = framworkMsgMap->Find(msgId);
 	    if(it_fmsg == framworkMsgMap->End()){
@@ -677,33 +1140,32 @@ uint16_t MessageCabinet::CancelDataSendRequest(PatternId_t patternId, MessageId_
 	      data.msgId = msgId;
 	      data.status = false;            //indicates payload was replaced sccessfully or not
 	      data.noOfDest = 0;      //no of node in destArray
-		  return 0;
+		  return false;
 	    }
 	    //Get Fmessage ptr
 	    FMessageQElement* fmsg_ptr = it_fmsg->Second();
 	    uint16_t wf_index = 0;
-	    DataStatusTypeE status;
 	    if(fmsg_ptr->broadcast == true){
-	    	status = fmsg_ptr->FindBroadcastStatus();
-	    	switch(status){
-				case PDN_ERROR_PKT_TOOBIG:
-				case PDN_ERROR:
-				Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_ERROR. Can be cancelled\n"); data.status = true; break;
-				break;
-				case PDN_DST_RECV:
-					Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_DST_RECV Too late to cancel\n"); data.status = false; break;
-				case PDN_WF_SENT:
-					Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_WF_SENT Too late to cancel\n"); data.status = false; break;
-				case PDN_WF_RECV:
-					Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_WF_RECV inquery wf\n");
+	    	FragmentStatusTypeE s = GetHighestFragmentStatusofFmessage(fmsg_ptr);
+	    	switch(s){
+				case  FRAG_FRAG_CREATED:
+					data.status =  Remove_Node(fmsg_ptr, 0, 1, fmsg_ptr->waveform[0], msgId ,flag);
+					break;
+				case  FRAG_WF_RECV:
 					wf_inquery[wf_index++] = fmsg_ptr->waveform[0];
 					break;
-				case PDN_FW_RECV:
-					Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_FW_RECV broadcast removed\n");
-					data.status =  Remove_Node(fmsg_ptr, 0, 1, fmsg_ptr->waveform[0],msgId ,flag);
+				case  FRAG_WF_SENT:
+					Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_WF_SENT Too late to cancel\n");
+					data.status = false;
 					break;
-				case PDN_BROADCAST_NOT_SUPPORTED:
+				case  FRAG_DST_RECV:
+					Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_DST_RECV Too late to cancel\n");
+					data.status = false;
 					break;
+				case  FRAG_DOES_NOT_EXIST:
+				default:
+					Debug_Error("CancelDataSendRequest unknown fragment status of message");
+					return false;
 	    	}
 	    	data.msgId = msgId;
 	    	data.noOfDest = 0;
@@ -728,38 +1190,37 @@ uint16_t MessageCabinet::CancelDataSendRequest(PatternId_t patternId, MessageId_
 	    			WaveformId_t wfid = fmsg_ptr->linkArray[link_index]->linkId.waveformId;
 	    			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Node %d is on wfid %d\n",remove_node,wfid);
 	    			//Get status
-	    			switch(fmsg_ptr->GetStatusOfNode(remove_node)){
-						case PDN_ERROR_PKT_TOOBIG:
-						case PDN_ERROR:
-							Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_ERROR, something wrong\n");
-							break;
-						case PDN_DST_RECV:
-							Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_DST_RECV, too late\n");
-							data.cancel_status[count] = false;
-							data.destArray[count] = remove_node;
-							count++;
-							break;
-						case PDN_WF_SENT:
-							Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_WF_SENT, too late\n");
-							data.cancel_status[count] = false;
-							data.destArray[count] = remove_node;
-							count++;
-							break;
-						case PDN_WF_RECV:
-							Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_WF_RECV, inquery wf\n");
-							wf_inquery[wf_index++] = fmsg_ptr->linkArray[link_index]->linkId.waveformId;
-							break;
-						case PDN_FW_RECV:
-							Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_FW_RECV, succes\n");
+	    			FragmentStatusTypeE s = GetHighestFragmentStatusofFmessageDest(fmsg_ptr, fmsg_ptr->linkArray[link_index]);
+	    	    	switch(s){
+	    				case  FRAG_FRAG_CREATED:
+							Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is FRAG_FRAG_CREATED, success\n");
 							data.cancel_status[count] = true;
 							data.destArray[count] = remove_node;
 							count++;
 							Remove_Node(fmsg_ptr,(uint16_t)1, remove_node, wfid, msgId, flag);
 							break;
-						case PDN_BROADCAST_NOT_SUPPORTED:
+	    				case  FRAG_WF_RECV:
+	    					Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is FRAG_WF_RECV, inquery wf\n");
+							wf_inquery[wf_index++] = fmsg_ptr->linkArray[link_index]->linkId.waveformId;
 							break;
-	    			}
-	    			break;
+	    				case  FRAG_WF_SENT:
+	    					Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is FRAG_WF_SENT Too late to cancel\n");
+	    					data.cancel_status[count] = false;
+							data.destArray[count] = remove_node;
+							count++;
+							break;
+	    				case  FRAG_DST_RECV:
+	    					Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is FRAG_DST_RECV Too late to cancel\n");
+							data.cancel_status[count] = false;
+							data.destArray[count] = remove_node;
+							count++;
+							break;
+	    				case  FRAG_DOES_NOT_EXIST:
+	    				default:
+	    					Debug_Error("CancelDataSendRequest unknown fragment status of message");
+	    					return false;
+	    	    	}
+	    	    	break;
 	    		}
 	    	}
 	        if(found == false){
@@ -770,19 +1231,22 @@ uint16_t MessageCabinet::CancelDataSendRequest(PatternId_t patternId, MessageId_
 	        	count++;
 	        }
 	    }
-	   Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet: Return what I know now. noOfDest %d\n",count);
+	    Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet: Return what I know now. noOfDest %d\n",count);
 	    data.msgId = msgId;
 	    data.status = false;            //indicates payload was replaced sccessfully or not
 	    data.noOfDest = count;
 	    return wf_index;
 }
-bool MessageCabinet::Remove_Node(FMessageQElement* fmsg_ptr, uint16_t noOfDest, NodeId_t remove_node, WaveformId_t wfid, MessageId_t msgId, bool& flag){
+bool MessageCabinet::Remove_Node(FMessageQElement* fmsg_ptr, uint16_t noOfDest, NodeId_t remove_node, WaveformId_t wfid, FMessageId_t  msgId, bool& flag){
     //check if this is unicast of broadcast
 	if(noOfDest == 0){
 		Debug_Printf(DBG_CORE_DATAFLOW , "Cancel Broadcast msg\n");
         //simply delete FrameworkMsgMap entry and WF_MessageQElement entry
 		framworkMsgMap->Erase(msgId);
-		this->wfMsgHeap[wfid].Delete(fmsg_ptr->wfQElement[wfid]);
+//		this->wfMsgHeap[wfid].Delete(fmsg_ptr->wfQElement[wfid]);
+		for(auto i_ptr = fmsg_ptr->wfQElement[wfid].Begin(); i_ptr != NULL; i_ptr = fmsg_ptr->wfQElement[wfid].Next(i_ptr)){
+			wfMsgHeap[wfid].Delete(i_ptr->GetData());
+		}
 		delete fmsg_ptr;
 		return true;
 	}
@@ -806,28 +1270,31 @@ bool MessageCabinet::Remove_Node(FMessageQElement* fmsg_ptr, uint16_t noOfDest, 
 	    	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet: liknArray[%d] is %d\n",link_index, fmsg_ptr->linkArray[link_index]->linkId.nodeId);
 	    }
     }
-
-	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Try adjusting Heap informaton\n");
-	//adjust information in Heap
-	for(uint16_t remove_index =0; remove_index < noOfDest; remove_index++){
-	   	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Remove node %d and Adjust destination in Heap\n",remove_node);
-	   	for(uint16_t dest_index =0; dest_index < fmsg_ptr->wfQElement[wfid]->noOfDest; dest_index++){
-	   		if(fmsg_ptr->wfQElement[wfid]->destArray[dest_index] == remove_node){
-	   			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::Found Node %d at %d\n",remove_node, dest_index);
-	   			uint16_t shift_index = dest_index;
-	   			for(;shift_index < fmsg_ptr->wfQElement[wfid]->noOfDest; shift_index++){
-	   				fmsg_ptr->wfQElement[wfid]->destArray[shift_index] = fmsg_ptr->wfQElement[wfid]->destArray[shift_index+1];
-	   			}
-	   		}
-	   	}
+	for(auto i_ptr = fmsg_ptr->wfQElement[wfid].Begin(); i_ptr != NULL; i_ptr = fmsg_ptr->wfQElement[wfid].Next(i_ptr)){
+		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Try adjusting Heap informaton\n");
+		//adjust information in Heap
+		for(uint16_t remove_index =0; remove_index < noOfDest; remove_index++){
+			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Remove node %d and Adjust destination in Heap\n",remove_node);
+			for(uint16_t dest_index =0; dest_index < i_ptr->GetData()->noOfDest; dest_index++){
+				if(i_ptr->GetData()->destArray[dest_index] == remove_node){
+					Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::Found Node %d at %d\n",remove_node, dest_index);
+					uint16_t shift_index = dest_index;
+					for(;shift_index < i_ptr->GetData()->noOfDest; shift_index++){
+						i_ptr->GetData()->destArray[shift_index] = i_ptr->GetData()->destArray[shift_index+1];
+					}
+				}
+			}
+		}
 	}
-
 	//now modify noOfDest
     fmsg_ptr->noOfDest -= noOfDest;
     fmsg_ptr->dnFromDest_remaining -=noOfDest;
     fmsg_ptr->dnSentByWF_remaining -=noOfDest;
     fmsg_ptr->dnRecvByWF_remaining -=noOfDest;
-    fmsg_ptr->wfQElement[wfid]->noOfDest -= noOfDest;
+//    fmsg_ptr->wfQElement[wfid]->noOfDest -= noOfDest;
+    for(auto i_ptr = fmsg_ptr->wfQElement[wfid].Begin(); i_ptr != NULL; i_ptr = fmsg_ptr->wfQElement[wfid].Next(i_ptr)){
+    	i_ptr->GetData()->noOfDest -= noOfDest;
+    }
 
     if(fmsg_ptr->dnSentByWF_remaining == 0)
     {
@@ -835,16 +1302,28 @@ bool MessageCabinet::Remove_Node(FMessageQElement* fmsg_ptr, uint16_t noOfDest, 
     }
 	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Adjust noOfDest")
     //if noOfdest in WF_MessageQElement is 0, remove entry from heap.
-    if(fmsg_ptr->wfQElement[wfid]->noOfDest == 0){
-    	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::Show pointer to WF_MessageQElement* %p\n",fmsg_ptr->wfQElement[wfid]);
-      	bool flag =this->wfMsgHeap[wfid].Delete(fmsg_ptr->wfQElement[wfid]);
-      	if(!flag){
-      	   	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Failed to remove entry\n");
-      	}else{
-      	   	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Entry in heap removed!\n");
-      	}
-      	fmsg_ptr->wfQElement[wfid] = NULL;
+//    if(fmsg_ptr->wfQElement[wfid]->noOfDest == 0){
+//    	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::Show pointer to WF_MessageQElement* %p\n",fmsg_ptr->wfQElement[wfid]);
+//      	bool flag =this->wfMsgHeap[wfid].Delete(fmsg_ptr->wfQElement[wfid]);
+//      	if(!flag){
+//      	   	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Failed to remove entry\n");
+//      	}else{
+//      	   	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Entry in heap removed!\n");
+//      	}
+//      	fmsg_ptr->wfQElement[wfid] = NULL;
+//    }
+    for(auto i_ptr = fmsg_ptr->wfQElement[wfid].Begin(); i_ptr != NULL; i_ptr = fmsg_ptr->wfQElement[wfid].Next(i_ptr)){
+		if(i_ptr->GetData()->noOfDest == 0){
+			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::Show pointer to WF_MessageQElement* %p\n",i_ptr->GetData());
+			bool flag =this->wfMsgHeap[wfid].Delete(i_ptr->GetData());
+			if(!flag){
+				Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Failed to remove entry\n");
+			}else{
+				Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Entry in heap removed!\n");
+			}
+		}
     }
+
 
 	//if noOfdest in framworkMsgMap = 0 remove FMessageQElement
 	if(fmsg_ptr->noOfDest == 0){
@@ -863,7 +1342,7 @@ bool MessageCabinet::Remove_Node(FMessageQElement* fmsg_ptr, uint16_t noOfDest, 
 return true;
 }
 
-bool MessageCabinet::CancelDataReponse_Helper(FMessageQElement* fmsg_ptr, uint16_t noOfDest, NodeId_t remove_node, WaveformId_t wfid, MessageId_t msgId)
+bool MessageCabinet::CancelDataReponse_Helper(FMessageQElement* fmsg_ptr, uint16_t noOfDest, NodeId_t remove_node, WaveformId_t wfid, FMessageId_t  msgId)
 {
 	if(noOfDest != 0){
 	    uint16_t current_noOfDest = fmsg_ptr->noOfDest;
@@ -895,110 +1374,287 @@ bool MessageCabinet::CancelDataReponse_Helper(FMessageQElement* fmsg_ptr, uint16
     }
 	return false;
 }
-uint16_t MessageCabinet::Add_Node(FMessageQElement* fmsg_ptr, uint64_t* destArray, uint16_t noOfDest, WaveformId_t wfid, RequestId_t rId, MessageId_t msgId, PatternId_t pid){
+
+
+
+MessageCabinet::AddNodeReturnValue_t MessageCabinet::Add_Node(FMessageQElement* fmsg_ptr, uint64_t* destArray, uint16_t noOfDest, WaveformId_t wfid, RequestId_t rId, FMessageId_t  msgId, PatternId_t pid){
 	//check status of this destination
-   Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::Add_Node. Check and Add destination on wf %d\n",wfid);
-
-    // this wfid may not exist for this msgId yet. Check if this wfid exists or not.
-    bool found = false;
-   Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::Show fmsg_ptr->noOfDest %d\n",fmsg_ptr->noOfDest);
-    for(uint16_t i =0; i < fmsg_ptr->noOfDest; i++){
-    	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: waveform[%d] is %d\n",i , fmsg_ptr->waveform[i]);
-    	if(fmsg_ptr->waveform[i] == wfid){
-    		found = true;
-    	}
-    }
-
-	//for(uint16_t index =0; index < noOfDest; index++){
-	if(fmsg_ptr->dnFromDest_remaining == 0 && found){
-		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: All node has PDN_DST_RECV too late to add\n");
-		return 0;
-	}
-	if(fmsg_ptr->dnSentByWF_remaining == 0 && found){
-		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: All node has PDN_WF_SENT too late to add\n");
-		return 0;
-	}
-	if(fmsg_ptr->dnRecvByWF_remaining == 0 && found){
-		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_WF_RECV Ask waveform %d\n",wfid);
-		for(uint16_t index =0; index < noOfDest; index++){
-			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: adding node %ld to list\n",destArray[index]);
-		    //Do not add entry here. It should be added when it received acknowledgement from wavefrom,
-			//fmsg_ptr->dnFromDest.Insert(destArray[index],false);
-			//fmsg_ptr->dnSentByWF.Insert(destArray[index],false);
-			//fmsg_ptr->dnRecvByWF.Insert(destArray[index],false);
-			fmsg_ptr->dnFromDest_remaining++;
-			fmsg_ptr->dnSentByWF_remaining++;
-			//fmsg_ptr->dnRecvByWF_remaining++; If success this is already 0
-			fmsg_ptr->waveform[fmsg_ptr->noOfDest] = wfid;
-			//fmsg_ptr->wfQElement[wfid]->destArray[fmsg_ptr->wfQElement[wfid]->noOfDest] = destArray[index];
-			//fmsg_ptr->wfQElement[wfid]->noOfDest++;
-			fmsg_ptr->noOfDest++;
-			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: noOfDest is %d Node %ld is added\n",index, destArray[index]);
+	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::Add_Node. Check and Add destination on wf %d\n",wfid);
+	// this wfid may not exist for this msgId yet. Check if this wfid exists or not.
+	bool found = false;
+	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet::Show fmsg_ptr->noOfDest %d\n",fmsg_ptr->noOfDest);
+	for(uint16_t i =0; i < fmsg_ptr->noOfDest; i++){
+		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: waveform[%d] is %d\n",i , fmsg_ptr->waveform[i]);
+		if(fmsg_ptr->waveform[i] == wfid){
+			found = true;
+			break;
 		}
-
-		//Core::WFControl::wfControl->Send_AddDestinationRequest(wfid, rId,msgId, destArray, noOfDest);
-        return 1;
 	}
 
-	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_FW_RECV: Adding node  to list.\n");
-   	//create map entry
+
+//#if ENABLE_FRAGMENTATION == 1
+
+	//BK: Check the status of the message to determine whether we can add this destination
+	//If this waveform was already selected
+		//Case 1: None of the fragments have been received by the waveform for no destination --> add
+		//Case 2: Only one of fragments have been received by the waveform
+			//Case 2-1: None of the fragments were sent by the waveform for none of the destinations -->Ask waveform
+			//Case 2-2: At least one of fragments were sent by the waveform for at least one of the destinations but not all-->Ask waveform
+			//Case 2-3: At least one of fragments were sent by the waveform for all the destinations --> reject
+		//Case 3: More than one fragment is received by the waveform --> reject
+	//if not found --> add as a new message
+
+	if(found){
+		auto wfMsgToFMsgMap_itt = wfMsgToFMsgMap->Find(fmsg_ptr->wfQElement[wfid].Begin()->GetData()->wfmsgId);
+		if(wfMsgToFMsgMap_itt != wfMsgToFMsgMap->End()){
+			FragmentList* fragmentlist_ptr = wfMsgToFMsgMap_itt->Second();
+			if(fragmentlist_ptr->lastSentCombinedStatusMap.Size() == 0){ //Case 1 or Case 2
+				bool isCase1 = true;
+
+				if(fragmentlist_ptr->fragmentmap.Size() > 0){
+					// We can consider looking at the first fragment since it is First come first served. However, otherwise we need to traverse
+					for(auto fragmentmap_itt = fragmentlist_ptr->fragmentmap.RBegin(); fragmentmap_itt != fragmentlist_ptr->fragmentmap.REnd(); ++fragmentmap_itt){ //BK: Traverse fragment list
+						for(auto fragmentdelstatus_it = fragmentmap_itt->Second().Begin(); fragmentdelstatus_it != fragmentmap_itt->Second().End(); ++fragmentdelstatus_it){
+							if(fragmentdelstatus_it->Second() >= FRAG_WF_RECV){
+								isCase1 = false;
+								break;
+							}
+						}
+						if(!isCase1) break;
+					}
+
+					if(isCase1){ // Case 1
+						//If a waveform message exists in the queue for this fmsg_ptr (destined to other neighbors on this destination)
+						// Traverse through all wfQElements and add the new destination to them
+						// And find FragmentList object and traverse through all waveformMessages (fragments) and create fragment status for the new destination
+						for(uint16_t index =0; index < noOfDest; index++){
+							Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: adding node %ld to list\n",destArray[index]);
+							fmsg_ptr->dnFromDest_remaining++;
+							fmsg_ptr->dnSentByWF_remaining++;
+							fmsg_ptr->dnRecvByWF_remaining++;
+							fmsg_ptr->waveform[fmsg_ptr->noOfDest] = wfid;
+							for(auto itt = fmsg_ptr->wfQElement[wfid].Begin(); itt != NULL; itt = fmsg_ptr->wfQElement[wfid].Next(itt)){
+								itt->GetData()->destArray[itt->GetData()->noOfDest] = destArray[index];
+								itt->GetData()->noOfDest++;
+							}
+							for(auto fragmentmap_itt = fragmentlist_ptr->fragmentmap.RBegin(); fragmentmap_itt != fragmentlist_ptr->fragmentmap.REnd(); ++fragmentmap_itt){
+								FragmentDeliveryStatusMap_t* fragment_del_status_map_ptr = &(fragmentmap_itt->Second());
+								fragment_del_status_map_ptr->Insert(destArray[index],FRAG_FRAG_CREATED);
+
+							}
+							fmsg_ptr->noOfDest++;
+							Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:::: noOfDest is %d Node %ld is added\n",index, destArray[index]);
+							Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Show number of message on wfid %d is %d\n", wfid,this->GetNumberWaveformOfMessages(wfid));
+						}
+						return ADDNODERV_DEST_ADDED_TO_EXISTING_WF_MSG;
+					}
+					else{ //Case 2
+						bool isCase2_3 = true;
+						for(auto fragmentmap_itt = fragmentlist_ptr->fragmentmap.RBegin(); fragmentmap_itt != fragmentlist_ptr->fragmentmap.REnd(); ++fragmentmap_itt){ //BK: Traverse fragment list
+							for(auto fragmentdelstatus_it = fragmentmap_itt->Second().Begin(); fragmentdelstatus_it != fragmentmap_itt->Second().End(); ++fragmentdelstatus_it){
+								if(fragmentdelstatus_it->Second() <= FRAG_WF_RECV){
+									isCase2_3 = false;
+									break;
+								}
+							}
+							if(!isCase2_3) break;
+						}
+
+						if(!isCase2_3){ //Case 2-1 or Case 2-2
+							Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: One of the destinations is PDN_WF_RECV Ask waveform %d\n",wfid);
+							//Core::WFControl::wfControl->Send_AddDestinationRequest(wfid, rId,msgId, destArray, noOfDest);
+
+							//Add destination for now but return ADDNODERV_ASK_PATTERN for initating askinng to WF
+							for(uint16_t index =0; index < noOfDest; index++){
+								Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: adding node %ld to list\n",destArray[index]);
+								fmsg_ptr->dnFromDest_remaining++;
+								fmsg_ptr->dnSentByWF_remaining++;
+								fmsg_ptr->dnRecvByWF_remaining++;
+								fmsg_ptr->waveform[fmsg_ptr->noOfDest] = wfid;
+								for(auto itt = fmsg_ptr->wfQElement[wfid].Begin(); itt != NULL; itt = fmsg_ptr->wfQElement[wfid].Next(itt)){
+									itt->GetData()->destArray[itt->GetData()->noOfDest] = destArray[index];
+									itt->GetData()->noOfDest++;
+								}
+								for(auto fragmentmap_itt = fragmentlist_ptr->fragmentmap.RBegin(); fragmentmap_itt != fragmentlist_ptr->fragmentmap.REnd(); ++fragmentmap_itt){
+									FragmentDeliveryStatusMap_t* fragment_del_status_map_ptr = &(fragmentmap_itt->Second());
+									fragment_del_status_map_ptr->Insert(destArray[index],FRAG_FRAG_CREATED);
+
+								}
+
+								fmsg_ptr->noOfDest++;
+								Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:::: noOfDest is %d Node %ld is added\n",index, destArray[index]);
+								Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Show number of message on wfid %d is %d\n", wfid,this->GetNumberWaveformOfMessages(wfid));
+							}
+
+//							return ADDNODERV_FAIL;
+							return ADDNODERV_ASK_PATTERN;
+						}
+						else{
+							Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: All node has PDN_WF_SENT for one of the fragments. Too late! \n");
+							return ADDNODERV_FAIL;
+						}
+
+					}
+				}
+				else{
+					Debug_Error("MessageCabinet::Add_Node ERROR! Fragmentation list is empty");
+					return ADDNODERV_FAIL;
+				}
+			}
+			else { //Case 3
+				Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Some node has PDN_WF_RECV for all of the fragments. Too late! \n");
+				return ADDNODERV_FAIL;
+			}
 
 
-	if(!found){
+		}
+		else{
+			Debug_Error("MessageCabinet::Add_Node ERROR! Cannot find the fragmentation list");
+			return ADDNODERV_FAIL;
+		}
+	}
+	else{
 		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Create new WF_QElement on wfid %d\n",wfid);
 		uint16_t old_noOfDest = fmsg_ptr->noOfDest;
-		//WF_MessageBase* message_ptr = fmsg_ptr->msg;
-		WF_Message_n64_t *wfMsg = new WF_Message_n64_t();
-		WF_MessageId_t wfMsgId = GetNewWaveformMsgId();
-		wfMsgToFMsgMap->Insert(wfMsgId, msgId);
-		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Show fmsg_ptr->msg %p, payload points to %p, msg type is %d\n", fmsg_ptr->msg, fmsg_ptr->msg->GetPayload(), fmsg_ptr->msg->GetType());
-		wfMsg->CopyFrom(*fmsg_ptr->msg);
-		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Show payload points to %p\n", wfMsg->GetPayload());
-		wfMsg->SetWaveformMessageID(wfMsgId);
-		//wfMsg->SetFrameworkMessageID(msgId);
-		wfMsg->SetWaveform(wfid);
-		wfMsg->SetSource(MY_NODE_ID);
-		wfMsg->SetNumberOfDest(noOfDest);
-		wfMsg->SetInstance(pid);
-		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Show adapterhdrsize is %d\n",wfMsg->GetHeaderSize());
-		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Show message size is %ld\n", sizeof(WF_Message_n64_t));
-		MsgPriorityMetric* metric_ptr = fmsg_ptr->metric;
-		WF_MessageQElement *element = new WF_MessageQElement(wfMsg, metric_ptr, 0, msgId, destArray, noOfDest, false); //Masahirio. wfMsgId is assigned by wf.
-		this->wfMsgHeap[wfid].Insert(element);
-		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: show created WF_MessageQElement ptr, msg %p %p\n",element, element->msg);
+
+		AddWaveformMessage(fmsg_ptr, wfid, false, destArray, noOfDest, pid);
 
 		fmsg_ptr->dnFromDest_remaining += noOfDest;
 		fmsg_ptr->dnSentByWF_remaining += noOfDest;
 		fmsg_ptr->dnRecvByWF_remaining += noOfDest;
 		fmsg_ptr->noOfDest += noOfDest;
-		fmsg_ptr->wfQElement[wfid] = element;
+
 		//update fmsg_ptr->waveform array
 		for(uint16_t index = 0; index < noOfDest; index++){
 			fmsg_ptr->waveform[old_noOfDest++] = wfid;
 		}
 		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Show number of message on wfid %d is %d\n", wfid,this->GetNumberWaveformOfMessages(wfid));
-		return 3;
+
+		return ADDNODERV_ADDED_AS_NEW_WF_MSG;
 	}
-	else{
-		for(uint16_t index =0; index < noOfDest; index++){
-			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: adding node %ld to list\n",destArray[index]);
-			//fmsg_ptr->dnFromDest.Insert(destArray[index],false); do not create entry here. I should be added when it got acknowledgement
-			//fmsg_ptr->dnSentByWF.Insert(destArray[index],false);
-			//fmsg_ptr->dnRecvByWF.Insert(destArray[index],false);
-			fmsg_ptr->dnFromDest_remaining++;
-			fmsg_ptr->dnSentByWF_remaining++;
-			fmsg_ptr->dnRecvByWF_remaining++;
-			fmsg_ptr->waveform[fmsg_ptr->noOfDest] = wfid;
-			fmsg_ptr->wfQElement[wfid]->destArray[fmsg_ptr->wfQElement[wfid]->noOfDest] = destArray[index];
-			fmsg_ptr->wfQElement[wfid]->noOfDest++;
-			fmsg_ptr->noOfDest++;
-			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:::: noOfDest is %d Node %ld is added\n",index, destArray[index]);
-			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Show number of message on wfid %d is %d\n", wfid,this->GetNumberWaveformOfMessages(wfid));
-		}
-	}
-	
-	return 2;
+
+//#else
+//
+//	//for(uint16_t index =0; index < noOfDest; index++){
+//	if(fmsg_ptr->dnFromDest_remaining == 0 && found){
+//		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: All node has PDN_DST_RECV too late to add\n");
+//		return ADDNODERV_FAIL;
+//	}
+//	if(fmsg_ptr->dnSentByWF_remaining == 0 && found){
+//		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: All node has PDN_WF_SENT too late to add\n");
+//		return ADDNODERV_FAIL;
+//	}
+//	if(fmsg_ptr->dnRecvByWF_remaining == 0 && found){
+//		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_WF_RECV Ask waveform %d\n",wfid);
+//		for(uint16_t index =0; index < noOfDest; index++){
+//			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: adding node %ld to list\n",destArray[index]);
+//			//Do not add entry here. It should be added when it received acknowledgement from wavefrom,
+//			//fmsg_ptr->dnFromDest.Insert(destArray[index],false);
+//			//fmsg_ptr->dnSentByWF.Insert(destArray[index],false);
+//			//fmsg_ptr->dnRecvByWF.Insert(destArray[index],false);
+//			fmsg_ptr->dnFromDest_remaining++;
+//			fmsg_ptr->dnSentByWF_remaining++;
+//			//fmsg_ptr->dnRecvByWF_remaining++; If success this is already 0
+//			fmsg_ptr->waveform[fmsg_ptr->noOfDest] = wfid;
+//			//fmsg_ptr->wfQElement[wfid]->destArray[fmsg_ptr->wfQElement[wfid]->noOfDest] = destArray[index];
+//			//fmsg_ptr->wfQElement[wfid]->noOfDest++;
+//			fmsg_ptr->noOfDest++;
+//			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: noOfDest is %d Node %ld is added\n",index, destArray[index]);
+//		}
+//
+//		//Core::WFControl::wfControl->Send_AddDestinationRequest(wfid, rId,msgId, destArray, noOfDest);
+//		return ADDNODERV_ASK_PATTERN;
+//	}
+//
+//	Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Status is PDN_FW_RECV: Adding node  to list.\n");
+//	//create map entry
+//
+//
+//	if(!found){
+//		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Create new WF_QElement on wfid %d\n",wfid);
+//		uint16_t old_noOfDest = fmsg_ptr->noOfDest;
+//		//WF_MessageBase* message_ptr = fmsg_ptr->msg;
+//
+//		AddWaveformMessage(fmsg_ptr, wfid, false, destArray, noOfDest, pid);
+//
+//
+//		//#if ENABLE_FRAGMENTATION == 1
+//		//		AddWaveformMessage(fmsg_ptr, wfid, false, destArray, noOfDest, pid);
+//		//
+//		//#else
+//		//		AddWaveformMessage(fmsg_ptr, wfid, false, destArray, noOfDest, pid);
+//		//
+//		////		WF_Message_n64_t *wfMsg = new WF_Message_n64_t();
+//		////		WF_MessageId_t wfMsgId = GetNewWaveformMsgId();
+//		////		wfMsgToFMsgMap->Insert(wfMsgId, msgId);
+//		////		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Show fmsg_ptr->msg %p, payload points to %p, msg type is %d\n", fmsg_ptr->msg, fmsg_ptr->msg->GetPayload(), fmsg_ptr->msg->GetType());
+//		////		wfMsg->CopyFrom(*fmsg_ptr->msg);
+//		////		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Show payload points to %p\n", wfMsg->GetPayload());
+//		////		wfMsg->SetWaveformMessageID(wfMsgId);
+//		////		//wfMsg->SetFrameworkMessageID(msgId);
+//		////		wfMsg->SetWaveform(wfid);
+//		////		wfMsg->SetSource(MY_NODE_ID);
+//		////		wfMsg->SetNumberOfDest(noOfDest);
+//		////		wfMsg->SetInstance(pid);
+//		////		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Show adapterhdrsize is %d\n",wfMsg->GetHeaderSize());
+//		////		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Show message size is %ld\n", sizeof(WF_Message_n64_t));
+//		////		MsgPriorityMetric* metric_ptr = fmsg_ptr->metric;
+//		////		WF_MessageQElement *element = new WF_MessageQElement(wfMsg, metric_ptr, 0, msgId, destArray, noOfDest, false); //Masahirio. wfMsgId is assigned by wf.
+//		////		this->wfMsgHeap[wfid].Insert(element);
+//		////		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: show created WF_MessageQElement ptr, msg %p %p\n",element, element->msg);
+//		//#endif
+//
+//		fmsg_ptr->dnFromDest_remaining += noOfDest;
+//		fmsg_ptr->dnSentByWF_remaining += noOfDest;
+//		fmsg_ptr->dnRecvByWF_remaining += noOfDest;
+//		fmsg_ptr->noOfDest += noOfDest;
+//
+//		//update fmsg_ptr->waveform array
+//		for(uint16_t index = 0; index < noOfDest; index++){
+//			fmsg_ptr->waveform[old_noOfDest++] = wfid;
+//		}
+//		Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Show number of message on wfid %d is %d\n", wfid,this->GetNumberWaveformOfMessages(wfid));
+//
+//		return ADDNODERV_ADDED_AS_NEW_WF_MSG;
+//	}
+//	else{ //If a waveform message exists in the queue for this fmsg_ptr (destined to other neighbors on this destination)
+//		// Traverse through all wfQElements and add the new destination to them
+//		// And find FragmentList object and traverse through all waveformMessages (fragments) and create fragment status for the new destination
+//		for(uint16_t index =0; index < noOfDest; index++){
+//			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: adding node %ld to list\n",destArray[index]);
+//			//fmsg_ptr->dnFromDest.Insert(destArray[index],false); do not create entry here. I should be added when it got acknowledgement
+//			//fmsg_ptr->dnSentByWF.Insert(destArray[index],false);
+//			//fmsg_ptr->dnRecvByWF.Insert(destArray[index],false);
+//			fmsg_ptr->dnFromDest_remaining++;
+//			fmsg_ptr->dnSentByWF_remaining++;
+//			fmsg_ptr->dnRecvByWF_remaining++;
+//			fmsg_ptr->waveform[fmsg_ptr->noOfDest] = wfid;
+//			for(auto itt = fmsg_ptr->wfQElement[wfid].Begin(); itt != NULL; itt = fmsg_ptr->wfQElement[wfid].Next(itt)){
+//				itt->GetData()->destArray[itt->GetData()->noOfDest] = destArray[index];
+//				itt->GetData()->noOfDest++;
+//			}
+//			auto itt2 = wfMsgToFMsgMap->Find(fmsg_ptr->wfQElement[wfid].Begin()->GetData()->wfmsgId);
+//			if(itt2 != wfMsgToFMsgMap->End()){
+//				FragmentList* fragmentlist_ptr = itt2->Second();
+//				for(auto fragmentmap_itt = fragmentlist_ptr->fragmentmap.Begin(); fragmentmap_itt != fragmentlist_ptr->fragmentmap.End(); ++fragmentmap_itt){
+//					fragmentmap_itt->Second().Insert(destArray[index],FRAG_FRAG_CREATED);
+//				}
+//			}else{
+//				Debug_Error("MessageCabinet::Add_Node ERROR! Cannot find the fragmentation list");
+//			}
+//
+//			//			fmsg_ptr->wfQElement[wfid]->destArray[fmsg_ptr->wfQElement[wfid]->noOfDest] = destArray[index];
+//			//			fmsg_ptr->wfQElement[wfid]->noOfDest++;
+//			fmsg_ptr->noOfDest++;
+//			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:::: noOfDest is %d Node %ld is added\n",index, destArray[index]);
+//			Debug_Printf(DBG_CORE_DATAFLOW, "MessageCabinet:: Show number of message on wfid %d is %d\n", wfid,this->GetNumberWaveformOfMessages(wfid));
+//		}
+//	}
+//
+//	return ADDNODERV_DEST_ADDED_TO_EXISTING_WF_MSG;
+//#endif
 }
+
 
 
 }//end of namespace

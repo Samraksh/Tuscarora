@@ -9,7 +9,7 @@
 #ifndef FRAMEWORKBASE_H_
 #define FRAMEWORKBASE_H_
 
-#include <map>
+//#include <map>
 #include "Platform/PlatformSelector.h"
 #include <Base/FrameworkTypes.h>
 #include "Lib/PAL/PAL_Lib.h"
@@ -17,22 +17,29 @@
 #include <Interfaces/PWI/Framework_I.h>
 #include <Interfaces/PWI/FrameworkResponces.h>
 
+
 #include "Framework/Core/DataFlow/PiggyBacker.h"
 #include "Framework/PWI/Neighborhood/CustomPatternNeighborTable.h"
 #include "Framework/PWI/Neighborhood/PI_NeighborManager.h"
 #include "Framework/Core/Neighborhood/NeighborTable.h"
+#include "Framework/Core/Neighborhood/PotentialNeighborRegistry.h"
+
 #include "Framework/Core/Discovery/None.h"
-#include "Framework/Core/Discovery/Global.h"
-#include "Framework/Core/Discovery/LongLink.h"
-#include "Framework/Core/Discovery/OracleLongLink.h"
 #include "Framework/Core/Neighborhood/AddressMap.h"
 #include "Framework/Core/Estimation/EstBase.h"
 #include "Framework/Core/Estimation/Scheduled.h"
 #include "Framework/Core/Estimation/ConflictAware.h"
 #include "Framework/Core/DataFlow/PacketHandler.h"
 #include "Framework/Core/Naming/StaticNaming.h"
-#include "Lib/Misc/MemMap.h"
 #include "PatternClient.h"
+
+#ifndef PLATFORM_EMOTE
+#include "Platform/linux/PAL/Logs/MemMap.h"
+#include "Platform/linux/Framework/Global.h"
+#include "Platform/linux/Framework/LongLink.h"
+#include "Platform/linux/Framework/OracleLongLink.h"
+
+#endif
 
 using namespace Core::Dataflow;
 using namespace Waveform;
@@ -42,23 +49,31 @@ static Core::Naming::StaticNaming NameService;
 
 
 namespace PWI {
-  
-  
 
 	
 class FrameworkBase : public Framework_I , EstimatorCallback_I<uint64_t>, public PiggyBackerI<uint64_t>
 {
 	friend class PacketHandler;///< Coordinates the delivery and transmission of the packets for the patterns, link estimation, neighborhood discovery, time synchronization, and data packets
 	friend class LinkEstimatorI;///< The interface to the link estimation module
+
+protected:
+	//This method is key for creating the objects used by Framework.
+	//This is platform centric and is implemented in PlatformConfig.cpp under respective platform directories
+	//eg. Platform/eMote/PlatformConfig.cpp
+	static void InitializeFrameworkObjects(FrameworkBase *fb);
+
 public:
 
 	Core::Naming::StaticNaming *nameService;
-	BSTMapT<MessageId_t, MessageId_t> fwToPattern;  //Store correspondance between pattern message Id and framewrok mesageId 
-	BSTMapT<MessageId_t, ListT<WaveformId_t,false, EqualTo<WaveformId_t> >* > fwmsgTowfid; // stores framework messageId <=> wfid list
+	BSTMapT <FMessageId_t , FMessageId_t > fwToPattern;  //Store correspondance between pattern message Id and framewrok mesageId 
+	BSTMapT <FMessageId_t , ListT<WaveformId_t,false, EqualTo<WaveformId_t> >* > fwmsgTowfid; // stores framework messageId <=> wfid list
 	LinkEstimationStore LES;
 	U64AddressSendDataDelegate_t *u64SendDelegate ;
-protected:
-  
+
+#ifndef PLATFORM_EMOTE
+	MemMap<Store> data;
+#endif
+
 	uint16_t outstandingPacketsPetPattern;
 	PotentialNeighborRegistry potential;
 	PiggyBacker<uint64_t> *PB;
@@ -77,18 +92,13 @@ protected:
 	ListT<NodeId_t,false, EqualTo<NodeId_t> >* successDest;
 	ListT<NodeId_t,false, EqualTo<NodeId_t> >* failDest;
 
-	//MessageId_t frameworkMsgId;
-	MessageId_t patternMsgId;
+	//FMessageId_t frameworkMsgId;
+	FMessageId_t patternMsgId;
 
 	uint8_t noOfWaveforms;
 
 	//used to check inquery timer to decide to send request again or not.
 	bool attribute_request_pending[MAX_WAVEFORMS];
-
-
-
-	//RandomSchedule<UniformRandomInt,UniformRNGState,uint64_t,uint64_t> *coreEventSch;
-	//Delegate<void, EventInfoU64&> *coreEventDel;
 	
 	Event *corePacketEvent;
 	EventDelegate *corePacketDel;
@@ -100,8 +110,8 @@ protected:
 	uint32_t deadNbrPeriod;
 	uint32_t seq;
 	int fd;
-	Header header;
-	MemMap<Store> data;
+	DiscoveryLogHeader header;
+
 	int communicationRange;
 
 	//PatternNeighborTable *defaultPatternTable;
@@ -109,7 +119,7 @@ protected:
 
 
 	//LinkEstimatorI *linkEstimator;
-	NetworkDiscovery *discovery;
+	NetworkDiscoveryI *discovery;
 
 	uint32_t numNeighbors;
 
@@ -126,26 +136,13 @@ protected:
 	
 	FrameworkAttributes fwAttribute;
 	
-	/* moving it to packethandler
-	MessageId_t GetNewFrameworkMsgId() {
-		//printf("Generating next Framework pkt id: current id (ptr: %p) is %d\n",&num1, num1);
-		//printf("New Framework pkt id: current id is %d\n",num1);
-		return ++frameworkMsgId;
-	}
-	*/
-	/*MessageId_t GetNewPatternMsgId(){
-		return ++patternMsgId;
-	}*/
-
-	//uint32_t GetNewReqId();
-	//uint32_t newReqnumber;
-	
-  
 public:
 	PatternEventDispatch_I *eventDispatcher;
 
+	//uint32_t mask[32];///< Used for logging only
+
 	WF_Attributes localWfInfo;
-	PacketAdaptor<uint64_t> *pktAdaptor64;
+	//PacketAdaptor<uint64_t> *pktAdaptor64;
 
 	Delegate<void, WF_DataStatusParam_n64_t> *ackDel;
 	Delegate<void, WF_Message_n64_t&> *wfRecvDel;
@@ -159,8 +156,12 @@ public:
 	uint8_t mobilityModel;
 	uint16_t speed;
 	uint16_t numNodes;
-	uint32_t mask[32];///< Used for logging only
-	uint16_t maxFrameworkPacketSize;
+
+	//uint16_t maxFrameworkPacketSize;
+
+	//uint32_t mask[32];///< Used for logging only
+	//uint16_t maxFrameworkPacketSize;
+
 	
 	//decreate inquerytimer to reschedule initial attribute request.
 	TimerDelegate *inqueryTimerDelegate;
@@ -177,7 +178,7 @@ public://Non interface methods
 	void SetLocalLink(Waveform::WaveformBase &ref, WaveformId_t wid, const char* name);
 	WaveformId_t SetLink(Waveform::WaveformBase &ref, WaveformId_t wid, const char* name);
 	void SetLinkEstimationType(EstimatorTypeE type);///< Sets the type of link estimation to use
-	void SetDiscoveryType(uint8_t type);///< Sets the type of neighborhood discovery to use
+	void SetDiscoveryType(NetworkDiscoveryTypeE type);///< Sets the type of neighborhood discovery to use
 	void SetRange(int range);
 	void SetNeighborInactivityPeriod(uint32_t period);
 	void SetLinkEstimationPeriod(uint32_t _period);///< The mean period of time between link estimation beacons
@@ -227,7 +228,7 @@ private:
 	void debugTimerHandler(uint32_t flag);
 	void MinimalWaveformSpray(PatternId_t pid, FMessage_t& msg, WaveformId_t wid, uint16_t nonce);
 	void UnAddressedSend (PatternId_t pid, FMessage_t& msg, WaveformId_t wid, uint16_t nonce);
-	void RefreshFrameworkAttribute(FrameworkAttributes &attr);
+	void RefreshFrameworkAttribute();
 
 
 
@@ -238,12 +239,12 @@ public:
 	void SendData (PatternId_t pid, NodeId_t *destArray, uint16_t noOfDest, FMessage_t& msg, uint16_t nonce, bool noAck=false);
 	void SendData (PatternId_t pid, NodeId_t *destArray, uint16_t noOfDest, LinkComparatorTypeE lcType, FMessage_t& msg, uint16_t nonce, bool noAck);
 
-	void SoftwareBroadCast(PatternId_t pid, FMessage_t& msg, WaveformId_t wid, uint16_t nonce, MessageId_t newMsgToken);
+	void SoftwareBroadCast(PatternId_t pid, FMessage_t& msg, WaveformId_t wid, uint16_t nonce, FMessageId_t  newMsgToken);
 	
 #if ENABLE_FW_BROADCAST==1 	
 	void BroadcastData (PatternId_t pid, FMessage_t& msg, WaveformId_t wid, uint16_t nonce);
 #endif
-	void ReplacePayloadRequest (PatternId_t patternId, MessageId_t msgId, void *payload, uint16_t sizeOfPayload);
+	void ReplacePayloadRequest (PatternId_t patternId, FMessageId_t  msgId, void *payload, uint16_t sizeOfPayload);
 
 	///Control plance
 	PatternId_t NewPatternInstanceRequest(PatternTypeE ptype, const char uniqueName[128]);
@@ -251,11 +252,11 @@ public:
 	void RegisterPatternRequest (PatternId_t patternId, const char uniqueName[128], PatternTypeE type);
 	void DeRegisterPatternRequest (PatternId_t patternId);
 	void SelectDataNotificationRequest (PatternId_t patternId, uint8_t notifierMask);
-	void AddDestinationRequest (PatternId_t patternId, MessageId_t msgId, NodeId_t *destArray, uint16_t noOfNbrs);
-	void AddDestinationRequest(PatternId_t patternId, MessageId_t msgId, NodeId_t* destArray, uint16_t noOfNbrs, LinkComparatorTypeE lcType);
+	void AddDestinationRequest (PatternId_t patternId, FMessageId_t  msgId, NodeId_t *destArray, uint16_t noOfNbrs);
+	void AddDestinationRequest(PatternId_t patternId, FMessageId_t  msgId, NodeId_t* destArray, uint16_t noOfNbrs, LinkComparatorTypeE lcType);
 
-	void CancelDataRequest (PatternId_t patternId, MessageId_t msgId, NodeId_t *destArray, uint16_t noOfDest);
-	void DataStatusRequest (PatternId_t patternId, MessageId_t msgId);
+	void CancelDataRequest (PatternId_t patternId, FMessageId_t  msgId, NodeId_t *destArray, uint16_t noOfDest);
+	void DataStatusRequest (PatternId_t patternId, FMessageId_t  msgId);
 	void FrameworkAttributesRequest(PatternId_t pid);
 	void SetLinkThresholdRequest (PatternId_t patternId, LinkMetrics threshold);
 	void SelectLinkComparatorRequest (PatternId_t patternId, LinkComparatorTypeE  lcType);

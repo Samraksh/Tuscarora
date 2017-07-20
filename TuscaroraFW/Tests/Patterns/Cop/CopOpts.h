@@ -9,8 +9,8 @@
 
 // #include "commandline.h"
 #include <Base/BasicTypes.h>
-#include "Lib/Logs/log.h"
 #include <Sys/RuntimeOpts.h>
+#include "../../../Platform/linux/PAL/Logs/log.h"
 
 // row selection methods: (defined as string constants to get the
 // compiler's help for spelling mistakes.

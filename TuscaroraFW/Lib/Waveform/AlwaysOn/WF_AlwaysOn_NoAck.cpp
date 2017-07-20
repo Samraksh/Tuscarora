@@ -14,11 +14,18 @@
 #include "WF_AlwaysOn_NoAck.h"
 #include "Lib/Misc/Debug.h"
 #include "Framework/Core/Naming/StaticNaming.h"
+#include "Framework/Core/Estimation/EstBase.h"
+#include <Interfaces/Waveform/EventTimeStamp.h>
 #include <Sys/netconvert.h>
+
 //Program  implemented using examples  from
 //http://austinmarton.wordpress.com/2011/09/14/sending-raw-ethernet-packets-from-a-specific-interface-in-c-on-linux/
 ///and
 ///http://yusufonlinux.blogspot.com/2010/11/data-link-access-and-zero-copy.html
+
+#if defined(PLATFORM_LINUX) || defined(PLATFORM_DCE)
+
+#include <Platform/linux/PAL/Logs/MemMap.h>
 
 #include <arpa/inet.h>
 #include <stdio.h>
@@ -38,11 +45,10 @@
 #include <fcntl.h>
 #include <netdb.h>
 #include <ifaddrs.h>
-
 #include <sstream>  //generate string key for map
 
-#include "Framework/Core/Estimation/EstBase.h"
-#include <Interfaces/Waveform/EventTimeStamp.h>
+#endif
+
 
 // extern bool DBG_WAVEFORM; // set in Lib/Misc/Debug.cpp
 extern NodeId_t MY_NODE_ID;
@@ -361,35 +367,6 @@ void WF_AlwaysOn_NoAck::SendData (WF_Message_n64_t& msg, uint16_t size, uint64_t
 
 
 	this->current_destination_ = destArray[0];
-	//start very short timer for acknowledgement from MAC. 
-	/*Debug_Printf(DBG_WAVEFORM, "Starting timer to wait for acknowledgement from NS-3\n");
-	if(ackTimer == NULL){
-		Debug_Printf(DBG_WAVEFORM, "ackTimer is NULL. Illegal!");
-	}
-	ackTimer->Start();*/
-	//signal WDN_WF_RECV to framework. For now, it is always success
-	//Store current ackType send to answer inquery via control plane
-	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn:: last_send_msg_dest_ptr[0] is %ld\n",last_sent_msg_dest_ptr[0]);
-
-	//Prepare WDN_WF_SENT for first destination. Just update first destination
-	Ack_Type[last_sent_msg_dest_ptr[0]] = WDN_WF_SENT;
-	MessageStatus[last_sent_msg_dest_ptr[0]] = WF_ST_SUCCESS;
-	this->CopyToDN(param);
-	/*
-	Debug_Printf( DBG_WAVEFORM,"Preparing WDN_WF_SENT for dest %ld \n", destList[0]); 
-	Ack_Type[last_sent_msg_dest_ptr[0]] = WDN_WF_SENT;
-	Debug_Printf(DBG_WAVEFORM, "Ack_Type.Size is %d\n",Ack_Type.Size());
-	param.statusType[0] = WDN_WF_SENT;
-	param.statu
-	param.status = WF_ST_SUCCESS;
-	uint64_t* dest = new uint64_t[1];
-	*dest = destArray[0];
-	param.dest = dest;
-	param.noOfDest = 1;
-	*/
-	//param->WF_Buffer_FULL = WF_Buffer_FULL;
-	param.readyToReceive = readyToRecv;
-	dataNotifierEvent->Invoke(param);
 
 	//validation
 	#if Debug_Flag
@@ -409,7 +386,19 @@ WF_MessageStatusE WF_AlwaysOn_NoAck::Unicast(uint64_t dest, WF_Message_n64_t& ms
 	if(DBG_WAVEFORM()) { PrintMAC((uint8_t*)destMAC); fflush(stdout);}
 	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn::Checking noOfDest %d\n",msg.GetNumberOfDest());
 	//printf("WF_AlwaysOn::Unicast:: Sending a unicast message to node: %lu, at address: ", dest); PrintMAC((uint8_t*)&deviceId); fflush(stdout);
-	return SendToDevice((uint8_t *)destMAC, msg, size);
+	WF_MessageStatusE rtn = SendToDevice((uint8_t *)destMAC, msg, size);
+
+
+	// Record the new status and trigger the data status
+	//	SendDataStatus(dest, rtn, WDN_WF_SENT);
+	Ack_Type[dest] = WDN_WF_SENT;
+	MessageStatus[dest] = rtn;
+	WF_DataStatusParam<uint64_t> param(msg.GetWaveformMessageID(), msg.GetWaveform());
+	this->CopyToDN(param);
+	param.readyToReceive = readyToRecv;
+	dataNotifierEvent->Invoke(param);
+
+	return rtn;
 }
 
 
@@ -545,7 +534,7 @@ void WF_AlwaysOn_NoAck::BroadcastData(WF_Message_n64_t& msg, uint16_t size, WF_M
 		}
 	}
 #endif
-	/*  disable ack in broadcast method for now. As it is in the ackTimer handler.
+	/*  disable ack in broadcast method for now. As it is in the ackTimer handler. //BK: WHY?????
 	//Now finished sending data thorugh socket. Prepare DataNotification signal to send WDN_WF_SENT
 	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn:: Prepare WDN_WF_SENT\n");
 
@@ -558,6 +547,17 @@ void WF_AlwaysOn_NoAck::BroadcastData(WF_Message_n64_t& msg, uint16_t size, WF_M
 	param->noOfDest = 0; //I guess this is used to get destination so I think it is safe to set 0. 
 	dataNotifierEvent->Invoke(param);
 	*/
+
+	Ack_Type[0] = WDN_WF_SENT;
+	MessageStatus[0] = ret;
+	WF_DataStatusParam<uint64_t> ackParam(last_sent_msg_ptr->GetWaveformMessageID(),last_sent_msg_ptr->GetWaveform());
+	this->CopyToDN(ackParam);
+	ackParam.destArray[0] = 0;
+	ackParam.statusType[0] = Core::Dataflow::WDN_WF_SENT;
+	ackParam.statusValue[0] = ret;
+	ackParam.readyToReceive = readyToRecv;
+	dataNotifierEvent->Invoke(ackParam); //Event only for SendData.
+
 
 	/*
 	//Now delete entry in map
@@ -786,15 +786,15 @@ void WF_AlwaysOn_NoAck::AckTimer_Handler(uint32_t flag)
 	if(last_sent_msg_ptr->GetNumberOfDest() >0 ){
 	//This is unicast. Store NACK for this node in the future but for now it is set to ack
 		//Ack_Type[last_sent_msg_dest_ptr[destination_index++]] = WDN_DST_RECV;
-		Ack_Type[current_node] = WDN_DST_RECV;
-		MessageStatus[current_node] = WF_ST_ACK_NOT_RECV;
+//		Ack_Type[current_node] = WDN_DST_RECV;
+//		MessageStatus[current_node] = WF_ST_ACK_NOT_RECV;
 		//Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn::Setting ackType of destination %ld to WDN_DST_SENT\n",last_sent_msg_dest_ptr[destination_index-1]);
 		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn::Setting ackType of destination %ld to WDN_DST_SENT\n",current_node);
 		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn::Ack_Type.Size is %d\n",Ack_Type.Size());
 	}else{
 		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn:: This is broadacast\n");
-		Ack_Type[0] = WDN_WF_SENT;
-		MessageStatus[0] = WF_ST_ACK_NOT_RECV;
+//		Ack_Type[0] = WDN_WF_SENT;
+//		MessageStatus[0] = WF_ST_ACK_NOT_RECV;
 	#if Debug_Flag
 		b_summary.negative_wf_sent_b++;
 	#endif
@@ -814,13 +814,13 @@ void WF_AlwaysOn_NoAck::AckTimer_Handler(uint32_t flag)
 
 		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK::AckTimer_Handler: Erased all keys? Size of Ack_Type is %d\n",Ack_Type.Size());
 		if(last_sent_msg_ptr->GetNumberOfDest() == 0){ //Broaodcast
-			WF_DataStatusParam<uint64_t> ackParam(last_sent_msg_ptr->GetWaveformMessageID(),last_sent_msg_ptr->GetWaveform());
-			this->CopyToDN(ackParam);
-			ackParam.destArray[0] = 0;
-			ackParam.statusType[0] = Core::Dataflow::WDN_WF_SENT;
-			ackParam.statusValue[0] = WF_ST_SUCCESS;
-			ackParam.readyToReceive = true; 
-			dataNotifierEvent->Invoke(ackParam); //Event only for SendData.
+//			WF_DataStatusParam<uint64_t> ackParam(last_sent_msg_ptr->GetWaveformMessageID(),last_sent_msg_ptr->GetWaveform());
+//			this->CopyToDN(ackParam);
+//			ackParam.destArray[0] = 0;
+//			ackParam.statusType[0] = Core::Dataflow::WDN_WF_SENT;
+//			ackParam.statusValue[0] = WF_ST_SUCCESS;
+//			ackParam.readyToReceive = true;
+//			dataNotifierEvent->Invoke(ackParam); //Event only for SendData.
 			WF_ControlResponseParam param;
 			param.id = 0;
 			cont = ControlStatusResponse;
@@ -903,27 +903,27 @@ void WF_AlwaysOn_NoAck::AckTimer_Handler(uint32_t flag)
 	      delete _destArray;
 	    }*/
 
-	    WF_CancelDataResponse_Param rv;
-		rv.msgId = _msgId;
-		rv.status = false;
-		rv.noOfDest = _noOfDestinations;
-		for(uint16_t index =0; index < _noOfDestinations; index++){
-			rv.cancel_status[index] = false;
-			rv.destArray[index] = _destArray[index];
-		}
-		WF_ControlResponseParam param_rv;
-		param_rv.id = _rId;
-		param_rv.wfid = WID;
-		cont = CancelPacketResponse;
-		param_rv.type = cont;
-		//param.status = false; // Too late to cancel send
-		param_rv.data = &rv;//0; // Not 100%  sure what needs to be set. I do not think this filed is used fo CancelDataRequest?
-		param_rv.dataSize = sizeof(WF_CancelDataResponse_Param); //Set to zero to be safe.
-		Debug_Printf(DBG_WAVEFORM, "Invoking Event\n"); fflush(stdout);
-		controlResponseEvent->Invoke(param_rv);
-		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Just Invoked event\n"); fflush(stdout);
-
-	    return;
+//	    WF_CancelDataResponse_Param rv;
+//		rv.msgId = _msgId;
+//		rv.status = false;
+//		rv.noOfDest = _noOfDestinations;
+//		for(uint16_t index =0; index < _noOfDestinations; index++){
+//			rv.cancel_status[index] = false;
+//			rv.destArray[index] = _destArray[index];
+//		}
+//		WF_ControlResponseParam param_rv;
+//		param_rv.id = _rId;
+//		param_rv.wfid = WID;
+//		cont = CancelPacketResponse;
+//		param_rv.type = cont;
+//		//param.status = false; // Too late to cancel send
+//		param_rv.data = &rv;//0; // Not 100%  sure what needs to be set. I do not think this filed is used fo CancelDataRequest?
+//		param_rv.dataSize = sizeof(WF_CancelDataResponse_Param); //Set to zero to be safe.
+//		Debug_Printf(DBG_WAVEFORM, "Invoking Event\n"); fflush(stdout);
+//		controlResponseEvent->Invoke(param_rv);
+//		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Just Invoked event\n"); fflush(stdout);
+//
+//	    return;
 	    //signal framework
 	    Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Dce_NoAcK::Got CancelDataRequest for msgId %lu\n",_msgId);
 	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK::Show destination to be canceled\n");
@@ -932,41 +932,18 @@ void WF_AlwaysOn_NoAck::AckTimer_Handler(uint32_t flag)
 	    }
 	    WF_CancelDataResponse_Param data;
 	    data.msgId = _msgId;
-	    uint16_t node_count = 0;
+	    data.noOfDest = 0;
+	    data.status = true;
 	    //check if request is for broadcast
-	    if(this->IsBroadcast == true){
-	    	//check current status
-	    	BSTMapT<NodeId_t, WF_DataStatusTypeE>::Iterator it_ack = Ack_Type.Find(0);
-	    	if(it_ack == Ack_Type.End() && !IsBroadcast){
-	    		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK:: Ack_Type for broadcast does not exist. Cannot cancel\n");
-	       	}else{
-	       		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce:: Check current status of broadcast\n");
-	       		switch(Ack_Type[0]){
-	       		case WDN_WF_RECV:{
-	       	  	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK:: Broadcast is successfully canceled\n");
-	       	  		destList.DeleteItem(0);
-	       	   	    Ack_Type.Erase(0);
-	       	        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK:: show destList\n");
-	       	        data.status = true;
-	       	        break;
-	       	   	}
-	       	    case WDN_WF_SENT:{
-	       	    	Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Dce_NoAcK:: Broadcast has WDN_WF_SENT. Too late to cancel\n");
-	       	    	data.status = false;
-	       	    	break;
-	       	    }
-	       	  	case WDN_DST_RECV:{
-	       	    	Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Dce_NoAcK:: Broadcast has WDN_DST_RECV. Too late to cancel\n");
-	       	    	data.status = false;
-	       	    	break;
-	       		}
-	       		default:
-	       			Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Dce_NoAcK:: Broadcast has Unknown status\n");
-	       			data.status = false;
-	       			break;
-	       		}
-	       	}
-	    	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce:: Broadcast is canceled\n");
+	    auto msgIdPtrite = MessageIdToPointer.Find(_msgId);
+	    if(msgIdPtrite == MessageIdToPointer.End()){
+		    data.status = false;
+		    for(uint16_t i = 0; i < _noOfDestinations; ++i){
+		    	data.destArray[i] = _destArray[i];
+		    	data.cancel_status[i] = false;
+		    	++data.noOfDest;
+		    }
+
 	    	WF_ControlResponseParam param;
 	    	param.id = _rId;
 	    	param.wfid = WID;
@@ -980,62 +957,134 @@ void WF_AlwaysOn_NoAck::AckTimer_Handler(uint32_t flag)
 	    	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK::Just Invoked event\n"); fflush(stdout);
 	    	return;
 	    }
+	    else{
+		    data.msgId = _msgId;
+		    data.noOfDest = 0;
+		    data.status = true;
+		    if(msgIdPtrite->Second()->GetNumberOfDest() == 0){
+		    	//check current status
+		    	BSTMapT<NodeId_t, WF_DataStatusTypeE>::Iterator it_ack = Ack_Type.Find(0);
+		    	if(it_ack == Ack_Type.End()){
+		    		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK:: Ack_Type for broadcast does not exist. Cannot cancel\n");
+				    for(uint16_t i = 0; i < _noOfDestinations; ++i){
+				    	data.destArray[i] = _destArray[i];
+				    	data.cancel_status[i] = false;
+				    	++data.noOfDest;
+				    }
+
+			    	WF_ControlResponseParam param;
+			    	param.id = _rId;
+			    	param.wfid = WID;
+			    	cont = CancelPacketResponse;
+			    	param.type = cont;
+			    	//param.status = false; // Too late to cancel send
+			    	param.data = &data;//0; // Not 100%  sure what needs to be set. I do not think this filed is used fo CancelDataRequest?
+			    	param.dataSize = sizeof(WF_CancelDataResponse_Param); //Set to zero to be safe.
+			    	Debug_Printf(DBG_WAVEFORM, "Invoking Event\n"); fflush(stdout);
+			    	controlResponseEvent->Invoke(param);
+			    	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK::Just Invoked event\n"); fflush(stdout);
+			    	return;
+		       	}
+		    	else{
+		       		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce:: Check current status of broadcast\n");
+		       		switch(Ack_Type[0]){
+		       		case WDN_WF_RECV:{
+		       	  	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK:: Broadcast is successfully canceled\n");
+		       	  		destList.DeleteItem(0);
+		       	   	    Ack_Type.Erase(0);
+		       	        Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK:: show destList\n");
+		       	        break;
+		       	   	}
+		       	    case WDN_WF_SENT:{
+		       	    	Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Dce_NoAcK:: Broadcast has WDN_WF_SENT. Too late to cancel\n");
+		       	    	data.status = false;
+		       	    	break;
+		       	    }
+		       	  	case WDN_DST_RECV:{
+		       	    	Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Dce_NoAcK:: Broadcast has WDN_DST_RECV. Too late to cancel\n");
+		       	    	data.status = false;
+		       	    	break;
+		       		}
+		       		default:
+		       			Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Dce_NoAcK:: Broadcast has Unknown status\n");
+		       			data.status = false;
+		       			break;
+		       		}
+		    	}
+		    	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce:: Broadcast is canceled\n");
+		    	WF_ControlResponseParam param;
+		    	param.id = _rId;
+		    	param.wfid = WID;
+		    	cont = CancelPacketResponse;
+		    	param.type = cont;
+		    	//param.status = false; // Too late to cancel send
+		    	param.data = &data;//0; // Not 100%  sure what needs to be set. I do not think this filed is used fo CancelDataRequest?
+		    	param.dataSize = sizeof(WF_CancelDataResponse_Param); //Set to zero to be safe.
+		    	Debug_Printf(DBG_WAVEFORM, "Invoking Event\n"); fflush(stdout);
+		    	controlResponseEvent->Invoke(param);
+		    	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK::Just Invoked event\n"); fflush(stdout);
+		    	return;
+
+		    }
+		    else{
+			    //check result
+			    for(uint16_t index =0; index < _noOfDestinations; index++){
+			        //check if given destination existed.
+			    	BSTMapT<NodeId_t, WF_DataStatusTypeE>::Iterator it_ack = Ack_Type.Find(_destArray[index]);
+			    	if(it_ack == Ack_Type.End() && !IsBroadcast){
+			    		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK:: Node %ld does not exist. Cannot cancel\n",_destArray[index]);
+			    		continue;
+			    	}
+			    	switch(Ack_Type[_destArray[index]]){
+			    	  case WDN_WF_RECV:{
+			    	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK:: destination[%ld] is successfully canceled\n",_destArray[index]);
+			    		destList.DeleteItem(_destArray[index]);
+			    	    Ack_Type.Erase(_destArray[index]);
+			            data.cancel_status[data.noOfDest] = true;
+			            data.destArray[data.noOfDest] = _destArray[index];
+			            ++data.noOfDest;
+			            Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK:: show destList\n");
+			            for(uint16_t k =0; k < destList.Size(); k++){
+			            	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK:: destList[%d] is %ld\n",k, destList.GetItem(k));
+			            }
+			            break;
+			    	  }
+			          case WDN_WF_SENT:{
+			    		Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Dce_NoAcK:: node %ld has WDN_WF_SENT. Too late to cancel\n",_destArray[index]);
+			    		break;
+			          }
+			    	  case WDN_DST_RECV:{
+			    		Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Dce_NoAcK:: node %ld has WDN_DST_RECV. Too late to cancel\n",_destArray[index]);
+			    		break;
+			    	  }
+			    	  default:
+			      		Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Dce_NoAcK:: node %ld has Unknown status\n",_destArray[index]);
+			      		data.cancel_status[data.noOfDest] = false;
+			      		data.destArray[data.noOfDest] = _destArray[index];
+			      		++data.noOfDest;
+			      		data.status = false;
+			      		break;
+			    	}
+			    }
+			    WF_ControlResponseParam param;
+			    param.id = _rId;
+			    param.wfid = WID;
+			    cont = CancelPacketResponse;
+			    param.type = cont;
+			    //param.status = false; // Too late to cancel send
+			    param.data = &data;//0; // Not 100%  sure what needs to be set. I do not think this filed is used fo CancelDataRequest?
+			    param.dataSize = sizeof(WF_CancelDataResponse_Param); //Set to zero to be safe.
+			    Debug_Printf(DBG_WAVEFORM, "Invoking Event\n"); fflush(stdout);
+			    controlResponseEvent->Invoke(param);
+			    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK::Just Invoked event\n"); fflush(stdout);
 
 
-	    //check result
-	    for(uint16_t index =0; index < _noOfDestinations; index++){
-	        //check if given destination existed.
-	    	BSTMapT<NodeId_t, WF_DataStatusTypeE>::Iterator it_ack = Ack_Type.Find(_destArray[index]);
-	    	if(it_ack == Ack_Type.End() && !IsBroadcast){
-	    		Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK:: Node %ld does not exist. Cannot cancel\n",_destArray[index]);
-	    		continue;
-	    	}
-
-	    	switch(Ack_Type[_destArray[index]]){
-	    	  case WDN_WF_RECV:{
-	    	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK:: destination[%ld] is successfully canceled\n",_destArray[index]);
-	    		destList.DeleteItem(_destArray[index]);
-	    	    Ack_Type.Erase(_destArray[index]);
-	            data.cancel_status[node_count] = true;
-	            data.destArray[node_count] = _destArray[index];
-	            node_count++;
-	            Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK:: show destList\n");
-	            for(uint16_t k =0; k < destList.Size(); k++){
-	            	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK:: destList[%d] is %ld\n",k, destList.GetItem(k));
-	            }
-	            break;
-	    	  }
-	          case WDN_WF_SENT:{
-	    		Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Dce_NoAcK:: node %ld has WDN_WF_SENT. Too late to cancel\n",_destArray[index]);
-	    		break;
-	          }
-	    	  case WDN_DST_RECV:{
-	    		Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Dce_NoAcK:: node %ld has WDN_DST_RECV. Too late to cancel\n",_destArray[index]);
-	    		break;
-	    	  }
-	    	  default:
-	      		Debug_Printf(DBG_WAVEFORM,"WF_AlwaysOn_Dce_NoAcK:: node %ld has Unknown status\n",_destArray[index]);
-	      		break;
-	    	}
+		    }
 	    }
-	    if(IsBroadcast == true){
-	      data.noOfDest = 0;
-	    }else{
-	      data.noOfDest = node_count;
-	    }
-	    data.status = true;
 
-	    WF_ControlResponseParam param;
-	    param.id = _rId;
-	    param.wfid = WID;
-	    cont = CancelPacketResponse;
-	    param.type = cont;
-	    //param.status = false; // Too late to cancel send
-	    param.data = &data;//0; // Not 100%  sure what needs to be set. I do not think this filed is used fo CancelDataRequest?
-	    param.dataSize = sizeof(WF_CancelDataResponse_Param); //Set to zero to be safe.
-	    Debug_Printf(DBG_WAVEFORM, "Invoking Event\n"); fflush(stdout);
-	    controlResponseEvent->Invoke(param);
-	    Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK::Just Invoked event\n"); fflush(stdout);
+
+
+
 
 
 	 /*********************************************************************************
@@ -1338,31 +1387,31 @@ void WF_AlwaysOn_NoAck::ProcessIncomingMessage(WaveformId_t wfid, uint16_t msgle
 void WF_AlwaysOn_NoAck::AddDestinationRequest(RequestId_t _rId, WF_MessageId_t _msgId, uint64_t* _destArray, uint16_t _noOfDestinations)
 {
 	Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK::Received AddDestinationReuqest\n");
-	 WF_AddDestinationResponse_Param rv;
-	 rv.msgId = _msgId;
-	 rv.status = false;
-	 if(IsBroadcast == true){
-		 rv.noOfDest = 0;
-		 
-	 }else{
-		 rv.noOfDest = _noOfDestinations;
-	 }
-	 for(uint16_t index =0 ; index < _noOfDestinations; index++){
-		 rv.add_status[index] = false;
-		 rv.destArray[index] = _destArray[index];
-	 }
-	 WF_ControlResponseParam param_rv;
-	 param_rv.id = _rId;
-	 param_rv.wfid = WID;
-	 cont = ReplacePayloadResponse;
-	 param_rv.type = cont;
-	 //param.status = false; // Too late to cancel send
-	 param_rv.data = &rv;//0; // Not 100%  sure what needs to be set. I do not think this filed is used fo CancelDataRequest?
-	 param_rv.dataSize = sizeof(WF_ReplacePayloadResponse_Param); //Set to zero to be safe.
-	 Debug_Printf(DBG_WAVEFORM, "Invoking Event\n"); fflush(stdout);
-	 controlResponseEvent->Invoke(param_rv);
-	 Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Just Invoked event\n"); fflush(stdout);
-	 return;
+//	 WF_AddDestinationResponse_Param rv;
+//	 rv.msgId = _msgId;
+//	 rv.status = false;
+//	 if(IsBroadcast == true){
+//		 rv.noOfDest = 0;
+//
+//	 }else{
+//		 rv.noOfDest = _noOfDestinations;
+//	 }
+//	 for(uint16_t index =0 ; index < _noOfDestinations; index++){
+//		 rv.add_status[index] = false;
+//		 rv.destArray[index] = _destArray[index];
+//	 }
+//	 WF_ControlResponseParam param_rv;
+//	 param_rv.id = _rId;
+//	 param_rv.wfid = WID;
+//	 cont = ReplacePayloadResponse;
+//	 param_rv.type = cont;
+//	 //param.status = false; // Too late to cancel send
+//	 param_rv.data = &rv;//0; // Not 100%  sure what needs to be set. I do not think this filed is used fo CancelDataRequest?
+//	 param_rv.dataSize = sizeof(WF_ReplacePayloadResponse_Param); //Set to zero to be safe.
+//	 Debug_Printf(DBG_WAVEFORM, "Invoking Event\n"); fflush(stdout);
+//	 controlResponseEvent->Invoke(param_rv);
+//	 Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Ack::Just Invoked event\n"); fflush(stdout);
+//	 return;
 
 
 	//I can assume destArray has only destination not found,
@@ -1371,7 +1420,7 @@ void WF_AlwaysOn_NoAck::AddDestinationRequest(RequestId_t _rId, WF_MessageId_t _
 		 Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK::destArray[%d] is %ld\n",index, _destArray[index]);
 	 }
 
-	  struct WF_AddDestinationResponse_Param data;
+	  WF_AddDestinationResponse_Param data;
 	  data.msgId = _msgId; // Stores message Id
 
 	  if(current_messageId.Size() !=0){
@@ -1409,6 +1458,7 @@ void WF_AlwaysOn_NoAck::AddDestinationRequest(RequestId_t _rId, WF_MessageId_t _
 						  data.status = true;
 						  data.noOfDest = _noOfDestinations;
 						  data.destArray[index] =_destArray[index];
+						  data.add_status[index] = true;
 					  }
 					  for(uint16_t index =0; index < _noOfDestinations; index++){
 						  Debug_Printf(DBG_WAVEFORM, "WF_AlwaysOn_Dce_NoAcK:: data.destArray[%d] is %ld\n", index, data.destArray[index])
@@ -1433,7 +1483,7 @@ void WF_AlwaysOn_NoAck::AddDestinationRequest(RequestId_t _rId, WF_MessageId_t _
 
 	  struct WF_ControlResponseParam param;
 	  param.id = _rId;
-	  param.type =AddDestinationResponse;
+	  param.type = AddDestinationResponse;
 	  param.data = &data;
 	  param.dataSize =sizeof(WF_AddDestinationResponse_Param);    //bool status;
 	  param.wfid = this->WID;

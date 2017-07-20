@@ -6,13 +6,25 @@
 
 #include "PotentialNeighborRegistry.h"
 
-
+#ifndef PLATFORM_EMOTE
+#include "Platform/linux/Framework/EstimationLogging.h" //This is platform dependent
+#endif
 
 namespace Core {
 namespace Discovery {
-    
+
+//#ifndef PLATFORM_EMOTE
+  //Estimation::EstimationLogging log;
+//#endif
+  PotentialNeighborRegistry::PotentialNeighborRegistry(){
+#ifndef PLATFORM_EMOTE
+	  //logger = &log;
+	  logger = new Estimation::EstimationLogging();
+#endif
+  }
+
   uint16_t PotentialNeighborRegistry::GetNumberOfNodes() {
-    return nbrs.size();
+	  return nbrs.Size();
   }
 
   //TODO: check the registry and return the nodes above the threshold potential
@@ -21,8 +33,8 @@ namespace Discovery {
   }
 
   PotentialNeighbor* PotentialNeighborRegistry::AddNode(LinkId id, PotentialNeighborTypeE type, uint8_t rssi, UFixed_7_8_t potential) {
-    PotentialNeighbor_t::iterator it = nbrs.find(id);
-    if(it!=nbrs.end()) 
+    PotentialNeighbor_t::Iterator it = nbrs.Find(id);
+    if(it!=nbrs.End())
       return 0;
 
     nbrs[id].linkId = id;
@@ -34,15 +46,15 @@ namespace Discovery {
   }
 
   PotentialNeighbor* PotentialNeighborRegistry::GetNode(LinkId id) {
-    PotentialNeighbor_t::iterator it = nbrs.find(id);
-    if(it!=nbrs.end()) 
-      return &(it->second);
+    PotentialNeighbor_t::Iterator it = nbrs.Find(id);
+    if(it!=nbrs.End())
+      return &(it->Second());
     return 0;
   }
 
   bool PotentialNeighborRegistry::UpdateNode(LinkId id, PotentialNeighbor _info) {
-    PotentialNeighbor_t::iterator it = nbrs.find(id);
-    if(it==nbrs.end()) 
+    PotentialNeighbor_t::Iterator it = nbrs.Find(id);
+    if(it==nbrs.End())
       return 0;
     nbrs[id].nodeType = _info.nodeType;
     nbrs[id].normalizedRssi = _info.normalizedRssi;
@@ -52,10 +64,10 @@ namespace Discovery {
   }
 
   bool PotentialNeighborRegistry::RemoveNode(LinkId id) {
-    PotentialNeighbor_t::iterator it = nbrs.find(id);
-    if(it==nbrs.end()) 
+    PotentialNeighbor_t::Iterator it = nbrs.Find(id);
+    if(it==nbrs.End())
       return 0;
-    nbrs.erase(id);
+    nbrs.Erase(id);
     
     return 1;
   }

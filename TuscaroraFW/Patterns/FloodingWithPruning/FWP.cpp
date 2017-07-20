@@ -126,8 +126,7 @@ void FWP::ControlResponseEvent(ControlResponseParam response)
 {
 	Debug_Printf(DBG_PATTERN, "PatternBase:: Got a control response of type %d\n", response.type);
 	switch (patternState){
-	case NO_PID:
-	case GOT_PID:
+	case UNREGISTERED:
 		if(response.type == PWI::PTN_RegisterResponse){
 			Handle_RegisterResponse(response);
 			Debug_Printf(DBG_PATTERN,"FWP:: Sending the attribute request to the framework.\n");
@@ -248,13 +247,13 @@ void FWP::ReceiveMessageEvent(FMessage_t& msg)
 	eventdispatcher->ReceiveMessage(msg.GetPayload(), msg.GetPayloadSize());
 }
 
-void FWP::InserBackToSendBuffer(MessageId_t id){
+void FWP::InserBackToSendBuffer( FMessageId_t  id){
 	FMessage_t *msg = sentMap[id];
 	sendBuffer->InsertFront(msg);
 	sentMap.Erase(id);
 }
 
-void FWP::CleanUpBuffers(MessageId_t id){
+void FWP::CleanUpBuffers( FMessageId_t  id){
 	sentMap.Erase(id);
 }
 

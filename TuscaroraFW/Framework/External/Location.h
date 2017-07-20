@@ -7,10 +7,10 @@
 #ifndef LOCATION_H_
 #define LOCATION_H_
 
-#ifdef PLATFORM_LINUX
-#include "Platform/linux/ExternalServices/LocationService/LocationService.h"
-#else
+#ifdef PLATFORM_DCE
 #include "Platform/dce/ExternalServices/LocationService/LocationService.h"
+#elif defined(PLATFORM_LINUX)
+#include "Platform/linux/ExternalServices/LocationService/LocationService.h"
 #endif
 
 using namespace ExternalServices;

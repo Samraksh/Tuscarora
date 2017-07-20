@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# set -x # Debug script
+
+function Die()
+{
+    # Print exit message and exit shell
+    # also print the trailing file as a convenience
+    # example: Die "There was an error! Exiting." diagnosis_File
+    echo  "Dying process"
+    echo "$*"
+    [[ -f $2 ]] && echo "$2:" && cat "$2"
+    exit 1
+}
+
+echo "Executing $0"
+cd ${TUS}
+echo "Running FragmentationTest"
+tmpdir="$(mktemp -dtp dceln/ FragmentationTest.XXXXX)"
+echo ${tmpdir}
+
+echo 
+./runOrDebug.sh -p dce --isolate ${tmpdir##*/} --doNotCopy --force  FW-FragmentationTest -- RunTime 50 Size 4 &> ${tmpdir}/run || Die "Couldn't run. See ${tmpdir}/run for output" ${tmpdir}/run
+
+printf "Validating FragmentationTest ... \n"
+
+
+for i in ${tmpdir}/files-[0-9]*; do
+	FileName="$i/FragmentationTestResults.txt"
+	[ -f $FileName ] ||  Die "No $FileName"
+    FAILCount=`grep  "FAIL" $FileName | wc -l`
+    PassCount=`grep  "PASS" $FileName | wc -l`
+    [ $FAILCount -eq 0 ] ||  Die "FAIL in $FileName"
+    [ $PassCount -eq 0 ] &&  Die "NO PASS in $FileName"
+   
+    FileName="$i/stdout"
+    [ -f $FileName ] ||  Die "No $FileName"
+    FAILCount_stdout=`grep  "FAIL" $FileName | wc -l`
+    [ $FAILCount_stdout -eq 0 ] ||  Die "FAILCount_stdout in $FileName"
+    ERRORCount_stdout=`grep  "ERROR" $FileName | wc -l`
+    [ $ERRORCount_stdout -eq 0 ] ||  Die "ERRORCount_stdout in $FileName"
+    
+done
+
+rm -r ${tmpdir}
+
+echo "PASS"
+
+
+
+

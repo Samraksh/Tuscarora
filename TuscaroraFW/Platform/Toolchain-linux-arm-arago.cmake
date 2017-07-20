@@ -1,8 +1,6 @@
 # This is important
 set(CMAKE_SYSTEM_NAME Linux)
 
-# This one not so much
-# -- Unclear what this is used for...
 set(CMAKE_SYSTEM_VERSION 3)
 set(CMAKE_SYSTEM_PROCESSOR ARM)
 set(SDK_PATH $ENV{TUS}/Toolchains/arago-2013.12)

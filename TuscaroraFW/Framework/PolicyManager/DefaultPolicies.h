@@ -18,6 +18,10 @@ namespace Policy {
   PacketSchedulingPolicyE packetPolicy = FCFS;
   //for debugging purpose made it 4. Used to be 1
   uint16_t packetsBufferedPerPattern =4;
+
+  bool IsFragmentationEnabled = true;
+  uint16_t fwMaxPacketSizePolicy = 10000; //Policy driven max packet payload size that the framework accepts from the patterns. Any non-zero value overrides max framework packet size. A zero value means an auto calculated maximum framework packet size which is set equal to the minimum of the maxpayload size supported by the available waveforms.
+
   LinkSelectionPolicyE nbrLinkSelectionPolicy = PATTERN_DEFINED;
   WaveformId_t preferredWaveform;
   

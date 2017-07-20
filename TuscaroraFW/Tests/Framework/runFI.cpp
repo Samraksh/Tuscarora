@@ -278,7 +278,7 @@ void FI_Test::DataStatus_Handler(DataStatusParam& ack)
 				if(ack.statusValue[index] == true){
 					// send_count++;
 				}else{
-					BSTMapT<MessageId_t, ListT<NodeId_t,false, EqualTo<NodeId_t> > >::Iterator it_replaced = replaced_dst.Find(ack.messageId);
+					BSTMapT <FMessageId_t , ListT<NodeId_t,false, EqualTo<NodeId_t> > >::Iterator it_replaced = replaced_dst.Find(ack.messageId);
 					if(it_replaced == replaced_dst.End()){
 						Debug_Printf(DBG_PATTERN, "FI_Test:: msgId not found\n");
 					}else{
@@ -329,7 +329,7 @@ void FI_Test::DataStatus_Handler(DataStatusParam& ack)
 				}else{
 					Debug_Printf(DBG_PATTERN, "FI_Test:: This is Negative DST acknowledgemenet\n");
 					this->dstNack_count++;
-					BSTMapT<MessageId_t, ListT<NodeId_t,false, EqualTo<NodeId_t> > >::Iterator it_replaced = replaced_dst.Find(ack.messageId);
+					BSTMapT <FMessageId_t , ListT<NodeId_t,false, EqualTo<NodeId_t> > >::Iterator it_replaced = replaced_dst.Find(ack.messageId);
 					if(it_replaced == replaced_dst.End()){
 							Debug_Printf(DBG_PATTERN, "FI_Test:: msgId not found\n");
 					}else{
@@ -367,7 +367,7 @@ void FI_Test::DataStatus_Handler(DataStatusParam& ack)
 		SendDataStat obj;
 		obj.total_sent = 0;
 		
-		BSTMapT<MessageId_t, uint16_t>::Iterator it_ack = dst_ack_count.Begin();
+		BSTMapT <FMessageId_t , uint16_t>::Iterator it_ack = dst_ack_count.Begin();
 		while(it_ack != dst_ack_count.End()){
 			obj.total_sent += it_ack->Second();
 			//Debug_Printf(DBG_PATTERN, "FI_Test:: messageId %d got %d PDN_DST_RECV\n",it_ack->First(), it_ack->Second());
@@ -384,7 +384,7 @@ void FI_Test::DataStatus_Handler(DataStatusParam& ack)
 		
 		msgId = ack.messageId;
 		Debug_Printf(DBG_PATTERN,"FI_Test::Received message id is %d\n",ack.messageId);
-		BSTMapT<MessageId_t, uint16_t>::Iterator it_dst_nack = dst_nack_count.Begin();
+		BSTMapT <FMessageId_t , uint16_t>::Iterator it_dst_nack = dst_nack_count.Begin();
 		while(it_dst_nack != dst_nack_count.End()){
 			total_dst_nack += it_dst_nack->Second();
 			//Debug_Printf(DBG_PATTERN, "FI_Test:: messageId %d got %d PDN_DST_RECV\n",it_dst_nack->First(), it_dst_nack->Second());
@@ -399,7 +399,7 @@ void FI_Test::DataStatus_Handler(DataStatusParam& ack)
 		this->dest_added_ack_count[ack.messageId] = dstAck_count;
 		AddDataStat add_obj;
 		add_obj.total_nack = 0;
-		BSTMapT<MessageId_t, uint16_t>::Iterator it_addedack = dest_added_ack_count.Begin();
+		BSTMapT <FMessageId_t , uint16_t>::Iterator it_addedack = dest_added_ack_count.Begin();
 		while(it_addedack != dest_added_ack_count.End()){
 		add_obj.total_nack += it_addedack->Second();
 		//Debug_Printf(DBG_PATTERN, "FI_Test:: ADD messageId %d got %d PDN_DST_RECV\n",it_addedack->First(), it_addedack->Second());
@@ -429,14 +429,14 @@ void FI_Test::DataStatus_Handler(DataStatusParam& ack)
 		this->ack_wf_recv[ack.messageId] = cancel_send_count_decrement;
 	}
 
-	BSTMapT<MessageId_t, uint16_t>::Iterator it_fwack = ack_fw_sent.Begin();
+	BSTMapT <FMessageId_t , uint16_t>::Iterator it_fwack = ack_fw_sent.Begin();
 	while(it_fwack != dst_ack_count.End()){
 		cancel.total_sent += it_fwack->Second();
 		//Debug_Printf(DBG_PATTERN, "FI_Test:: FW ACK :: messageId %d got %d PDN_FW_RECV\n",it_fwack->First(), it_fwack->Second());
 		++it_fwack;
 	}
 	//Debug_Printf(DBG_PATTERN, "FI_Test:: Total PDN_FW_RECV is %d\n",cancel.total_sent);
-	BSTMapT<MessageId_t, uint16_t>::Iterator it_wfack = ack_wf_recv.Begin();
+	BSTMapT <FMessageId_t , uint16_t>::Iterator it_wfack = ack_wf_recv.Begin();
 	while(it_wfack != dst_ack_count.End()){
 		cancel.total_wf_nack += it_wfack->Second();
 		//Debug_Printf(DBG_PATTERN, "FI_Test:: messageId %d got %d PDN_WF_RECV\n",it_wfack->First(), it_wfack->Second());
@@ -445,7 +445,7 @@ void FI_Test::DataStatus_Handler(DataStatusParam& ack)
 	//Debug_Printf(DBG_PATTERN, "FI_Test:: Total Negative PDN_WF_RECV is %d\n", cancel.total_wf_nack);
 	//find out number of wf sent out ack
 	this->sendout_count[ack.messageId] = sendAck_count;
-	BSTMapT<MessageId_t, uint16_t>::Iterator it_sendack = sendout_count.Begin();
+	BSTMapT <FMessageId_t , uint16_t>::Iterator it_sendack = sendout_count.Begin();
 	while(it_sendack != sendout_count.End()){
 		cancel.total_sent_out += it_sendack->Second();
 		//Debug_Printf(DBG_PATTERN, "FI_Test:: messageId %d got %d PDN_WF_SENT\n",it_sendack->First(), it_sendack->Second());
@@ -462,7 +462,7 @@ void FI_Test::DataStatus_Handler(DataStatusParam& ack)
 
 	///replaced
 	/* uint16_t total_replaced = 0;
-	BSTMapT <MessageId_t, ListT<NodeId_t,true, EqualTo<NodeId_t> > >::Iterator it_replaced_count = replaced_dst.Begin();
+	BSTMapT  <FMessageId_t , ListT<NodeId_t,true, EqualTo<NodeId_t> > >::Iterator it_replaced_count = replaced_dst.Begin();
 	while(it_replaced_count != replaced_dst.End()){
 	total_replaced += it_replaced_count->Second().Size();
 	Debug_Printf(DBG_PATTERN, "Total replaced adjusted to %d \n",total_replaced);
@@ -686,7 +686,10 @@ int main(int argc, char* argv[]) {
 		normal = true;
 		broadcast = true;
 	}
-
+	else {
+		normal = true;
+		unicast = true;
+	}
 	FW_Init fwInit;
 	fwInit.Execute(&opts);
 

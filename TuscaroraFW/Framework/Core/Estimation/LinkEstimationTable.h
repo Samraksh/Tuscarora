@@ -9,9 +9,10 @@
 #define LINK_ESTIMATION_TABLE
 
 #include <Interfaces/Core/LinkEstimatorI.h>
+#include <Interfaces/Core/EstimationLogI.h>
 #include "Framework/Core/Discovery/NodeSchedule.h"
-#include <map>
-#include "EstimationLogging.h"
+#include <Lib/DS/BSTMapT.h>
+
 
 extern const uint16_t MAX_NBR;
 
@@ -34,14 +35,14 @@ public:
 
 
 template <class WFAddressType>
-using  Estimation_t = std::map<WF_LinkId<WFAddressType>, EstimationInfo<WFAddressType> >;
+using  Estimation_t = BSTMapT<WF_LinkId<WFAddressType>, EstimationInfo<WFAddressType> >;
 
 
 template <class WFAddressType>
 class LinkEstimationTable{
 	
 	Estimation_t<WFAddressType>*  nbrs;
-	EstimationLogging logger;
+	EstimationLogI *logger;
 public:
 	LinkEstimationTable();
 	EstimationInfo<WFAddressType>* GetEstimationInfo(WFAddressType linkAddress, WaveformId_t wfId);///< Returns the NeighborInfo object for the specified node id.

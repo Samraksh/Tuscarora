@@ -7,12 +7,12 @@
 #ifndef MISC_H_
 #define MISC_H_
 
+#include "Logs/MemMap.h"
 #include "Misc/compat-util.h"
 #include "Misc/datastructs.h"
 #include "Misc/Debug.h"
 #include "Misc/endian.h"
 #include "Misc/MemChunkI.h"
-#include "Misc/MemMap.h"
 
 
 #endif //MISC_H_

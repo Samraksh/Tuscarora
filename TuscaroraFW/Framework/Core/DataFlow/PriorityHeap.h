@@ -24,11 +24,12 @@ struct MsgPriorityMetric {
  uint64_t submitTimeMicro; 
 };
 
+class WF_MessageQElementComparator_t;
 
 struct WF_MessageQElement {
   WF_MessageBase *msg;
-  MessageId_t wfmsgId;
-  MessageId_t frameworkMsgId;
+  WF_MessageId_t  wfmsgId;
+  FMessageId_t  frameworkMsgId;
   MsgPriorityMetric *metric;
 
   //bool ackFromDest[MAX_DEST];  //indicates if acknowledgement from destination is recieved
@@ -42,7 +43,7 @@ struct WF_MessageQElement {
   //Link* linkArray[MAX_DEST];
   
 public:
-  WF_MessageQElement(WF_MessageBase *_msg, MsgPriorityMetric *_metric, MessageId_t _wfMsgid, MessageId_t _fwsMsgid, uint64_t *_nodeArray, uint16_t _noOfDest, bool _broadcast){
+  WF_MessageQElement(WF_MessageBase *_msg, MsgPriorityMetric *_metric, FMessageId_t  _wfMsgid, FMessageId_t  _fwsMsgid, uint64_t *_nodeArray, uint16_t _noOfDest, bool _broadcast){
     msg = _msg;
     wfmsgId=_wfMsgid;
     frameworkMsgId = _fwsMsgid;
@@ -62,7 +63,20 @@ public:
   bool operator == (WF_MessageQElement<Comparator> &B){
     return comp.EqualTo(*this,B);
   }*/
+  friend class WF_MessageQElementComparator_t;
 };
+
+class WF_MessageQElementComparator_t{
+public:
+	static bool LessThan ( WF_MessageQElement* const &A,  WF_MessageQElement* const&B) {
+		return (A->wfmsgId < B->wfmsgId);
+	}
+	static bool EqualTo ( WF_MessageQElement* const &A,  WF_MessageQElement* const &B) {
+		return (A->wfmsgId == B->wfmsgId);
+	}
+};
+
+typedef AVLBST_T<WF_MessageQElement*,WF_MessageQElementComparator_t> WF_MessageSegmentsQElementSearchTree_t;
 
 
 class PriorityFCFSCompare{

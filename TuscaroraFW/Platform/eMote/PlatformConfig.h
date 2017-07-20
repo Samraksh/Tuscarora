@@ -1,0 +1,14 @@
+#ifndef _PLATFORM_CONFIG_EMOTE_
+#define _PLATFORM_CONFIG_EMOTE_
+
+//#warning "Compiling for EMOTE deployment! Using Platform Config under EMOTE"
+
+#define ENABLE_PIGGYBACKING 1
+#define ENABLE_EXPLICIT_SENDER_TIMESTAMPING 1
+#define ENABLE_IMPLICIT_SYNC_TIMESTAMPING 0
+
+#define ENABLE_FW_BROADCAST 0
+
+#define DEPLOY 1
+
+#endif //_PLATFORM_CONFIG_EMOTE_

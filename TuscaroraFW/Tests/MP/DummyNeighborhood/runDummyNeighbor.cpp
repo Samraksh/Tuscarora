@@ -9,8 +9,8 @@
 #include "runDummyNeighbor.h"
 
 #include <Sys/Run.h>
+#include "../../../Platform/Shims/DirectBinding/Framework/PatternEventDispatch.h"
 #include "Tests/FW_Init.h"
-#include <Platform/linux/Framework/PatternEventDispatch.h>
 
 #define TEST_NBR_COUNT 10
 

@@ -37,7 +37,7 @@ class FWP : public PatternBase , public Fwp_I{
 	PatternNeighborTableI* nbrTable;
 	FIFOList *sendBuffer;
 	FMessage_t *outgoingPacket;
-	BSTMapT<MessageId_t, FMessage_t*> sentMap;
+	BSTMapT <FMessageId_t , FMessage_t*> sentMap;
 	bool active;
 	FrameworkAttributes fwAttributes;
 	FWP2AppShim_I* eventdispatcher;
@@ -47,8 +47,8 @@ private:
 	void ControlResponseEvent (ControlResponseParam response);
 	void DataStatusEvent (DataStatusParam notification);
 	void ReceiveMessageEvent (FMessage_t& msg);
-	void InserBackToSendBuffer(MessageId_t id);
-	void CleanUpBuffers(MessageId_t id);
+	void InserBackToSendBuffer( FMessageId_t  id);
+	void CleanUpBuffers( FMessageId_t  id);
 	void DequeAndSend();
 	bool InitiateProtocol();
 public:

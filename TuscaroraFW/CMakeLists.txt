@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 2.8.12)
-option(Type CACHE "Type of build")
-option(Target CACHE "Executable name" )
-option(Framework "Build a standalone Framework process" "No")
-option(AlwaysOn "Build a standalone AlwaysOn waveform process" "No")
-option(TestDir CACHE "Test sources directory")
-option(MainFile CACHE "Main for test resides in this File")
-#set (arch "x86_64" CACHE STRING "Platform to compile for" FORCE)
+set (Type "Debug" CACHE STRING "Type of build")
+#set (Target "Timer" CACHE STRING "Executable name" )
+#option(Framework  CACHE STRING "Build a standalone Framework process" "No")
+option (AlwaysOn "Build a standalone AlwaysOn waveform process" "OFF")
+option (TestDir "Test sources directory" "OFF")
+option (MainFile "Main for test resides in this File" "OFF")
+set (ARCH "eMote" CACHE STRING "Platform to compile for")
 
 add_definitions(
     -Wfatal-errors
@@ -15,7 +15,10 @@ if ("${MainFile}" STREQUAL "OFF" )
 	set (MainFile "${TestDir}/run${Target}.cpp" )
 endif()
 
-Message("using " ${MainFile} " as main file")
+#Full path of the main file
+set (MainFileFP "${CMAKE_CURRENT_SOURCE_DIR}/${MainFile}" )
+MESSAGE( STATUS "File with Main:         " ${MainFileFP} )
+
 # specify the build type
 # This has to be set _after_ specifying the project.
 if( "${Type}" MATCHES "release" )
@@ -27,37 +30,43 @@ else ()
 endif ()
 
 # This has to be set _before_specifying the project.
-if( "${arch}" MATCHES "x86_64" )
+if( "${ARCH}" MATCHES "x86_64" )
   message("==>compling for x86_64")
   set (AMP_PLATFORM linux)
   set (PLATFORM "x86_64" CACHE STRING "Platform to compile for")
   set (CMAKE_TOOLCHAIN_FILE Platform/Toolchain-linux-x86_64.cmake)
   add_definitions(-DPLATFORM_LINUX=1)
-elseif("${arch}" MATCHES "dce" )
+elseif("${ARCH}" MATCHES "dce" )
   message("==>compling for DCE")
   set (PLATFORM "dce" CACHE STRING "Platform to compile for")
   set (AMP_PLATFORM linux)
   set (CMAKE_TOOLCHAIN_FILE Platform/Toolchain-ns3-dce.cmake)
   add_definitions(-DPLATFORM_DCE=1)
-elseif("${arch}" MATCHES "arm" )
+elseif("${ARCH}" MATCHES "eMote" )
+  message("==>compling for eMote")
+  set (PLATFORM "eMote" CACHE STRING "Platform to compile for")
+  set (AMP_PLATFORM linux)
+  set (CMAKE_TOOLCHAIN_FILE Platform/Toolchain-Emote-CortexM3-ARM.cmake)
+  add_definitions(-DPLATFORM_EMOTE=1)
+elseif("${ARCH}" MATCHES "arm" )
   message("==>compling for arm")
   set (PLATFORM "linux" CACHE STRING "Platform to compile for")
   set (AMP_PLATFORM linux)
   set (CMAKE_TOOLCHAIN_FILE Platform/Toolchain-linux-arm-arago.cmake)
   add_definitions(-DPLATFORM_LINUX=1)
-elseif("${arch}" MATCHES "rpi" )
+elseif("${ARCH}" MATCHES "rpi" )
   message("==>compling for Raspberry Pi Linux")
   set (PLATFORM "linux" CACHE STRING "Platform to compile for")
   set (AMP_PLATFORM linux)
   set (CMAKE_TOOLCHAIN_FILE Platform/Toolchain-linux-arm-rpi.cmake)
   add_definitions(-DPLATFORM_LINUX=1)
-elseif("${arch}" MATCHES "c66" )
+elseif("${ARCH}" MATCHES "c66" )
   message("==>compling for c66")
   set (PLATFORM "DSP" CACHE STRING "Platform to compile for")
   set (AMP_PLATFORM sysbiosv6)
   set (CMAKE_TOOLCHAIN_FILE Platform/Toolchain-dsp-sysbiosv6-c66.cmake)
 else ()
-  message("usage: cmake -Darch=[arm|rpi|c66|x86_64] [-Dtype=[release|debug]]")
+  message("usage: cmake -DARCH=[arm|rpi|c66|x86_64] [-Dtype=[release|debug]]")
   return()
 endif ()
 
@@ -86,25 +95,42 @@ set (CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
 set (CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "")
 set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${ARCH_CMAKE_EXE_LINKER_FLAGS}")
 
+MESSAGE( STATUS "Platform Compiler:         " ${CMAKE_CXX_COMPILER} )
+MESSAGE( STATUS "Platform Archiver:         " ${CMAKE_AR} )
 MESSAGE( STATUS "Linker flags: " ${CMAKE_EXE_LINKER_FLAGS} )
-MESSAGE( STATUS "Platform Archiver:         " ${ARCH_CMAKE_AR} )
+#MESSAGE( STATUS "Platform Archiver:         " ${ARCH_CMAKE_AR} )
+
+
 MESSAGE( STATUS "Tuscarora_DIR:         " $ENV{TUS} )
 set (CMAKE_AR ${ARCH_CMAKE_AR})
 
-#Bring the headers, such as Student.h into the project
-include_directories($ENV{TUS}/)
+include_directories(.)
 include_directories(Include/)
 
-#googletest includes
-#include_directories($ENV{TUS}/googletest/googletest/)
-include_directories($ENV{TUS}/googletest/googletest/include/)
+message(STATUS "Printing List of Include Dirs")
+message(STATUS "---------------------------")
+get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+foreach(dir ${dirs})
+  message(STATUS "'${dir}'")
+endforeach()
+message(STATUS "---------------------------")
+
+if (NOT "${ARCH}" MATCHES "eMote" )
+  message("==> Including Google Test framework ")  
+  #googletest includes
+  #include_directories($ENV{TUS}/googletest/googletest/)
+  include_directories(googletest/googletest/include/)
+  add_subdirectory(googletest/googletest/)
+else()
+  message("==> Skipping Google Test Framework for eMote ")  
+endif()
 
 #However, the file(GLOB...) allows for wildcard additions:
 file(GLOB_RECURSE FW_SRCS Framework/*.cpp)
 MESSAGE( STATUS "Framework Sources:         " ${FW_SRCS} )
 
 file(GLOB_RECURSE APP_SRCS Apps/*.cpp)
-MESSAGE( STATUS "Pattern Sources:         " ${APP_SRCS} )
+MESSAGE( STATUS "Application Sources:         " ${APP_SRCS} )
 
 file(GLOB_RECURSE PTN_SRCS Patterns/*.cpp)
 MESSAGE( STATUS "Pattern Sources:         " ${PTN_SRCS} )
@@ -115,6 +141,28 @@ MESSAGE( STATUS "Common Library Sources:         " ${LIB_SRCS} )
 
 file(GLOB_RECURSE PLAT_SRCS Platform/${PLATFORM}/*.cpp)
 MESSAGE( STATUS "Platform (${PLATFORM}) Sources:         " ${PLAT_SRCS} )
+
+if( "${ARCH}" MATCHES "dce" )
+	file(GLOB_RECURSE PLAT_ADD_SRCS Platform/linux/*.cpp)
+	
+	#Below line removes LocationService.cpp & PlatformConfig.cpp, since its already present under dce, need a better solution
+	list(REMOVE_AT PLAT_ADD_SRCS 0 8) 
+	#list(FILTER PLAT_ADD_SRCS EXCLUDE REGEX "*/LocationService.cpp")
+	MESSAGE( STATUS "Platform (${PLATFORM}) Posix Sources:         " ${PLAT_ADD_SRCS} )
+	list(APPEND PLAT_SRCS ${PLAT_ADD_SRCS})
+	
+	file(GLOB_RECURSE PLAT_SHIM_SRCS Platform/Shims/DirectBinding/*.cpp)
+	MESSAGE( STATUS "Platform (${PLATFORM}) Shim Sources:         " ${PLAT_SHIM_SRCS} )
+	list(APPEND PLAT_SRCS ${PLAT_SHIM_SRCS})
+endif ()
+
+
+if( "${ARCH}" MATCHES "x86_64" )
+	file(GLOB_RECURSE PLAT_SHIM_SRCS Platform/Shims/LinuxSocket/*.cpp)
+	MESSAGE( STATUS "Platform (${PLATFORM}) Shim Sources:         " ${PLAT_SHIM_SRCS} )
+	list(APPEND PLAT_SRCS ${PLAT_SHIM_SRCS})
+endif ()
+
 
 #file(GLOB INIT_SRC Tests/Init/*.cpp)
 #MESSAGE(STATUS "Initialization Sources:         " ${INIT_SRC} )
@@ -131,28 +179,27 @@ list(REMOVE_ITEM TEST_SRCS ${VAL_SRCS})
 #file(GLOB GTEST_SRC $ENV{TUS}/googletest/googletest/src/*.cc)
 #MESSAGE(STATUS "Googletest Sources:         " ${GTEST_SRC} )
 
-add_subdirectory($ENV{TUS}/googletest/googletest/)
-
 #if a CMakeLists.txt is available in the test folder include that and add those targets to the main target
 #otherwise just build using default mainfile
 if (EXISTS "${TestDir}/CMakeLists.txt")
 	add_subdirectory(${TestDir})
 	set (subTargets "sub${Target}")
 	message ("Adding subtarget: " ${subTargets} )
-	add_executable(${Target} ${FW_SRCS} ${APP_SRCS} ${PTN_SRCS} ${LIB_SRCS} ${PLAT_SRCS} ${TEST_SRCS} ${MainFile} $<TARGET_OBJECTS:${subTargets}>)
+
+	add_executable(${Target} ${FW_SRCS} ${APP_SRCS} ${PTN_SRCS} ${LIB_SRCS} ${PLAT_SRCS} ${TEST_SRCS} ${MainFileFP} $<TARGET_OBJECTS:${subTargets}>)
 else ()
-	if ("${arch}" MATCHES "dce" )
+	if ("${ARCH}" MATCHES "dce" )
 		message("//////Building for DCE: Target: " ${Target} " //////")
 		set (LINK_FLAGS "-lrt -ldl -pie -rdynamic")
 		#set (CMAKE_MODULE_LINKER_FLAGS  "${LINK_FLAGS}" )
-		#add_library(${Target} MODULE ${SRCS} ${LIB_SRCS} ${PLAT_SRCS} ${TEST_SRCS} ${MainFile} )
+		#add_library(${Target} MODULE ${SRCS} ${LIB_SRCS} ${PLAT_SRCS} ${TEST_SRCS} ${MainFileFP} )
 		set (CMAKE_EXE_LINKER_FLAGS  "${LINK_FLAGS}" )
-		add_executable(${Target} ${FW_SRCS} ${APP_SRCS} ${PTN_SRCS} ${LIB_SRCS} ${PLAT_SRCS} ${TEST_SRCS} ${MainFile} )
+		add_executable(${Target} ${FW_SRCS} ${APP_SRCS} ${PTN_SRCS} ${LIB_SRCS} ${PLAT_SRCS} ${TEST_SRCS} ${MainFileFP} )
 		SET_TARGET_PROPERTIES(${Target} PROPERTIES PREFIX "" SUFFIX "")
 		target_link_libraries(${Target} gtest)
 		
 	else ()
-		add_executable(${Target} ${FW_SRCS} ${APP_SRCS} ${PTN_SRCS} ${LIB_SRCS} ${PLAT_SRCS} ${TEST_SRCS} ${MainFile} )
+		add_executable(${Target} ${FW_SRCS} ${APP_SRCS} ${PTN_SRCS} ${LIB_SRCS} ${PLAT_SRCS} ${TEST_SRCS} ${MainFileFP} )
 		target_link_libraries(${Target} gtest)
 	endif()
 	

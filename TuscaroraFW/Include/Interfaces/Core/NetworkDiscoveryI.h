@@ -13,6 +13,7 @@
 #include <Base/BasicTypes.h>
 #include <Base/FrameworkTypes.h>
 #include <Base/FixedPoint.h>
+#include <Interfaces/Core/MessageT.h>
 #include "Node.h"
 #include "Link.h"
 //#include <Interfaces/Core/PatternNamingI.h>
@@ -24,6 +25,32 @@ namespace Core {
   
 ///Types and classes related to the network discovery service
 namespace Discovery{
+
+enum NetworkDiscoveryTypeE {
+	GLOBAL_DISCOVERY,
+	ORACLE_DISCOVERY,
+	LONG_LINK_DISCOVERY,
+	ZSC_DISCOVERY,
+	FLOOD_DISCOVERY,
+	NULL_DISCOVERY
+};
+
+class DiscoveryLogHeader {
+ public:
+  uint32_t nodeid;
+  uint32_t beaconPeriod;
+  uint8_t inactivityPeriod;
+  uint16_t range;
+  uint8_t linkEstimationType;
+  uint8_t discoveryType;
+  uint16_t numNodes;
+  uint16_t runTime;
+  uint8_t density;
+  uint8_t mobilityModel;
+  uint16_t speed;
+};
+
+
 
   ///Enum for the type of neighbor change event.
   enum PNbrUpdateTypeE {
@@ -60,18 +87,23 @@ namespace Discovery{
   class NetworkDiscoveryI {
 
   public:
+	virtual ~NetworkDiscoveryI() {};
+
     ///Registers the change delegates with the discovery service. The delegate callback occurs when a network discovery event happens.
-    bool RegisterDelegate(PotentialNeighborDelegate &del);
+    virtual bool RegisterDelegate(PotentialNeighborDelegate &del)=0;
 
     ///Returns the number of neighbors associated with a particular waveform.
-    uint16_t NetworkSize (uint16_t waveformId);
+    virtual uint16_t NetworkSize (uint16_t waveformId)=0;
 
     ///Returns the number of potential (local) neighbors for a given node.
-    uint16_t NumberOfPotentialNeighbors (NodeId_t node);
+    virtual uint16_t NumberOfPotentialNeighbors (NodeId_t node)=0;
 
     ///Copies potential neighbors information for a given node into the array pointed to by parameter 'nodeInfoArray' and returns the number of nodes which where copied.
     ///The 'nodeInfoArray' parameter should be atleast of size 'arraySize' (parameter 3)
-    uint16_t PotentialNeighborsList (NodeId_t node, NodeInfo *nodeInfoArray, uint16_t arraySize);
+    virtual uint16_t PotentialNeighborsList (NodeId_t node, NodeInfo *nodeInfoArray, uint16_t arraySize)=0;
+
+    virtual void Start()=0;
+    virtual void ProcessMessage(FMessage_t& msg)=0;
   };
 
 

@@ -63,7 +63,7 @@ class Core_Test{
   Timer *msgTimer;
   Timer *apiTimer;
   PatternId_t pid;
-  MessageId_t msgId;
+  FMessageId_t  msgId;
   uint16_t nonce;
   //Delegates
   TimerDelegate *timerDelegate;

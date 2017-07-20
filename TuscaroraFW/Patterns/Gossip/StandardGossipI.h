@@ -11,11 +11,12 @@
 
 #include "Gossip.h"
 
-#ifdef PLATFORM_DCE
-#include <Platform/dce/Pattern/Gossip2AppShim.h>
-#elif PLATFORM_LINUX
-#include <Platform/linux/Pattern/Gossip2AppShim.h>
+#if PTN_UPPER_SHIM==DIRECT_BIND_SHIM
+#include <Platform/Shims/DirectBinding/Pattern/Gossip2AppShim.h>
+#elif PTN_UPPER_SHIM==SOCKET_SHIM
+#include <Platform/Shims/LinuxSocket/Pattern/Gossip2AppShim.h>
 #endif
+
 
 
 //#include <Interfaces/Core/ConfigureFrameworkI.h>

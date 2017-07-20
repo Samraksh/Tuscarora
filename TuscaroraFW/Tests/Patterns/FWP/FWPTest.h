@@ -9,11 +9,14 @@
 #ifndef TESTS_PATTERNS_FWP_FWPTEST_H_
 #define TESTS_PATTERNS_FWP_FWPTEST_H_
 
-#include "Lib/PAL/PAL_Lib.h"
-
-#include "Patterns/FloodingWithPruning/FWP.h"
-#include <Platform/dce/Pattern/FWP2AppShim.h>
 #include <Sys/RuntimeOpts.h>
+#include "Lib/PAL/PAL_Lib.h"
+#include "Patterns/FloodingWithPruning/FWP.h"
+
+#if  FWP_LOWER_SHIM==SOCKET_SHIM
+#include <Platform/Shims/LinuxSocket/Pattern/FWP2AppShim.h>
+#endif
+
 
 extern NodeId_t MY_NODE_ID;
 
